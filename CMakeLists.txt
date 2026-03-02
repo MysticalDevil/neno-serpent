@@ -187,6 +187,13 @@ endif()
 
 if(NOT ANDROID)
 enable_testing()
+
+add_executable(bot-benchmark
+    src/tools/bot_benchmark.cpp
+)
+target_include_directories(bot-benchmark PRIVATE src)
+target_link_libraries(bot-benchmark PRIVATE Qt6::Core nenoserpent_core nenoserpent_adapter)
+
 add_executable(engine-adapter-tests
     tests/test_engine_adapter.cpp
 )
@@ -434,6 +441,14 @@ target_include_directories(adapter-bot-runtime-tests PRIVATE src)
 target_link_libraries(adapter-bot-runtime-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
 add_test(NAME AdapterBotRuntimeTest COMMAND adapter-bot-runtime-tests)
 set_tests_properties(AdapterBotRuntimeTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(adapter-bot-config-tests
+    tests/test_bot_config_adapter.cpp
+)
+target_include_directories(adapter-bot-config-tests PRIVATE src)
+target_link_libraries(adapter-bot-config-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
+add_test(NAME AdapterBotConfigTest COMMAND adapter-bot-config-tests)
+set_tests_properties(AdapterBotConfigTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endif()
 
 nenoserpent_apply_project_options(
@@ -465,6 +480,8 @@ nenoserpent_apply_project_options(
     adapter-choice-models-tests
     adapter-bot-tests
     adapter-bot-runtime-tests
+    adapter-bot-config-tests
+    bot-benchmark
 )
 
 if(UNIX AND NOT APPLE AND NOT ANDROID)

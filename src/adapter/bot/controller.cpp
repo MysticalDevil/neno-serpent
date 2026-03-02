@@ -101,6 +101,74 @@ auto countSafeNeighbors(const QPoint& from,
   return safe;
 }
 
+struct MovePreview {
+  bool valid = false;
+  QPoint wrappedHead{0, 0};
+  std::deque<QPoint> nextBody;
+};
+
+auto previewMove(const Snapshot& snapshot,
+                 const QPoint& head,
+                 const QPoint& direction,
+                 const std::deque<QPoint>& body,
+                 const QPoint& candidate) -> MovePreview {
+  MovePreview preview{};
+  if (isReverseDirection(candidate, direction)) {
+    return preview;
+  }
+
+  const QPoint nextHead = head + candidate;
+  preview.wrappedHead =
+    nenoserpent::core::wrapPoint(nextHead, snapshot.boardWidth, snapshot.boardHeight);
+  std::deque<QPoint> collisionBody = body;
+  const bool wouldEatFood = preview.wrappedHead == snapshot.food;
+  if (!wouldEatFood && !collisionBody.empty()) {
+    collisionBody.pop_back();
+  }
+  const auto collision = nenoserpent::core::collisionOutcomeForHead(nextHead,
+                                                                    snapshot.boardWidth,
+                                                                    snapshot.boardHeight,
+                                                                    snapshot.obstacles,
+                                                                    collisionBody,
+                                                                    snapshot.ghostActive,
+                                                                    snapshot.portalActive,
+                                                                    snapshot.laserActive,
+                                                                    snapshot.shieldActive);
+  if (collision.collision) {
+    return preview;
+  }
+
+  preview.nextBody = std::move(collisionBody);
+  preview.nextBody.push_front(preview.wrappedHead);
+  preview.valid = true;
+  return preview;
+}
+
+auto countSafeContinuations(const Snapshot& snapshot,
+                            const QPoint& head,
+                            const QPoint& direction,
+                            const std::deque<QPoint>& body,
+                            const int depth) -> int {
+  if (depth <= 0) {
+    return 0;
+  }
+
+  int best = 0;
+  for (const QPoint& candidate : kDirections) {
+    const auto preview = previewMove(snapshot, head, direction, body, candidate);
+    if (!preview.valid) {
+      continue;
+    }
+    const int continuation =
+      1 +
+      countSafeContinuations(snapshot, preview.wrappedHead, candidate, preview.nextBody, depth - 1);
+    if (continuation > best) {
+      best = continuation;
+    }
+  }
+  return best;
+}
+
 } // namespace
 
 auto pickDirection(const Snapshot& snapshot, const StrategyConfig& config)
@@ -116,35 +184,17 @@ auto pickDirection(const Snapshot& snapshot, const StrategyConfig& config)
   const int priority = powerPriority(config, snapshot.powerUpType);
 
   for (const QPoint& candidate : kDirections) {
-    if (isReverseDirection(candidate, snapshot.direction)) {
+    const auto preview =
+      previewMove(snapshot, snapshot.head, snapshot.direction, snapshot.body, candidate);
+    if (!preview.valid) {
       continue;
     }
 
-    const QPoint nextHead = snapshot.head + candidate;
-    const QPoint wrappedHead =
-      nenoserpent::core::wrapPoint(nextHead, snapshot.boardWidth, snapshot.boardHeight);
-
-    std::deque<QPoint> collisionBody = snapshot.body;
+    const QPoint wrappedHead = preview.wrappedHead;
     const bool wouldEatFood = wrappedHead == snapshot.food;
     const bool wouldEatPower = hasPowerUp && wrappedHead == snapshot.powerUpPos;
-    if (!wouldEatFood && !collisionBody.empty()) {
-      collisionBody.pop_back();
-    }
 
-    const auto collision = nenoserpent::core::collisionOutcomeForHead(nextHead,
-                                                                      snapshot.boardWidth,
-                                                                      snapshot.boardHeight,
-                                                                      snapshot.obstacles,
-                                                                      collisionBody,
-                                                                      snapshot.ghostActive,
-                                                                      snapshot.portalActive,
-                                                                      snapshot.laserActive,
-                                                                      snapshot.shieldActive);
-    if (collision.collision) {
-      continue;
-    }
-
-    auto blocked = buildBlockedMap(snapshot, collisionBody);
+    auto blocked = buildBlockedMap(snapshot, preview.nextBody);
     const std::size_t headIndex =
       static_cast<std::size_t>(boardIndex(wrappedHead, snapshot.boardWidth));
     blocked[headIndex] = false;
@@ -169,10 +219,13 @@ auto pickDirection(const Snapshot& snapshot, const StrategyConfig& config)
     const int consumeBonus =
       (wouldEatFood ? config.foodConsumeBonus : 0) + (wouldEatPower ? priority : 0);
     const int trapPenalty = safeNeighbors <= 1 ? config.trapPenalty : 0;
+    const int lookahead = countSafeContinuations(
+      snapshot, wrappedHead, candidate, preview.nextBody, config.lookaheadDepth);
 
     const int score = (openSpace * config.openSpaceWeight) +
                       (safeNeighbors * config.safeNeighborWeight) + straightBonus + consumeBonus -
-                      (distanceToTarget * config.targetDistanceWeight) - trapPenalty;
+                      (distanceToTarget * config.targetDistanceWeight) - trapPenalty +
+                      (lookahead * config.lookaheadWeight);
     if (score > bestScore) {
       bestScore = score;
       bestDirection = candidate;

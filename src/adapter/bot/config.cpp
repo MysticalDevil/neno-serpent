@@ -1,10 +1,16 @@
 #include "adapter/bot/config.h"
 
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
+
 #include "power_up_id.h"
 
 namespace nenoserpent::adapter::bot {
 
 namespace {
+
 auto buildDefaultPowerPriority() -> QHash<int, int> {
   return {
     {PowerUpId::Shield, 30},
@@ -18,6 +24,62 @@ auto buildDefaultPowerPriority() -> QHash<int, int> {
     {PowerUpId::Mini, 5},
   };
 }
+
+auto intOrDefault(const QJsonObject& object, const QString& key, const int fallback) -> int {
+  const auto value = object.value(key);
+  return value.isDouble() ? value.toInt() : fallback;
+}
+
+void applyOverrides(StrategyConfig& config, const QJsonObject& object) {
+  config.openSpaceWeight =
+    intOrDefault(object, QStringLiteral("openSpaceWeight"), config.openSpaceWeight);
+  config.safeNeighborWeight =
+    intOrDefault(object, QStringLiteral("safeNeighborWeight"), config.safeNeighborWeight);
+  config.targetDistanceWeight =
+    intOrDefault(object, QStringLiteral("targetDistanceWeight"), config.targetDistanceWeight);
+  config.straightBonus =
+    intOrDefault(object, QStringLiteral("straightBonus"), config.straightBonus);
+  config.foodConsumeBonus =
+    intOrDefault(object, QStringLiteral("foodConsumeBonus"), config.foodConsumeBonus);
+  config.trapPenalty = intOrDefault(object, QStringLiteral("trapPenalty"), config.trapPenalty);
+  config.lookaheadDepth =
+    intOrDefault(object, QStringLiteral("lookaheadDepth"), config.lookaheadDepth);
+  config.lookaheadWeight =
+    intOrDefault(object, QStringLiteral("lookaheadWeight"), config.lookaheadWeight);
+  config.powerTargetPriorityThreshold = intOrDefault(
+    object, QStringLiteral("powerTargetPriorityThreshold"), config.powerTargetPriorityThreshold);
+  config.powerTargetDistanceSlack = intOrDefault(
+    object, QStringLiteral("powerTargetDistanceSlack"), config.powerTargetDistanceSlack);
+  config.choiceCooldownTicks =
+    intOrDefault(object, QStringLiteral("choiceCooldownTicks"), config.choiceCooldownTicks);
+  config.stateActionCooldownTicks = intOrDefault(
+    object, QStringLiteral("stateActionCooldownTicks"), config.stateActionCooldownTicks);
+
+  const auto powerPriorityValue = object.value(QStringLiteral("powerPriorityByType"));
+  if (!powerPriorityValue.isObject()) {
+    return;
+  }
+  const auto priorityObject = powerPriorityValue.toObject();
+  for (auto it = priorityObject.begin(); it != priorityObject.end(); ++it) {
+    bool ok = false;
+    const int type = it.key().toInt(&ok);
+    if (!ok || !it.value().isDouble()) {
+      continue;
+    }
+    config.powerPriorityByType.insert(type, it.value().toInt());
+  }
+}
+
+auto loadJsonBytes(const QString& filePath, QByteArray& outBytes, QString& outError) -> bool {
+  QFile file(filePath);
+  if (!file.open(QIODevice::ReadOnly)) {
+    outError = QStringLiteral("open failed: %1").arg(filePath);
+    return false;
+  }
+  outBytes = file.readAll();
+  return true;
+}
+
 } // namespace
 
 auto defaultStrategyConfig() -> const StrategyConfig& {
@@ -28,6 +90,8 @@ auto defaultStrategyConfig() -> const StrategyConfig& {
     .straightBonus = 4,
     .foodConsumeBonus = 10,
     .trapPenalty = 40,
+    .lookaheadDepth = 2,
+    .lookaheadWeight = 10,
     .powerTargetPriorityThreshold = 14,
     .powerTargetDistanceSlack = 2,
     .choiceCooldownTicks = 2,
@@ -39,6 +103,94 @@ auto defaultStrategyConfig() -> const StrategyConfig& {
 
 auto powerPriority(const StrategyConfig& config, const int type) -> int {
   return config.powerPriorityByType.value(type, 0);
+}
+
+auto currentBuildProfileName() -> QString {
+#if defined(NENOSERPENT_BUILD_DEBUG)
+  return QStringLiteral("debug");
+#elif defined(NENOSERPENT_BUILD_DEV)
+  return QStringLiteral("dev");
+#else
+  return QStringLiteral("release");
+#endif
+}
+
+auto loadStrategyConfigFromJson(const QByteArray& json,
+                                const QString& profile,
+                                const QString& source) -> StrategyLoadResult {
+  StrategyLoadResult result{
+    .config = defaultStrategyConfig(),
+    .loaded = false,
+    .profile = profile,
+    .source = source,
+    .error = {},
+  };
+
+  QJsonParseError parseError{};
+  const auto document = QJsonDocument::fromJson(json, &parseError);
+  if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+    result.error = QStringLiteral("invalid json: %1").arg(parseError.errorString());
+    return result;
+  }
+
+  const auto root = document.object();
+  const auto profilesValue = root.value(QStringLiteral("profiles"));
+  if (!profilesValue.isObject()) {
+    result.error = QStringLiteral("missing object key: profiles");
+    return result;
+  }
+
+  const auto profiles = profilesValue.toObject();
+  const auto defaultProfile = profiles.value(QStringLiteral("default"));
+  if (defaultProfile.isObject()) {
+    applyOverrides(result.config, defaultProfile.toObject());
+  }
+
+  const auto selected = profiles.value(profile);
+  if (!selected.isObject()) {
+    result.error = QStringLiteral("missing profile: %1").arg(profile);
+    return result;
+  }
+  applyOverrides(result.config, selected.toObject());
+  result.loaded = true;
+  return result;
+}
+
+auto loadStrategyConfig(const QString& profile,
+                        const QString& overrideFilePath,
+                        const QString& resourcePath) -> StrategyLoadResult {
+  if (!overrideFilePath.trimmed().isEmpty()) {
+    QByteArray jsonBytes;
+    QString error;
+    if (loadJsonBytes(overrideFilePath.trimmed(), jsonBytes, error)) {
+      auto result = loadStrategyConfigFromJson(jsonBytes, profile, overrideFilePath.trimmed());
+      if (result.loaded) {
+        return result;
+      }
+      result.error = QStringLiteral("%1 (override)").arg(result.error);
+      return result;
+    }
+    return {
+      .config = defaultStrategyConfig(),
+      .loaded = false,
+      .profile = profile,
+      .source = overrideFilePath.trimmed(),
+      .error = error,
+    };
+  }
+
+  QByteArray jsonBytes;
+  QString error;
+  if (!loadJsonBytes(resourcePath, jsonBytes, error)) {
+    return {
+      .config = defaultStrategyConfig(),
+      .loaded = false,
+      .profile = profile,
+      .source = resourcePath,
+      .error = error,
+    };
+  }
+  return loadStrategyConfigFromJson(jsonBytes, profile, resourcePath);
 }
 
 } // namespace nenoserpent::adapter::bot

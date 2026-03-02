@@ -1,0 +1,45 @@
+{
+  "profiles": {
+    "default": {
+      "openSpaceWeight": 3,
+      "safeNeighborWeight": 12,
+      "targetDistanceWeight": 8,
+      "straightBonus": 4,
+      "foodConsumeBonus": 10,
+      "trapPenalty": 40,
+      "lookaheadDepth": 2,
+      "lookaheadWeight": 10,
+      "powerTargetPriorityThreshold": 14,
+      "powerTargetDistanceSlack": 2,
+      "choiceCooldownTicks": 2,
+      "stateActionCooldownTicks": 4,
+      "powerPriorityByType": {
+        "1": 9,
+        "2": 11,
+        "3": 20,
+        "4": 30,
+        "5": 18,
+        "6": 16,
+        "7": 14,
+        "8": 25,
+        "9": 5
+      }
+    },
+    "debug": {
+      "safeNeighborWeight": 14,
+      "targetDistanceWeight": 7,
+      "foodConsumeBonus": 12,
+      "lookaheadWeight": 12,
+      "choiceCooldownTicks": 1
+    },
+    "dev": {
+      "safeNeighborWeight": 13,
+      "targetDistanceWeight": 8
+    },
+    "release": {
+      "safeNeighborWeight": 12,
+      "targetDistanceWeight": 9,
+      "trapPenalty": 44
+    }
+  }
+}

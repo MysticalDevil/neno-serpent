@@ -98,6 +98,12 @@ qt_add_resources(nenoserpent_adapter "audio_score_res"
         "audio/score_catalog.json"
 )
 
+qt_add_resources(nenoserpent_adapter "bot_strategy_res"
+    PREFIX "/"
+    FILES
+        "adapter/bot/strategy_profiles.json"
+)
+
 qt_add_executable(NenoSerpent
     MANUAL_FINALIZATION
     main.cpp

@@ -53,6 +53,18 @@ EngineAdapter::EngineAdapter(QObject* parent)
       m_inputQueue(m_sessionCore.inputQueue()),
       m_fsmState(nullptr) {
   m_timer->setTimerType(Qt::PreciseTimer);
+  const QString botStrategyOverride = qEnvironmentVariable("NENOSERPENT_BOT_STRATEGY_FILE");
+  const auto strategyLoad = nenoserpent::adapter::bot::loadStrategyConfig(
+    nenoserpent::adapter::bot::currentBuildProfileName(), botStrategyOverride);
+  m_botStrategyConfig = strategyLoad.config;
+  if (strategyLoad.loaded) {
+    qCInfo(nenoserpentInputLog).noquote()
+      << "bot strategy loaded profile=" << strategyLoad.profile << "source=" << strategyLoad.source;
+  } else {
+    qCWarning(nenoserpentInputLog).noquote()
+      << "bot strategy fallback to defaults profile=" << strategyLoad.profile
+      << "source=" << strategyLoad.source << "reason=" << strategyLoad.error;
+  }
 
   m_audioBus.setCallbacks({
     .startMusic = [this](const nenoserpent::audio::ScoreTrackId trackId) -> void {

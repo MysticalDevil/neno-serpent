@@ -8,6 +8,7 @@ usage() {
 Usage:
   ./scripts/dev.sh clang-tidy <build-dir> [files...]
   ./scripts/dev.sh android-icons
+  ./scripts/dev.sh bot-benchmark [--games N --max-ticks M ...]
 EOF
 }
 
@@ -24,6 +25,9 @@ case "${subcommand}" in
     ;;
   android-icons)
     exec "${ROOT_DIR}/dev/android_icons.sh" "$@"
+    ;;
+  bot-benchmark)
+    exec "${ROOT_DIR}/dev/bot_benchmark.sh" "$@"
     ;;
   *)
     usage

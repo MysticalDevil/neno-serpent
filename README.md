@@ -96,6 +96,9 @@ CMAKE_BUILD_TYPE=Release ./scripts/deploy.sh android
 
 # Generate Android launcher mipmaps + Play Store 512x512 icon
 ./scripts/dev.sh android-icons
+
+# Run bot benchmark (builds bot-benchmark target and executes it)
+./scripts/dev.sh bot-benchmark --games 300 --max-ticks 5000 --profile dev
 ```
 
 ### Build and Deploy (WebAssembly)
@@ -145,13 +148,16 @@ docker compose --profile cd run --rm gh-cd-android-preflight
   - In pause/game over/replay/library/medal: back to menu
 - **Y / C / Tap Logo**: Cycle Console Shell Colors
 - **M**: Toggle Music
+- **F8**: Toggle Rule Bot Autoplay
 - **Back / Esc**: Quit App
 
 ## Input Architecture Notes
 - Logging system plan: `docs/LOGGING_SYSTEM_PLAN.md`
 - Audio authoring guide: `docs/AUDIO_AUTHORING.md`
 - Level authoring guide: `docs/LEVEL_AUTHORING.md`
+- Bot rules and tuning: `docs/BOT_RULES.md`
 - Runtime automation injection: set `NENOSERPENT_INPUT_FILE=/tmp/nenoserpent-input.queue` (recommended) or `NENOSERPENT_INPUT_PIPE=/tmp/nenoserpent-input.pipe`, then send tokens with `./scripts/input.sh inject ...`
+- Rule bot strategy override: set `NENOSERPENT_BOT_STRATEGY_FILE=/abs/path/strategy_profiles.json` to override built-in strategy profiles.
 
 ## License
 Licensed under the [GNU GPL v3](LICENSE).

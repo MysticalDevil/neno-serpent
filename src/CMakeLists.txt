@@ -46,6 +46,8 @@ add_library(nenoserpent_adapter
     adapter/view_models/selection.cpp
     adapter/bot/controller.h
     adapter/bot/controller.cpp
+    adapter/bot/config.h
+    adapter/bot/config.cpp
     adapter/bot/runtime.h
     adapter/bot/runtime.cpp
     adapter/input/router.cpp

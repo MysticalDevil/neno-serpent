@@ -67,6 +67,7 @@ auto EngineAdapter::driveBotAutoplay() -> bool {
       },
     .choices = m_choices,
     .currentChoiceIndex = m_choiceIndex,
+    .strategy = &m_botStrategyConfig,
   });
   m_botActionCooldownTicks = decision.nextCooldownTicks;
 

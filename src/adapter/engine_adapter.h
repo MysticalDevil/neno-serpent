@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QVariantList>
 
+#include "adapter/bot/config.h"
 #include "adapter/haptics/controller.h"
 #include "adapter/ui/action.h"
 #include "app_state.h"
@@ -415,6 +416,8 @@ private:
   int m_bgmVariant = 0;
   bool m_botAutoplayEnabled = false;
   int m_botActionCooldownTicks = 0;
+  nenoserpent::adapter::bot::StrategyConfig m_botStrategyConfig =
+    nenoserpent::adapter::bot::defaultStrategyConfig();
   bool m_stateCallbackInProgress = false;
   std::optional<int> m_pendingStateChange;
 

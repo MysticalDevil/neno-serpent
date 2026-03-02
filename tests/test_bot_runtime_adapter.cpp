@@ -9,6 +9,7 @@ private slots:
   void startMenuTriggersStartWhenEnabled();
   void choiceSelectionPicksChoiceAndConfirms();
   void cooldownDelaysNonPlayingActions();
+  void usesCustomCooldownFromStrategy();
 };
 
 void BotRuntimeAdapterTest::startMenuTriggersStartWhenEnabled() {
@@ -55,6 +56,27 @@ void BotRuntimeAdapterTest::cooldownDelaysNonPlayingActions() {
   QVERIFY(!result.triggerStart);
   QVERIFY(!result.consumeTick);
   QCOMPARE(result.nextCooldownTicks, 1);
+}
+
+void BotRuntimeAdapterTest::usesCustomCooldownFromStrategy() {
+  auto strategy = nenoserpent::adapter::bot::defaultStrategyConfig();
+  strategy.choiceCooldownTicks = 9;
+  strategy.stateActionCooldownTicks = 7;
+
+  nenoserpent::adapter::bot::RuntimeInput startInput{};
+  startInput.enabled = true;
+  startInput.state = AppState::StartMenu;
+  startInput.strategy = &strategy;
+  const auto startResult = nenoserpent::adapter::bot::step(startInput);
+  QCOMPARE(startResult.nextCooldownTicks, 7);
+
+  nenoserpent::adapter::bot::RuntimeInput choiceInput{};
+  choiceInput.enabled = true;
+  choiceInput.state = AppState::ChoiceSelection;
+  choiceInput.strategy = &strategy;
+  choiceInput.choices = {QVariantMap{{"type", 4}}};
+  const auto choiceResult = nenoserpent::adapter::bot::step(choiceInput);
+  QCOMPARE(choiceResult.nextCooldownTicks, 9);
 }
 
 QTEST_MAIN(BotRuntimeAdapterTest)

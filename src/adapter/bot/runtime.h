@@ -4,6 +4,7 @@
 
 #include <QVariantList>
 
+#include "adapter/bot/config.h"
 #include "adapter/bot/controller.h"
 #include "app_state.h"
 
@@ -16,6 +17,7 @@ struct RuntimeInput {
   Snapshot snapshot;
   QVariantList choices;
   int currentChoiceIndex = 0;
+  const StrategyConfig* strategy = nullptr;
 };
 
 struct RuntimeOutput {

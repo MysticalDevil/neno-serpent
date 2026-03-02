@@ -3,6 +3,8 @@
 namespace nenoserpent::adapter::bot {
 
 auto step(const RuntimeInput& input) -> RuntimeOutput {
+  const StrategyConfig& strategy =
+    (input.strategy != nullptr) ? *input.strategy : defaultStrategyConfig();
   RuntimeOutput output{};
   output.nextCooldownTicks = input.cooldownTicks;
   if (!input.enabled) {
@@ -15,7 +17,7 @@ auto step(const RuntimeInput& input) -> RuntimeOutput {
   }
 
   if (input.state == AppState::Playing) {
-    output.enqueueDirection = pickDirection(input.snapshot);
+    output.enqueueDirection = pickDirection(input.snapshot, strategy);
     return output;
   }
 
@@ -24,14 +26,14 @@ auto step(const RuntimeInput& input) -> RuntimeOutput {
   }
 
   if (input.state == AppState::ChoiceSelection) {
-    const int bestIndex = pickChoiceIndex(input.choices);
+    const int bestIndex = pickChoiceIndex(input.choices, strategy);
     if (bestIndex < 0) {
       return output;
     }
     output.setChoiceIndex = bestIndex;
     output.triggerStart = true;
     output.consumeTick = true;
-    output.nextCooldownTicks = 2;
+    output.nextCooldownTicks = strategy.choiceCooldownTicks;
     return output;
   }
 
@@ -39,7 +41,7 @@ auto step(const RuntimeInput& input) -> RuntimeOutput {
       input.state == AppState::GameOver || input.state == AppState::Replaying) {
     output.triggerStart = true;
     output.consumeTick = true;
-    output.nextCooldownTicks = 4;
+    output.nextCooldownTicks = strategy.stateActionCooldownTicks;
     return output;
   }
 

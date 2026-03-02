@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "core/game/rules.h"
-#include "power_up_id.h"
 
 namespace nenoserpent::adapter::bot {
 
@@ -28,31 +27,6 @@ auto toroidalDistance(const QPoint& from, const QPoint& to, const int width, con
   const int dx = std::abs(from.x() - to.x());
   const int dy = std::abs(from.y() - to.y());
   return std::min(dx, width - dx) + std::min(dy, height - dy);
-}
-
-auto powerUpPriority(const int type) -> int {
-  switch (type) {
-  case PowerUpId::Shield:
-    return 30;
-  case PowerUpId::Laser:
-    return 25;
-  case PowerUpId::Magnet:
-    return 20;
-  case PowerUpId::Portal:
-    return 18;
-  case PowerUpId::Double:
-    return 16;
-  case PowerUpId::Rich:
-    return 14;
-  case PowerUpId::Slow:
-    return 11;
-  case PowerUpId::Ghost:
-    return 9;
-  case PowerUpId::Mini:
-    return 5;
-  default:
-    return 0;
-  }
 }
 
 auto boardIndex(const QPoint& p, const int width) -> int {
@@ -129,7 +103,8 @@ auto countSafeNeighbors(const QPoint& from,
 
 } // namespace
 
-auto pickDirection(const Snapshot& snapshot) -> std::optional<QPoint> {
+auto pickDirection(const Snapshot& snapshot, const StrategyConfig& config)
+  -> std::optional<QPoint> {
   if (snapshot.body.empty() || snapshot.boardWidth <= 0 || snapshot.boardHeight <= 0) {
     return std::nullopt;
   }
@@ -138,7 +113,7 @@ auto pickDirection(const Snapshot& snapshot) -> std::optional<QPoint> {
   std::optional<QPoint> bestDirection;
 
   const bool hasPowerUp = snapshot.powerUpPos.x() >= 0 && snapshot.powerUpPos.y() >= 0;
-  const int powerPriority = powerUpPriority(snapshot.powerUpType);
+  const int priority = powerPriority(config, snapshot.powerUpType);
 
   for (const QPoint& candidate : kDirections) {
     if (isReverseDirection(candidate, snapshot.direction)) {
@@ -178,24 +153,26 @@ auto pickDirection(const Snapshot& snapshot) -> std::optional<QPoint> {
     const int safeNeighbors = countSafeNeighbors(wrappedHead, snapshot, blocked);
 
     QPoint target = snapshot.food;
-    if (hasPowerUp && powerPriority >= 14) {
+    if (hasPowerUp && priority >= config.powerTargetPriorityThreshold) {
       const int foodDistance =
         toroidalDistance(wrappedHead, snapshot.food, snapshot.boardWidth, snapshot.boardHeight);
       const int powerDistance = toroidalDistance(
         wrappedHead, snapshot.powerUpPos, snapshot.boardWidth, snapshot.boardHeight);
-      if (powerDistance <= foodDistance + 2) {
+      if (powerDistance <= foodDistance + config.powerTargetDistanceSlack) {
         target = snapshot.powerUpPos;
       }
     }
 
     const int distanceToTarget =
       toroidalDistance(wrappedHead, target, snapshot.boardWidth, snapshot.boardHeight);
-    const int straightBonus = (candidate == snapshot.direction) ? 4 : 0;
-    const int consumeBonus = (wouldEatFood ? 10 : 0) + (wouldEatPower ? powerPriority : 0);
-    const int trapPenalty = safeNeighbors <= 1 ? 40 : 0;
+    const int straightBonus = (candidate == snapshot.direction) ? config.straightBonus : 0;
+    const int consumeBonus =
+      (wouldEatFood ? config.foodConsumeBonus : 0) + (wouldEatPower ? priority : 0);
+    const int trapPenalty = safeNeighbors <= 1 ? config.trapPenalty : 0;
 
-    const int score = (openSpace * 3) + (safeNeighbors * 12) + straightBonus + consumeBonus -
-                      (distanceToTarget * 8) - trapPenalty;
+    const int score = (openSpace * config.openSpaceWeight) +
+                      (safeNeighbors * config.safeNeighborWeight) + straightBonus + consumeBonus -
+                      (distanceToTarget * config.targetDistanceWeight) - trapPenalty;
     if (score > bestScore) {
       bestScore = score;
       bestDirection = candidate;
@@ -205,7 +182,7 @@ auto pickDirection(const Snapshot& snapshot) -> std::optional<QPoint> {
   return bestDirection;
 }
 
-auto pickChoiceIndex(const QVariantList& choices) -> int {
+auto pickChoiceIndex(const QVariantList& choices, const StrategyConfig& config) -> int {
   int bestIndex = -1;
   int bestPriority = std::numeric_limits<int>::min();
 
@@ -215,7 +192,7 @@ auto pickChoiceIndex(const QVariantList& choices) -> int {
       continue;
     }
     const int type = item.value(QStringLiteral("type")).toInt();
-    const int priority = powerUpPriority(type);
+    const int priority = powerPriority(config, type);
     if (priority > bestPriority) {
       bestPriority = priority;
       bestIndex = i;

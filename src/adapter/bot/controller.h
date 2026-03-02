@@ -7,6 +7,8 @@
 #include <QPoint>
 #include <QVariantList>
 
+#include "adapter/bot/config.h"
+
 namespace nenoserpent::adapter::bot {
 
 struct Snapshot {
@@ -25,7 +27,10 @@ struct Snapshot {
   std::deque<QPoint> body;
 };
 
-[[nodiscard]] auto pickDirection(const Snapshot& snapshot) -> std::optional<QPoint>;
-[[nodiscard]] auto pickChoiceIndex(const QVariantList& choices) -> int;
+[[nodiscard]] auto pickDirection(const Snapshot& snapshot,
+                                 const StrategyConfig& config = defaultStrategyConfig())
+  -> std::optional<QPoint>;
+[[nodiscard]] auto pickChoiceIndex(const QVariantList& choices,
+                                   const StrategyConfig& config = defaultStrategyConfig()) -> int;
 
 } // namespace nenoserpent::adapter::bot

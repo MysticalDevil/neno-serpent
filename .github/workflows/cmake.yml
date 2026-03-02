@@ -28,6 +28,7 @@ jobs:
           libasound2-dev \
           libpulse-dev \
           libsensors-dev \
+          ripgrep \
           xvfb \
           libxcb-cursor0 \
           libxcb-xinerama0 \
@@ -60,3 +61,16 @@ jobs:
       run: |
         export QT_QPA_PLATFORM=offscreen
         xvfb-run -a ctest --preset debug --output-on-failure
+
+    - name: Build Bot Benchmark
+      run: cmake --build --preset debug --target bot-benchmark
+
+    - name: Bot Benchmark Gate
+      run: |
+        BOT_BENCH_PROFILE=debug \
+        BOT_BENCH_MODE=balanced \
+        BOT_BENCH_GAMES=120 \
+        BOT_BENCH_MAX_TICKS=3000 \
+        BOT_BENCH_MIN_AVG=70 \
+        BOT_BENCH_MIN_P95=120 \
+        ./scripts/ci/bot_benchmark_gate.sh build/debug

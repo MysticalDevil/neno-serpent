@@ -38,6 +38,26 @@ void UiCommandController::cycleBgm() const {
   }
 }
 
+void UiCommandController::cycleBotMode() const {
+  if (m_engineAdapter != nullptr) {
+    m_engineAdapter->cycleBotMode();
+  }
+}
+
+auto UiCommandController::setBotParam(const QString& key, const int value) const -> bool {
+  if (m_engineAdapter != nullptr) {
+    return m_engineAdapter->setBotParam(key, value);
+  }
+  return false;
+}
+
+auto UiCommandController::botStatus() const -> QVariantMap {
+  if (m_engineAdapter != nullptr) {
+    return m_engineAdapter->botStatus();
+  }
+  return {};
+}
+
 void UiCommandController::seedChoicePreview(const QVariantList& types) const {
   if (m_engineAdapter != nullptr) {
     m_engineAdapter->debugSeedChoicePreview(types);

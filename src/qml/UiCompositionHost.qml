@@ -44,6 +44,7 @@ Item {
             gameFont: host.gameFont
             elapsed: host.elapsed
             iconDebugMode: host.uiRuntimeState.iconDebugMode
+            botDebugPanelVisible: host.uiRuntimeState.botDebugPanelVisible
             staticDebugScene: host.uiRuntimeState.staticDebugScene
             staticDebugOptions: host.uiRuntimeState.staticDebugOptions
         }

@@ -192,6 +192,10 @@ auto main(int argc, char* argv[]) -> int {
                                    QStringLiteral("Bot strategy profile (debug/dev/release)."),
                                    QStringLiteral("name"),
                                    nenoserpent::adapter::bot::currentBuildProfileName());
+  QCommandLineOption modeOption(QStringList{QStringLiteral("mode")},
+                                QStringLiteral("Bot mode (safe/balanced/aggressive)."),
+                                QStringLiteral("name"),
+                                QStringLiteral("balanced"));
   QCommandLineOption strategyFileOption(
     QStringList{QStringLiteral("strategy-file")},
     QStringLiteral("Optional strategy JSON file path override."),
@@ -202,6 +206,7 @@ auto main(int argc, char* argv[]) -> int {
   parser.addOption(seedOption);
   parser.addOption(levelOption);
   parser.addOption(profileOption);
+  parser.addOption(modeOption);
   parser.addOption(strategyFileOption);
   parser.process(app);
 
@@ -210,6 +215,7 @@ auto main(int argc, char* argv[]) -> int {
   const uint32_t seedBase = static_cast<uint32_t>(parser.value(seedOption).toUInt());
   const int levelIndex = std::max(0, parser.value(levelOption).toInt());
   const QString profile = parser.value(profileOption).trimmed().toLower();
+  const QString mode = parser.value(modeOption).trimmed().toLower();
   const QString strategyFile = parser.value(strategyFileOption).trimmed();
 
   const auto strategyLoad = nenoserpent::adapter::bot::loadStrategyConfig(profile, strategyFile);
@@ -220,15 +226,27 @@ auto main(int argc, char* argv[]) -> int {
               << " reason=" << strategyLoad.error.toStdString() << '\n';
   }
 
+  auto strategy = strategyLoad.config;
+  if (mode == QStringLiteral("safe")) {
+    nenoserpent::adapter::bot::applyModeDefaults(strategy,
+                                                 nenoserpent::adapter::bot::BotMode::Safe);
+  } else if (mode == QStringLiteral("aggressive")) {
+    nenoserpent::adapter::bot::applyModeDefaults(strategy,
+                                                 nenoserpent::adapter::bot::BotMode::Aggressive);
+  } else {
+    nenoserpent::adapter::bot::applyModeDefaults(strategy,
+                                                 nenoserpent::adapter::bot::BotMode::Balanced);
+  }
+
   nenoserpent::services::LevelRepository levels;
   QList<QPoint> obstacles;
   if (const auto level = levels.loadResolvedLevel(levelIndex); level.has_value()) {
     obstacles = level->walls;
   }
 
-  const auto stats = runBenchmark(games, maxTicks, seedBase, obstacles, strategyLoad.config);
+  const auto stats = runBenchmark(games, maxTicks, seedBase, obstacles, strategy);
   std::cout << "[bot-benchmark] games=" << stats.games << " level=" << levelIndex
-            << " profile=" << profile.toStdString() << '\n';
+            << " profile=" << profile.toStdString() << " mode=" << mode.toStdString() << '\n';
   std::cout << "[bot-benchmark] score.max=" << stats.maxScore << " score.avg=" << stats.avgScore
             << " score.median=" << stats.medianScore << " score.p95=" << stats.p95Score << '\n';
   std::cout << "[bot-benchmark] outcomes.gameOver=" << stats.gameOvers

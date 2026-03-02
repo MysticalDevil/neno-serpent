@@ -64,6 +64,8 @@ QtObject {
         COLOR: "ToggleShellColor",
         SHELL: "ToggleShellColor",
         MUSIC: "ToggleMusic"
+        BOTMODE: "ToggleBot",
+        BOTPANEL: "ToggleBotPanel"
     })
     readonly property var staticSceneOptionHandlers: ({
         BUFF: function(sceneName, options, value, helpers) {
@@ -349,6 +351,16 @@ QtObject {
         controller.setStaticScene(scenes[index], {})
     }
 
+    function toggleBotDebugPanel() {
+        if (!controller.stateOwner) {
+            return
+        }
+        controller.stateOwner.botDebugPanelVisible = !controller.stateOwner.botDebugPanelVisible
+        controller.showDebugOsd(controller.stateOwner.botDebugPanelVisible
+            ? "BOT PANEL ON"
+            : "BOT PANEL OFF")
+    }
+
     function exitIconLab() {
         if (controller.stateOwner) {
             controller.stateOwner.iconDebugMode = false
@@ -465,6 +477,37 @@ QtObject {
     }
 
     function routeDebugToken(token) {
+        if (token === "DBG_BOT_PANEL") {
+            controller.toggleBotDebugPanel()
+            return true
+        }
+        if (token === "DBG_BOT_MODE") {
+            controller.commandController.cycleBotMode()
+            return true
+        }
+        if (token.startsWith("DBG_BOT_PARAM:")) {
+            const payload = token.slice("DBG_BOT_PARAM:".length)
+            const parts = payload.split(",").map((part) => part.trim()).filter((part) => part.length > 0)
+            let applied = false
+            for (const part of parts) {
+                const separator = part.indexOf("=")
+                if (separator <= 0 || separator >= part.length - 1) {
+                    continue
+                }
+                const key = part.slice(0, separator).trim()
+                const value = Number(part.slice(separator + 1).trim())
+                if (!Number.isInteger(value)) {
+                    continue
+                }
+                if (controller.commandController.setBotParam(key, value)) {
+                    applied = true
+                }
+            }
+            if (!applied) {
+                controller.showDebugOsd("DBG BOT PARAM INVALID")
+            }
+            return true
+        }
         if (token.startsWith("DBG_CHOICE")) {
             let choiceTypes = []
             const separatorIndex = token.indexOf(":")

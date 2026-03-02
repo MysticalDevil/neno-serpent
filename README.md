@@ -148,7 +148,8 @@ docker compose --profile cd run --rm gh-cd-android-preflight
   - In pause/game over/replay/library/medal: back to menu
 - **Y / C / Tap Logo**: Cycle Console Shell Colors
 - **M**: Toggle Music
-- **F8**: Toggle Rule Bot Autoplay
+- **F8**: Cycle Rule Bot Mode (`off -> safe -> balanced -> aggressive -> off`)
+- **F9**: Toggle Bot Tuning Panel (debug UI)
 - **Back / Esc**: Quit App
 
 ## Input Architecture Notes

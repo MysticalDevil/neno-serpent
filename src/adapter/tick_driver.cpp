@@ -46,7 +46,7 @@ auto EngineAdapter::driveBotAutoplay() -> bool {
     return false;
   }
   const auto decision = nenoserpent::adapter::bot::step({
-    .enabled = m_botAutoplayEnabled,
+    .enabled = botAutoplayEnabled(),
     .cooldownTicks = m_botActionCooldownTicks,
     .state = m_state,
     .snapshot =

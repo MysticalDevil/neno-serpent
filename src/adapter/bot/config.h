@@ -6,6 +6,13 @@
 
 namespace nenoserpent::adapter::bot {
 
+enum class BotMode {
+  Off,
+  Safe,
+  Balanced,
+  Aggressive,
+};
+
 struct StrategyConfig {
   int openSpaceWeight = 3;
   int safeNeighborWeight = 12;
@@ -34,6 +41,9 @@ struct StrategyLoadResult {
 
 [[nodiscard]] auto defaultStrategyConfig() -> const StrategyConfig&;
 [[nodiscard]] auto powerPriority(const StrategyConfig& config, int type) -> int;
+[[nodiscard]] auto modeName(BotMode mode) -> QString;
+[[nodiscard]] auto nextMode(BotMode mode) -> BotMode;
+void applyModeDefaults(StrategyConfig& config, BotMode mode);
 [[nodiscard]] auto currentBuildProfileName() -> QString;
 [[nodiscard]] auto loadStrategyConfigFromJson(const QByteArray& json,
                                               const QString& profile,

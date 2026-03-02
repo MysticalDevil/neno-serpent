@@ -56,7 +56,9 @@ EngineAdapter::EngineAdapter(QObject* parent)
   const QString botStrategyOverride = qEnvironmentVariable("NENOSERPENT_BOT_STRATEGY_FILE");
   const auto strategyLoad = nenoserpent::adapter::bot::loadStrategyConfig(
     nenoserpent::adapter::bot::currentBuildProfileName(), botStrategyOverride);
-  m_botStrategyConfig = strategyLoad.config;
+  m_botBaseStrategyConfig = strategyLoad.config;
+  m_botStrategyConfig = m_botBaseStrategyConfig;
+  applyBotModeDefaults();
   if (strategyLoad.loaded) {
     qCInfo(nenoserpentInputLog).noquote()
       << "bot strategy loaded profile=" << strategyLoad.profile << "source=" << strategyLoad.source;

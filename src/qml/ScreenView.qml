@@ -20,6 +20,7 @@ Item {
     property string gameFont
     property real elapsed
     property bool iconDebugMode: false
+    property bool botDebugPanelVisible: false
     property string staticDebugScene: ""
     property var staticDebugOptions: ({})
     property int iconLabSelection: 0
@@ -418,6 +419,19 @@ Item {
                     ink: root.gameInk
                     topInset: screenSafeArea.y + (sessionRender.state === AppState.Replaying ? 30 : 2)
                     rightInset: root.width - screenSafeArea.x - screenSafeArea.width + 2
+                }
+
+                BotDebugPanel {
+                    id: botDebugPanel
+                    x: screenSafeArea.x + 4
+                    y: screenSafeArea.y + 4
+                    z: LayerScale.screenOverlay + 1
+                    visible: root.botDebugPanelVisible
+                    commandController: root.commandController
+                    bgColor: Qt.rgba(root.gamePanel.r, root.gamePanel.g, root.gamePanel.b, 0.86)
+                    borderColor: root.gameBorder
+                    textColor: root.gameInk
+                    gameFont: root.gameFont
                 }
             }
 

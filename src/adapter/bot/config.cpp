@@ -1,5 +1,7 @@
 #include "adapter/bot/config.h"
 
+#include <algorithm>
+
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -103,6 +105,56 @@ auto defaultStrategyConfig() -> const StrategyConfig& {
 
 auto powerPriority(const StrategyConfig& config, const int type) -> int {
   return config.powerPriorityByType.value(type, 0);
+}
+
+auto modeName(const BotMode mode) -> QString {
+  switch (mode) {
+  case BotMode::Off:
+    return QStringLiteral("off");
+  case BotMode::Safe:
+    return QStringLiteral("safe");
+  case BotMode::Balanced:
+    return QStringLiteral("balanced");
+  case BotMode::Aggressive:
+    return QStringLiteral("aggressive");
+  }
+  return QStringLiteral("off");
+}
+
+auto nextMode(const BotMode mode) -> BotMode {
+  switch (mode) {
+  case BotMode::Off:
+    return BotMode::Safe;
+  case BotMode::Safe:
+    return BotMode::Balanced;
+  case BotMode::Balanced:
+    return BotMode::Aggressive;
+  case BotMode::Aggressive:
+    return BotMode::Off;
+  }
+  return BotMode::Off;
+}
+
+void applyModeDefaults(StrategyConfig& config, const BotMode mode) {
+  switch (mode) {
+  case BotMode::Off:
+    break;
+  case BotMode::Safe:
+    config.safeNeighborWeight += 5;
+    config.trapPenalty += 10;
+    config.targetDistanceWeight = std::max(1, config.targetDistanceWeight - 2);
+    config.lookaheadDepth = std::max(2, config.lookaheadDepth);
+    break;
+  case BotMode::Balanced:
+    break;
+  case BotMode::Aggressive:
+    config.foodConsumeBonus += 8;
+    config.straightBonus += 3;
+    config.targetDistanceWeight += 2;
+    config.safeNeighborWeight = std::max(0, config.safeNeighborWeight - 4);
+    config.trapPenalty = std::max(0, config.trapPenalty - 8);
+    break;
+  }
 }
 
 auto currentBuildProfileName() -> QString {

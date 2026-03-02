@@ -414,6 +414,7 @@ private:
   bool m_musicEnabled = true;
   int m_bgmVariant = 0;
   bool m_botAutoplayEnabled = false;
+  int m_botActionCooldownTicks = 0;
   bool m_stateCallbackInProgress = false;
   std::optional<int> m_pendingStateChange;
 

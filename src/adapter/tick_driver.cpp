@@ -45,6 +45,9 @@ auto EngineAdapter::driveBotAutoplay() -> bool {
   if (!m_botAutoplayEnabled || !m_fsmState) {
     return false;
   }
+  if (m_botActionCooldownTicks > 0) {
+    --m_botActionCooldownTicks;
+  }
 
   if (m_state == AppState::Playing) {
     const auto direction = nenoserpent::adapter::bot::pickDirection({
@@ -69,21 +72,44 @@ auto EngineAdapter::driveBotAutoplay() -> bool {
     return false;
   }
 
-  if (m_state != AppState::ChoiceSelection) {
+  if (m_state == AppState::ChoiceSelection) {
+    if (m_botActionCooldownTicks > 0) {
+      return false;
+    }
+    const int bestIndex = nenoserpent::adapter::bot::pickChoiceIndex(m_choices);
+    if (bestIndex < 0) {
+      return false;
+    }
+
+    if (m_choiceIndex != bestIndex) {
+      m_choiceIndex = bestIndex;
+      emit choiceIndexChanged();
+    }
+
+    qCDebug(nenoserpentInputLog).noquote() << "bot pick choice index:" << bestIndex;
+    dispatchStateCallback([](GameState& state) -> void { state.handleStart(); });
+    m_botActionCooldownTicks = 2;
+    return true;
+  }
+
+  if (m_botActionCooldownTicks > 0) {
     return false;
   }
 
-  const int bestIndex = nenoserpent::adapter::bot::pickChoiceIndex(m_choices);
-  if (bestIndex < 0) {
-    return false;
+  if (m_state == AppState::Paused || m_state == AppState::GameOver) {
+    qCDebug(nenoserpentInputLog).noquote()
+      << "bot resume/restart from state:" << static_cast<int>(m_state);
+    dispatchStateCallback([](GameState& state) -> void { state.handleStart(); });
+    m_botActionCooldownTicks = 4;
+    return true;
   }
 
-  if (m_choiceIndex != bestIndex) {
-    m_choiceIndex = bestIndex;
-    emit choiceIndexChanged();
+  if (m_state == AppState::Replaying) {
+    qCDebug(nenoserpentInputLog).noquote() << "bot leaves replay to start menu";
+    dispatchStateCallback([](GameState& state) -> void { state.handleStart(); });
+    m_botActionCooldownTicks = 4;
+    return true;
   }
 
-  qCDebug(nenoserpentInputLog).noquote() << "bot pick choice index:" << bestIndex;
-  dispatchStateCallback([](GameState& state) -> void { state.handleStart(); });
-  return true;
+  return false;
 }

@@ -2,11 +2,14 @@
 #include <cstdint>
 #include <iostream>
 #include <numeric>
+#include <ranges>
 #include <vector>
 
 #include <QCommandLineOption>
 #include <QCommandLineParser>
 #include <QCoreApplication>
+#include <QFile>
+#include <QTextStream>
 #include <QVariantList>
 
 #include "adapter/bot/runtime.h"
@@ -57,11 +60,123 @@ struct BenchmarkStats {
   int p95Score = 0;
 };
 
+struct DatasetWriter final {
+  explicit DatasetWriter(const QString& path)
+      : file(path) {
+  }
+
+  QFile file;
+  QTextStream stream{&file};
+  bool enabled = false;
+  bool headerWritten = false;
+  int sampleCount = 0;
+  int maxSamples = 0;
+
+  auto open(const int maxRows) -> bool {
+    maxSamples = maxRows;
+    if (file.fileName().trimmed().isEmpty()) {
+      return false;
+    }
+    const bool appendMode = file.exists() && file.size() > 0;
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+      std::cerr << "[bot-benchmark] failed to open dataset file: " << file.fileName().toStdString()
+                << '\n';
+      return false;
+    }
+    enabled = true;
+    headerWritten = appendMode;
+    if (!headerWritten) {
+      writeHeader();
+    }
+    return true;
+  }
+
+  [[nodiscard]] auto shouldStop() const -> bool {
+    return enabled && maxSamples > 0 && sampleCount >= maxSamples;
+  }
+
+  static auto directionClass(const QPoint& direction) -> int {
+    if (direction == QPoint(0, -1)) {
+      return 0; // up
+    }
+    if (direction == QPoint(1, 0)) {
+      return 1; // right
+    }
+    if (direction == QPoint(0, 1)) {
+      return 2; // down
+    }
+    if (direction == QPoint(-1, 0)) {
+      return 3; // left
+    }
+    return -1;
+  }
+
+  auto writeSample(const nenoserpent::adapter::bot::Snapshot& snapshot,
+                   const int levelIndex,
+                   const int score,
+                   const QPoint& action) -> void {
+    if (!enabled || shouldStop()) {
+      return;
+    }
+    const int actionClass = directionClass(action);
+    if (actionClass < 0) {
+      return;
+    }
+    auto collides = [&snapshot](const QPoint& cell) -> int {
+      const bool outOfBounds = cell.x() < 0 || cell.y() < 0 || cell.x() >= snapshot.boardWidth ||
+                               cell.y() >= snapshot.boardHeight;
+      if (outOfBounds) {
+        return 1;
+      }
+      if (snapshot.obstacles.contains(cell) ||
+          std::ranges::find(snapshot.body, cell) != snapshot.body.end()) {
+        return 1;
+      }
+      return 0;
+    };
+
+    const QPoint up(0, -1);
+    const QPoint right(1, 0);
+    const QPoint down(0, 1);
+    const QPoint left(-1, 0);
+
+    stream << levelIndex << ',' << score << ',' << snapshot.body.size() << ',' << snapshot.head.x()
+           << ',' << snapshot.head.y() << ',' << snapshot.direction.x() << ','
+           << snapshot.direction.y() << ',' << (snapshot.food.x() - snapshot.head.x()) << ','
+           << (snapshot.food.y() - snapshot.head.y()) << ','
+           << (snapshot.powerUpPos.x() - snapshot.head.x()) << ','
+           << (snapshot.powerUpPos.y() - snapshot.head.y()) << ',' << snapshot.powerUpType << ','
+           << (snapshot.powerUpType > 0 ? 1 : 0) << ',' << (snapshot.ghostActive ? 1 : 0) << ','
+           << (snapshot.shieldActive ? 1 : 0) << ',' << (snapshot.portalActive ? 1 : 0) << ','
+           << (snapshot.laserActive ? 1 : 0) << ',' << collides(snapshot.head + up) << ','
+           << collides(snapshot.head + right) << ',' << collides(snapshot.head + down) << ','
+           << collides(snapshot.head + left) << ',' << actionClass << '\n';
+    sampleCount += 1;
+  }
+
+  auto close() -> void {
+    if (enabled) {
+      stream.flush();
+      file.close();
+    }
+  }
+
+private:
+  auto writeHeader() -> void {
+    stream << "level,score,body_len,head_x,head_y,dir_x,dir_y,food_dx,food_dy,power_dx,power_dy,"
+           << "power_type,power_active,ghost_active,shield_active,portal_active,laser_active,"
+           << "danger_up,danger_right,danger_down,danger_left,action\n";
+    headerWritten = true;
+  }
+};
+
 auto runBenchmark(const int games,
                   const int maxTicks,
                   const uint32_t seedBase,
                   const QList<QPoint>& obstacles,
-                  const nenoserpent::adapter::bot::StrategyConfig& strategy) -> BenchmarkStats {
+                  const nenoserpent::adapter::bot::StrategyConfig& strategy,
+                  const int levelIndex,
+                  DatasetWriter* datasetWriter) -> BenchmarkStats {
   std::vector<int> scores;
   scores.reserve(static_cast<std::size_t>(games));
 
@@ -79,6 +194,9 @@ auto runBenchmark(const int games,
     const int maxDecisions = maxTicks * 4;
 
     while (decisions < maxDecisions) {
+      if (datasetWriter != nullptr && datasetWriter->shouldStop()) {
+        break;
+      }
       const auto mode = runner.mode();
       if (mode == nenoserpent::core::SessionMode::GameOver) {
         ++gameOvers;
@@ -126,6 +244,28 @@ auto runBenchmark(const int games,
       }
 
       if (decision.enqueueDirection.has_value()) {
+        if (datasetWriter != nullptr) {
+          datasetWriter->writeSample(
+            {
+              .head = core.headPosition(),
+              .direction = core.direction(),
+              .food = state.food,
+              .powerUpPos = state.powerUpPos,
+              .powerUpType = state.powerUpType,
+              .ghostActive = state.activeBuff == static_cast<int>(nenoserpent::core::BuffId::Ghost),
+              .shieldActive = state.shieldActive,
+              .portalActive =
+                state.activeBuff == static_cast<int>(nenoserpent::core::BuffId::Portal),
+              .laserActive = state.activeBuff == static_cast<int>(nenoserpent::core::BuffId::Laser),
+              .boardWidth = 20,
+              .boardHeight = 18,
+              .obstacles = state.obstacles,
+              .body = core.body(),
+            },
+            levelIndex,
+            state.score,
+            *decision.enqueueDirection);
+        }
         runner.enqueueDirection(*decision.enqueueDirection);
       }
 
@@ -145,7 +285,7 @@ auto runBenchmark(const int games,
     scores.push_back(runner.core().state().score);
   }
 
-  std::sort(scores.begin(), scores.end());
+  std::ranges::sort(scores);
   const int maxScore = scores.empty() ? 0 : scores.back();
   const double sum = std::accumulate(scores.begin(), scores.end(), 0.0);
   const double avgScore = scores.empty() ? 0.0 : sum / static_cast<double>(scores.size());
@@ -200,6 +340,15 @@ auto main(int argc, char* argv[]) -> int {
     QStringList{QStringLiteral("strategy-file")},
     QStringLiteral("Optional strategy JSON file path override."),
     QStringLiteral("path"));
+  QCommandLineOption dumpDatasetOption(
+    QStringList{QStringLiteral("dump-dataset")},
+    QStringLiteral("Optional output CSV path for (state,action) dataset dump."),
+    QStringLiteral("path"));
+  QCommandLineOption maxSamplesOption(
+    QStringList{QStringLiteral("max-samples")},
+    QStringLiteral("Maximum dataset rows to dump (0 = unlimited)."),
+    QStringLiteral("count"),
+    QStringLiteral("0"));
 
   parser.addOption(gamesOption);
   parser.addOption(ticksOption);
@@ -208,6 +357,8 @@ auto main(int argc, char* argv[]) -> int {
   parser.addOption(profileOption);
   parser.addOption(modeOption);
   parser.addOption(strategyFileOption);
+  parser.addOption(dumpDatasetOption);
+  parser.addOption(maxSamplesOption);
   parser.process(app);
 
   const int games = std::max(1, parser.value(gamesOption).toInt());
@@ -217,6 +368,8 @@ auto main(int argc, char* argv[]) -> int {
   const QString profile = parser.value(profileOption).trimmed().toLower();
   const QString mode = parser.value(modeOption).trimmed().toLower();
   const QString strategyFile = parser.value(strategyFileOption).trimmed();
+  const QString dumpDatasetPath = parser.value(dumpDatasetOption).trimmed();
+  const int maxSamples = std::max(0, parser.value(maxSamplesOption).toInt());
 
   const auto strategyLoad = nenoserpent::adapter::bot::loadStrategyConfig(profile, strategyFile);
   if (!strategyLoad.loaded) {
@@ -244,13 +397,25 @@ auto main(int argc, char* argv[]) -> int {
     obstacles = level->walls;
   }
 
-  const auto stats = runBenchmark(games, maxTicks, seedBase, obstacles, strategy);
+  DatasetWriter datasetWriter(dumpDatasetPath);
+  DatasetWriter* datasetWriterPtr = nullptr;
+  if (!dumpDatasetPath.isEmpty() && datasetWriter.open(maxSamples)) {
+    datasetWriterPtr = &datasetWriter;
+  }
+
+  const auto stats =
+    runBenchmark(games, maxTicks, seedBase, obstacles, strategy, levelIndex, datasetWriterPtr);
+  datasetWriter.close();
   std::cout << "[bot-benchmark] games=" << stats.games << " level=" << levelIndex
             << " profile=" << profile.toStdString() << " mode=" << mode.toStdString() << '\n';
   std::cout << "[bot-benchmark] score.max=" << stats.maxScore << " score.avg=" << stats.avgScore
             << " score.median=" << stats.medianScore << " score.p95=" << stats.p95Score << '\n';
   std::cout << "[bot-benchmark] outcomes.gameOver=" << stats.gameOvers
             << " outcomes.timeout=" << stats.timeouts << '\n';
+  if (datasetWriterPtr != nullptr) {
+    std::cout << "[bot-benchmark] dataset.path=" << dumpDatasetPath.toStdString()
+              << " dataset.samples=" << datasetWriter.sampleCount << '\n';
+  }
 
   return 0;
 }

@@ -9,7 +9,9 @@ Usage:
   ./scripts/dev.sh clang-tidy <build-dir> [files...]
   ./scripts/dev.sh android-icons
   ./scripts/dev.sh bot-benchmark [--games N --max-ticks M ...]
+  ./scripts/dev.sh bot-tune [--mode balanced --iterations 60 --output /tmp/tuned.json]
   ./scripts/dev.sh bot-e2e [build-dir] [baseline.tsv]
+  ./scripts/dev.sh bot-leaderboard [build-dir] [suite.tsv]
 EOF
 }
 
@@ -30,8 +32,14 @@ case "${subcommand}" in
   bot-benchmark)
     exec "${ROOT_DIR}/dev/bot_benchmark.sh" "$@"
     ;;
+  bot-tune)
+    exec "${ROOT_DIR}/dev/bot_tune.sh" "$@"
+    ;;
   bot-e2e)
     exec "${ROOT_DIR}/ci/bot_e2e_regression.sh" "$@"
+    ;;
+  bot-leaderboard)
+    exec "${ROOT_DIR}/ci/bot_leaderboard_regression.sh" "$@"
     ;;
   *)
     usage

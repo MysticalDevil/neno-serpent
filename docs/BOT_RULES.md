@@ -54,6 +54,27 @@ CI regression gate:
 Baseline scenarios live in `scripts/ci/bot_e2e_baseline.tsv` and lock fixed
 `mode + level + seed + threshold` tuples.
 
+Leaderboard benchmark suite (fixed 20 scenarios):
+
+```bash
+./scripts/dev.sh bot-leaderboard build/debug
+```
+
+Suite definition is tracked in `scripts/ci/bot_leaderboard_suite.tsv`.
+This is used to compare long-run relative strength across modes and seeds.
+
+Offline parameter tuning:
+
+```bash
+./scripts/dev.sh bot-tune --mode balanced --iterations 60 --output /tmp/nenoserpent_bot_tuned.json
+```
+
+The tuned file can be loaded via:
+
+```bash
+NENOSERPENT_BOT_STRATEGY_FILE=/tmp/nenoserpent_bot_tuned.json ./build/debug/NenoSerpent
+```
+
 ## Live Debug Tuning
 
 Debug tokens accepted by runtime injection:

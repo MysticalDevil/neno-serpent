@@ -102,6 +102,12 @@ CMAKE_BUILD_TYPE=Release ./scripts/deploy.sh android
 
 # Run fixed bot E2E regression matrix (safe/balanced/aggressive x fixed levels)
 ./scripts/dev.sh bot-e2e build/debug
+
+# Run fixed 20-case leaderboard benchmark suite
+./scripts/dev.sh bot-leaderboard build/debug
+
+# Tune bot profile parameters offline and emit override JSON
+./scripts/dev.sh bot-tune --mode balanced --iterations 60 --output /tmp/nenoserpent_bot_tuned.json
 ```
 
 ### Build and Deploy (WebAssembly)

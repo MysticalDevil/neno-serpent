@@ -1,0 +1,21 @@
+# id	mode	level	seed	games	max_ticks
+L01	safe	0	1337	16	2200
+L02	safe	0	1438	16	2200
+L03	safe	0	1539	16	2200
+L04	safe	0	1640	16	2200
+L05	safe	1	1337	16	2200
+L06	safe	1	1438	16	2200
+L07	safe	1	1539	16	2200
+L08	safe	1	1640	16	2200
+L09	balanced	0	1337	20	2400
+L10	balanced	0	1438	20	2400
+L11	balanced	0	1539	20	2400
+L12	balanced	0	1640	20	2400
+L13	balanced	1	1337	20	2400
+L14	balanced	1	1438	20	2400
+L15	balanced	1	1539	20	2400
+L16	balanced	1	1640	20	2400
+L17	aggressive	0	1337	20	2400
+L18	aggressive	0	1438	20	2400
+L19	aggressive	1	1337	20	2400
+L20	aggressive	1	1438	20	2400

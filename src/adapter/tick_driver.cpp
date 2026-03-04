@@ -2,6 +2,7 @@
 
 #include <QDateTime>
 
+#include "adapter/bot/backend.h"
 #include "adapter/bot/runtime.h"
 #include "adapter/engine_adapter.h"
 #include "core/buff/runtime.h"
@@ -68,6 +69,7 @@ auto EngineAdapter::driveBotAutoplay() -> bool {
     .choices = m_choices,
     .currentChoiceIndex = m_choiceIndex,
     .strategy = &m_botStrategyConfig,
+    .backend = &nenoserpent::adapter::bot::ruleBackend(),
   });
   m_botActionCooldownTicks = decision.nextCooldownTicks;
 

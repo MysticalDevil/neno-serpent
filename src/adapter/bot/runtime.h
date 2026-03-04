@@ -4,8 +4,8 @@
 
 #include <QVariantList>
 
+#include "adapter/bot/backend.h"
 #include "adapter/bot/config.h"
-#include "adapter/bot/controller.h"
 #include "app_state.h"
 
 namespace nenoserpent::adapter::bot {
@@ -18,6 +18,7 @@ struct RuntimeInput {
   QVariantList choices;
   int currentChoiceIndex = 0;
   const StrategyConfig* strategy = nullptr;
+  const BotBackend* backend = nullptr;
 };
 
 struct RuntimeOutput {

@@ -12,6 +12,7 @@
 #include <QTextStream>
 #include <QVariantList>
 
+#include "adapter/bot/backend.h"
 #include "adapter/bot/runtime.h"
 #include "core/buff/runtime.h"
 #include "core/session/runner.h"
@@ -232,6 +233,7 @@ auto runBenchmark(const int games,
           },
         .choices = toChoiceModel(runner.choices()),
         .strategy = &strategy,
+        .backend = &nenoserpent::adapter::bot::ruleBackend(),
       });
       cooldown = decision.nextCooldownTicks;
 

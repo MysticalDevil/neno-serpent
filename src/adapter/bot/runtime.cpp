@@ -5,6 +5,7 @@ namespace nenoserpent::adapter::bot {
 auto step(const RuntimeInput& input) -> RuntimeOutput {
   const StrategyConfig& strategy =
     (input.strategy != nullptr) ? *input.strategy : defaultStrategyConfig();
+  const BotBackend& backend = (input.backend != nullptr) ? *input.backend : ruleBackend();
   RuntimeOutput output{};
   output.nextCooldownTicks = input.cooldownTicks;
   if (!input.enabled) {
@@ -17,7 +18,7 @@ auto step(const RuntimeInput& input) -> RuntimeOutput {
   }
 
   if (input.state == AppState::Playing) {
-    output.enqueueDirection = pickDirection(input.snapshot, strategy);
+    output.enqueueDirection = backend.decideDirection(input.snapshot, strategy);
     return output;
   }
 
@@ -26,7 +27,7 @@ auto step(const RuntimeInput& input) -> RuntimeOutput {
   }
 
   if (input.state == AppState::ChoiceSelection) {
-    const int bestIndex = pickChoiceIndex(input.choices, strategy);
+    const int bestIndex = backend.decideChoice(input.choices, strategy);
     if (bestIndex < 0) {
       return output;
     }

@@ -1,16 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Monochrome mask for Android 13+ themed icons -->
-    <path android:fillColor="#FFFFFFFF" android:pathData="M37,61h10v10h-10z" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M49,61h10v10h-10z" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M61,61h10v10h-10z" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M61,49h10v10h-10z" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M61,37h10v10h-10z" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M49,37h10v10h-10z" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M37,37h10v10h-10z" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M41,33h2v4h-2z" />
-</vector>
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:antialias="true"
+    android:dither="true"
+    android:filter="true"
+    android:gravity="center"
+    android:src="@drawable/ic_launcher_monochrome_layer" />

@@ -1,22 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="#A7C96B"
-        android:pathData="M30,30h8v8h-8zM40,30h8v8h-8zM50,30h8v8h-8zM60,30h8v8h-8zM70,30h8v8h-8zM70,40h8v8h-8zM70,50h8v8h-8zM70,60h8v8h-8zM70,70h8v8h-8zM60,70h8v8h-8zM50,70h8v8h-8zM40,70h8v8h-8zM30,70h8v8h-8zM30,60h8v8h-8zM30,40h8v8h-8z" />
-    <path
-        android:fillColor="#ECF6D6"
-        android:pathData="M30,50h8v8h-8z" />
-    <path
-        android:fillColor="#24351B"
-        android:pathData="M35,52h1v1h-1zM35,55h1v1h-1z" />
-    <path
-        android:fillColor="#E26052"
-        android:pathData="M50,50h8v8h-8z" />
-    <path
-        android:fillColor="#5B8A3B"
-        android:pathData="M53,46h2v4h-2z" />
-</vector>
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:antialias="true"
+    android:dither="true"
+    android:filter="true"
+    android:gravity="center"
+    android:src="@drawable/ic_launcher_foreground_layer" />

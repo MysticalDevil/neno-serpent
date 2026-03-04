@@ -44,6 +44,12 @@ void UiCommandController::cycleBotMode() const {
   }
 }
 
+void UiCommandController::resetBotModeDefaults() const {
+  if (m_engineAdapter != nullptr) {
+    m_engineAdapter->resetBotModeDefaults();
+  }
+}
+
 auto UiCommandController::setBotParam(const QString& key, const int value) const -> bool {
   if (m_engineAdapter != nullptr) {
     return m_engineAdapter->setBotParam(key, value);

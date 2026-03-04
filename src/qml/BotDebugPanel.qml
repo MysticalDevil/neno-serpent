@@ -11,7 +11,7 @@ Item {
     property var statusMap: ({})
 
     width: 110
-    height: 122
+    height: 136
 
     function refreshStatus() {
         if (!panel.commandController || !panel.commandController.botStatus) {
@@ -179,6 +179,23 @@ Item {
                 onClicked: {
                     if (panel.commandController && panel.commandController.cycleBotMode) {
                         panel.commandController.cycleBotMode()
+                        panel.refreshStatus()
+                    }
+                }
+            }
+        }
+
+        Text {
+            text: "RESET DEFAULT"
+            color: panel.textColor
+            font.pixelSize: 7
+            font.family: panel.gameFont
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    if (panel.commandController
+                            && panel.commandController.resetBotModeDefaults) {
+                        panel.commandController.resetBotModeDefaults()
                         panel.refreshStatus()
                     }
                 }

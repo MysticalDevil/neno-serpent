@@ -45,12 +45,22 @@ Run with:
 
 The benchmark reports max/avg/median/p95 score and game-over/timeout outcomes.
 
+CI regression gate:
+
+```bash
+./scripts/ci/bot_e2e_regression.sh build/debug
+```
+
+Baseline scenarios live in `scripts/ci/bot_e2e_baseline.tsv` and lock fixed
+`mode + level + seed + threshold` tuples.
+
 ## Live Debug Tuning
 
 Debug tokens accepted by runtime injection:
 
 - `DBG_BOT_PANEL` (toggle panel visibility)
 - `DBG_BOT_MODE` (cycle mode)
+- `DBG_BOT_RESET` (reapply current mode defaults)
 - `DBG_BOT_PARAM:KEY=VALUE[,KEY=VALUE...]`
 
 Examples:
@@ -58,5 +68,9 @@ Examples:
 ```text
 DBG_BOT_PANEL
 DBG_BOT_MODE
+DBG_BOT_RESET
 DBG_BOT_PARAM:LOOKAHEADWEIGHT=14,LOOKAHEADDEPTH=3,SAFENEIGHBORWEIGHT=16
 ```
+
+Bot tuner panel now supports mode-preserving rollback via `RESET DEFAULT`,
+which reapplies mode defaults (`safe`/`balanced`/`aggressive`) over live tweaks.

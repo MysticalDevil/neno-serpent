@@ -485,6 +485,10 @@ QtObject {
             controller.commandController.cycleBotMode()
             return true
         }
+        if (token === "DBG_BOT_RESET") {
+            controller.commandController.resetBotModeDefaults()
+            return true
+        }
         if (token.startsWith("DBG_BOT_PARAM:")) {
             const payload = token.slice("DBG_BOT_PARAM:".length)
             const parts = payload.split(",").map((part) => part.trim()).filter((part) => part.length > 0)

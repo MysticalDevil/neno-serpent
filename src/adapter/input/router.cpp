@@ -122,6 +122,14 @@ void EngineAdapter::cycleBotMode() {
   qCInfo(nenoserpentInputLog).noquote() << "bot mode ->" << botModeName();
 }
 
+void EngineAdapter::resetBotModeDefaults() {
+  m_botActionCooldownTicks = 0;
+  applyBotModeDefaults();
+  emit botStrategyChanged();
+  emit eventPrompt(u"BOT RESET: MODE DEFAULT"_s);
+  qCInfo(nenoserpentInputLog).noquote() << "bot strategy reset for mode ->" << botModeName();
+}
+
 auto EngineAdapter::setBotParam(const QString& key, int value) -> bool {
   const QString normalized = key.trimmed().toLower();
   if (normalized.isEmpty()) {

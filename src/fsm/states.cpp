@@ -19,7 +19,12 @@ void SplashState::update() {
 // --- Menu State ---
 void MenuState::enter() {
   m_context.setInternalState(AppState::StartMenu);
-  m_context.stopEngineTimer();
+  if (m_context.botAutoplayEnabled()) {
+    // Bot autoplay needs periodic ticks in menu to trigger start/resume actions.
+    m_context.startEngineTimer(120);
+  } else {
+    m_context.stopEngineTimer();
+  }
 }
 
 void MenuState::handleStart() {

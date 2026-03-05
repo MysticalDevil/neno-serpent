@@ -41,14 +41,27 @@ while (($# > 0)); do
       shift 2
       ;;
     *)
+      if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+        cat <<'EOF'
+Usage:
+  ./scripts/dev.sh bot-run [--build-preset <preset>] [--backend off|rule|ml|search]
+                           [--headful|--headless] [--ui-mode full|screen]
+                           [--ml-model <runtime-json>]
+
+Notes:
+  - shell ui-mode is debug-only and is intentionally disabled for bot-run.
+  - backend=ml requires --ml-model.
+EOF
+        exit 0
+      fi
       echo "unknown arg: $1" >&2
       exit 1
       ;;
   esac
 done
 
-if [[ "${UI_MODE}" != "full" && "${UI_MODE}" != "screen" && "${UI_MODE}" != "shell" ]]; then
-  echo "invalid --ui-mode: ${UI_MODE} (expected full|screen|shell)" >&2
+if [[ "${UI_MODE}" != "full" && "${UI_MODE}" != "screen" ]]; then
+  echo "invalid --ui-mode: ${UI_MODE} (expected full|screen; shell is debug-only)" >&2
   exit 1
 fi
 if [[ "${BOT_BACKEND}" != "off" && "${BOT_BACKEND}" != "rule" && "${BOT_BACKEND}" != "ml" &&
@@ -79,4 +92,27 @@ if [[ "${HEADFUL}" == "1" ]]; then
   exec "${APP_PATH}" "--ui-mode=${UI_MODE}"
 fi
 
-exec env QT_QPA_PLATFORM=offscreen "${APP_PATH}" "--ui-mode=${UI_MODE}"
+INPUT_ENDPOINT="${NENOSERPENT_INPUT_FILE:-${NENOSERPENT_TMP_DIR:-${ROOT_DIR}/cache/dev}/nenoserpent-input.pipe}"
+
+env QT_QPA_PLATFORM=offscreen NENOSERPENT_INPUT_FILE="${INPUT_ENDPOINT}" \
+  "${APP_PATH}" "--ui-mode=${UI_MODE}" &
+APP_PID=$!
+
+# In headless mode, kick one START to move bot out of menu state.
+for _ in $(seq 1 80); do
+  if [[ -p "${INPUT_ENDPOINT}" || -f "${INPUT_ENDPOINT}" ]]; then
+    break
+  fi
+  sleep 0.05
+done
+if [[ -p "${INPUT_ENDPOINT}" || -f "${INPUT_ENDPOINT}" ]]; then
+  # Splash may still be active; pulse START a few times so menu->playing transition is guaranteed.
+  (
+    for _ in $(seq 1 6); do
+      sleep 0.5
+      "${ROOT_DIR}/scripts/input.sh" inject -p "${INPUT_ENDPOINT}" START || true
+    done
+  ) &
+fi
+
+wait "${APP_PID}"

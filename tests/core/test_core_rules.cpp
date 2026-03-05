@@ -74,6 +74,9 @@ public:
   [[nodiscard]] auto hasPendingStateChange() const -> bool override {
     return false;
   }
+  [[nodiscard]] auto botAutoplayEnabled() const -> bool override {
+    return false;
+  }
   [[nodiscard]] auto hasSave() const -> bool override {
     return false;
   }
@@ -210,26 +213,30 @@ void TestCoreRules::testCollisionOutcomeMatchesPortalLaserAndShieldSemantics() {
   const QList<QPoint> obstacles{QPoint(3, 3)};
   const std::deque<QPoint> snakeBody{QPoint(5, 5), QPoint(4, 5)};
 
-  const nenoserpent::core::CollisionOutcome portalOutcome = nenoserpent::core::collisionOutcomeForHead(
-    QPoint(3, 3), 20, 20, obstacles, snakeBody, false, true, false, false);
+  const nenoserpent::core::CollisionOutcome portalOutcome =
+    nenoserpent::core::collisionOutcomeForHead(
+      QPoint(3, 3), 20, 20, obstacles, snakeBody, false, true, false, false);
   QVERIFY(!portalOutcome.collision);
   QVERIFY(!portalOutcome.consumeLaser);
   QVERIFY(!portalOutcome.consumeShield);
 
-  const nenoserpent::core::CollisionOutcome laserOutcome = nenoserpent::core::collisionOutcomeForHead(
-    QPoint(3, 3), 20, 20, obstacles, snakeBody, false, false, true, false);
+  const nenoserpent::core::CollisionOutcome laserOutcome =
+    nenoserpent::core::collisionOutcomeForHead(
+      QPoint(3, 3), 20, 20, obstacles, snakeBody, false, false, true, false);
   QVERIFY(!laserOutcome.collision);
   QVERIFY(laserOutcome.consumeLaser);
   QCOMPARE(laserOutcome.obstacleIndex, 0);
 
-  const nenoserpent::core::CollisionOutcome shieldOutcome = nenoserpent::core::collisionOutcomeForHead(
-    QPoint(4, 5), 20, 20, obstacles, snakeBody, false, false, false, true);
+  const nenoserpent::core::CollisionOutcome shieldOutcome =
+    nenoserpent::core::collisionOutcomeForHead(
+      QPoint(4, 5), 20, 20, obstacles, snakeBody, false, false, false, true);
   QVERIFY(!shieldOutcome.collision);
   QVERIFY(shieldOutcome.consumeShield);
   QVERIFY(!shieldOutcome.consumeLaser);
 
-  const nenoserpent::core::CollisionOutcome crashOutcome = nenoserpent::core::collisionOutcomeForHead(
-    QPoint(4, 5), 20, 20, obstacles, snakeBody, false, false, false, false);
+  const nenoserpent::core::CollisionOutcome crashOutcome =
+    nenoserpent::core::collisionOutcomeForHead(
+      QPoint(4, 5), 20, 20, obstacles, snakeBody, false, false, false, false);
   QVERIFY(crashOutcome.collision);
 }
 
@@ -240,8 +247,10 @@ void TestCoreRules::testTickIntervalForScoreUsesSpeedFloor() {
 }
 
 void TestCoreRules::testPickRoguelikeChoicesIsBoundedAndDeterministic() {
-  const QList<nenoserpent::core::ChoiceSpec> pickA = nenoserpent::core::pickRoguelikeChoices(1234U, 3);
-  const QList<nenoserpent::core::ChoiceSpec> pickB = nenoserpent::core::pickRoguelikeChoices(1234U, 3);
+  const QList<nenoserpent::core::ChoiceSpec> pickA =
+    nenoserpent::core::pickRoguelikeChoices(1234U, 3);
+  const QList<nenoserpent::core::ChoiceSpec> pickB =
+    nenoserpent::core::pickRoguelikeChoices(1234U, 3);
   QCOMPARE(pickA.size(), 3);
   QCOMPARE(pickA.size(), pickB.size());
   for (int i = 0; i < pickA.size(); ++i) {
@@ -249,7 +258,8 @@ void TestCoreRules::testPickRoguelikeChoicesIsBoundedAndDeterministic() {
     QCOMPARE(pickA[i].name, pickB[i].name);
   }
 
-  const QList<nenoserpent::core::ChoiceSpec> bounded = nenoserpent::core::pickRoguelikeChoices(99U, 99);
+  const QList<nenoserpent::core::ChoiceSpec> bounded =
+    nenoserpent::core::pickRoguelikeChoices(99U, 99);
   QCOMPARE(bounded.size(), 9);
 }
 

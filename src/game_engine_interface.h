@@ -34,6 +34,7 @@ public:
   [[nodiscard]] virtual auto foodPos() const -> QPoint = 0;
   [[nodiscard]] virtual auto currentState() const -> int = 0;
   [[nodiscard]] virtual auto hasPendingStateChange() const -> bool = 0;
+  [[nodiscard]] virtual auto botAutoplayEnabled() const -> bool = 0;
   [[nodiscard]] virtual auto hasSave() const -> bool = 0;
   [[nodiscard]] virtual auto hasReplay() const -> bool = 0;
 

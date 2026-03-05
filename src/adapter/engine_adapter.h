@@ -289,7 +289,7 @@ public:
     return m_choicePending;
   }
   [[nodiscard]] auto fruitLibrary() const -> QVariantList;
-  [[nodiscard]] auto botAutoplayEnabled() const noexcept -> bool {
+  [[nodiscard]] auto botAutoplayEnabled() const noexcept -> bool override {
     return m_botControlPort != nullptr ? m_botControlPort->autoplayEnabled() : false;
   }
   [[nodiscard]] auto botModeName() const -> QString {

@@ -15,15 +15,15 @@ namespace {
 
 auto buildDefaultPowerPriority() -> QHash<int, int> {
   return {
-    {PowerUpId::Shield, 30},
-    {PowerUpId::Laser, 25},
-    {PowerUpId::Magnet, 20},
-    {PowerUpId::Portal, 18},
-    {PowerUpId::Double, 16},
-    {PowerUpId::Rich, 14},
-    {PowerUpId::Slow, 11},
-    {PowerUpId::Ghost, 9},
-    {PowerUpId::Mini, 5},
+    {PowerUpId::Mini, 100},
+    {PowerUpId::Shield, 90},
+    {PowerUpId::Portal, 82},
+    {PowerUpId::Laser, 76},
+    {PowerUpId::Magnet, 68},
+    {PowerUpId::Double, 58},
+    {PowerUpId::Rich, 54},
+    {PowerUpId::Ghost, 40},
+    {PowerUpId::Slow, 28},
   };
 }
 
@@ -95,8 +95,8 @@ auto defaultStrategyConfig() -> const StrategyConfig& {
     .trapPenalty = 40,
     .lookaheadDepth = 2,
     .lookaheadWeight = 10,
-    .powerTargetPriorityThreshold = 14,
-    .powerTargetDistanceSlack = 2,
+    .powerTargetPriorityThreshold = 30,
+    .powerTargetDistanceSlack = 4,
     .tieBreakSeed = 0,
     .choiceCooldownTicks = 2,
     .stateActionCooldownTicks = 4,

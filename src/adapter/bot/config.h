@@ -21,6 +21,12 @@ enum class BotBackendMode {
   Search,
 };
 
+enum class DecisionPolicy {
+  Conservative,
+  Balanced,
+  Aggressive,
+};
+
 struct StrategyConfig {
   int openSpaceWeight = 3;
   int safeNeighborWeight = 12;
@@ -55,6 +61,9 @@ struct StrategyLoadResult {
 void applyModeDefaults(StrategyConfig& config, BotMode mode);
 [[nodiscard]] auto backendModeName(BotBackendMode mode) -> QString;
 [[nodiscard]] auto nextBackendMode(BotBackendMode mode) -> BotBackendMode;
+[[nodiscard]] auto decisionPolicyName(DecisionPolicy policy) -> QString;
+[[nodiscard]] auto parseDecisionPolicy(const QString& raw) -> DecisionPolicy;
+[[nodiscard]] auto decisionPolicyFromEnvironment() -> DecisionPolicy;
 [[nodiscard]] auto currentBuildProfileName() -> QString;
 [[nodiscard]] auto loadStrategyConfigFromJson(const QByteArray& json,
                                               const QString& profile,

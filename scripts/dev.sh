@@ -149,6 +149,7 @@ EOF
       cat <<'EOF'
 Usage: ./scripts/dev.sh bot-online-run [--workspace cache/<dir> --build-preset debug --ui-mode screen]
        [--level N]
+       [--decision-policy aggressive|balanced|conservative]
        [--quality low|medium|high|extreme]
        [--suite scripts/ci/bot_leaderboard_rule_suite.tsv]
 Purpose: start ml-online trainer loop in background and run game in headful mode.
@@ -164,7 +165,7 @@ EOF
     bot-run)
       cat <<'EOF'
 Usage: ./scripts/dev.sh bot-run [--backend off|human|rule|ml|ml-online|search] [--headful|--headless] \
-[--ui-mode full|screen] [--level N]
+[--ui-mode full|screen] [--level N] [--decision-policy aggressive|balanced|conservative]
 Purpose: run gameplay with selected bot backend and UI mode.
 EOF
       ;;

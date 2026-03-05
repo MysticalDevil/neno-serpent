@@ -43,6 +43,7 @@ auto resolveBackend(const RuntimeInput& input) -> ResolvedBackend {
 auto contextualChoiceStrategy(const StrategyConfig& base, const Snapshot& snapshot)
   -> StrategyConfig {
   StrategyConfig contextual = base;
+  const DecisionPolicy policy = decisionPolicyFromEnvironment();
   const int boardCells = std::max(1, snapshot.boardWidth * snapshot.boardHeight);
   const int bodyPermille = (static_cast<int>(snapshot.body.size()) * 1000) / boardCells;
   const int obstaclePermille =
@@ -52,6 +53,20 @@ auto contextualChoiceStrategy(const StrategyConfig& base, const Snapshot& snapsh
     const int current = powerPriority(contextual, type);
     contextual.powerPriorityByType.insert(type, current + delta);
   };
+
+  if (policy == DecisionPolicy::Conservative) {
+    boostPriority(PowerUpId::Mini, 18);
+    boostPriority(PowerUpId::Shield, 14);
+    boostPriority(PowerUpId::Portal, 10);
+    boostPriority(PowerUpId::Double, -8);
+    boostPriority(PowerUpId::Rich, -10);
+  } else if (policy == DecisionPolicy::Aggressive) {
+    boostPriority(PowerUpId::Mini, -10);
+    boostPriority(PowerUpId::Shield, -8);
+    boostPriority(PowerUpId::Double, 14);
+    boostPriority(PowerUpId::Rich, 18);
+    boostPriority(PowerUpId::Magnet, 8);
+  }
 
   if (bodyPermille >= 200 || snapshot.body.size() >= 18) {
     boostPriority(PowerUpId::Mini, 24);
@@ -69,12 +84,20 @@ auto contextualChoiceStrategy(const StrategyConfig& base, const Snapshot& snapsh
 }
 
 auto dynamicChoiceCooldownTicks(const StrategyConfig& strategy, const Snapshot& snapshot) -> int {
-  const int intervalMs = std::clamp(nenoserpent::core::tickIntervalForScore(snapshot.score), 60, 200);
+  const DecisionPolicy policy = decisionPolicyFromEnvironment();
+  const int intervalMs =
+    std::clamp(nenoserpent::core::tickIntervalForScore(snapshot.score), 60, 200);
   const int fastness = 200 - intervalMs; // 0..140
   const int extraTicks = fastness / 28;  // 0..5
-  return std::clamp(strategy.choiceCooldownTicks + extraTicks,
-                    strategy.choiceCooldownTicks,
-                    strategy.choiceCooldownTicks + 6);
+  int policyTicks = 0;
+  if (policy == DecisionPolicy::Conservative) {
+    policyTicks = 2;
+  } else if (policy == DecisionPolicy::Aggressive) {
+    policyTicks = -1;
+  }
+  return std::clamp(strategy.choiceCooldownTicks + extraTicks + policyTicks,
+                    std::max(0, strategy.choiceCooldownTicks - 1),
+                    strategy.choiceCooldownTicks + 8);
 }
 
 } // namespace

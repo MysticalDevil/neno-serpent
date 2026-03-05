@@ -189,6 +189,37 @@ auto nextBackendMode(const BotBackendMode mode) -> BotBackendMode {
   return BotBackendMode::Off;
 }
 
+auto decisionPolicyName(const DecisionPolicy policy) -> QString {
+  switch (policy) {
+  case DecisionPolicy::Conservative:
+    return QStringLiteral("conservative");
+  case DecisionPolicy::Balanced:
+    return QStringLiteral("balanced");
+  case DecisionPolicy::Aggressive:
+    return QStringLiteral("aggressive");
+  }
+  return QStringLiteral("balanced");
+}
+
+auto parseDecisionPolicy(const QString& raw) -> DecisionPolicy {
+  const QString normalized = raw.trimmed().toLower();
+  if (normalized == QStringLiteral("conservative")) {
+    return DecisionPolicy::Conservative;
+  }
+  if (normalized == QStringLiteral("aggressive")) {
+    return DecisionPolicy::Aggressive;
+  }
+  return DecisionPolicy::Balanced;
+}
+
+auto decisionPolicyFromEnvironment() -> DecisionPolicy {
+  const QString raw = qEnvironmentVariable("NENOSERPENT_BOT_DECISION_POLICY").trimmed();
+  if (raw.isEmpty()) {
+    return DecisionPolicy::Balanced;
+  }
+  return parseDecisionPolicy(raw);
+}
+
 auto currentBuildProfileName() -> QString {
 #if defined(NENOSERPENT_BUILD_DEBUG)
   return QStringLiteral("debug");

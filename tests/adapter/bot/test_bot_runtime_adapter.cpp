@@ -11,6 +11,7 @@ private slots:
   void choiceSelectionPicksChoiceAndConfirms();
   void choiceSelectionContextBoostsLaserOnDenseObstacles();
   void choiceSelectionUsesDynamicCooldownAtHighSpeed();
+  void choiceSelectionDecisionPolicyAffectsCooldown();
   void cooldownDelaysNonPlayingActions();
   void usesCustomCooldownFromStrategy();
   void usesInjectedBackendForDirectionAndChoice();
@@ -102,6 +103,51 @@ void BotRuntimeAdapterTest::choiceSelectionUsesDynamicCooldownAtHighSpeed() {
   QVERIFY(result.triggerStart);
   QVERIFY(result.consumeTick);
   QVERIFY(result.nextCooldownTicks > strategy.choiceCooldownTicks);
+}
+
+void BotRuntimeAdapterTest::choiceSelectionDecisionPolicyAffectsCooldown() {
+  class ScopedEnv final {
+  public:
+    explicit ScopedEnv(const char* key)
+        : m_key(key),
+          m_hadValue(qEnvironmentVariableIsSet(key)),
+          m_previous(m_hadValue ? qgetenv(key) : QByteArray()) {
+    }
+    ~ScopedEnv() {
+      if (m_hadValue) {
+        qputenv(m_key.constData(), m_previous);
+      } else {
+        qunsetenv(m_key.constData());
+      }
+    }
+
+  private:
+    QByteArray m_key;
+    bool m_hadValue = false;
+    QByteArray m_previous;
+  };
+
+  auto runWithPolicy = [](const char* policy) {
+    qputenv("NENOSERPENT_BOT_DECISION_POLICY", policy);
+    nenoserpent::adapter::bot::RuntimeInput input{};
+    input.enabled = true;
+    input.state = AppState::ChoiceSelection;
+    input.choices = {
+      QVariantMap{{"type", 4}},
+      QVariantMap{{"type", 8}},
+      QVariantMap{{"type", 9}},
+    };
+    input.snapshot.score = 200;
+    return nenoserpent::adapter::bot::step(input).nextCooldownTicks;
+  };
+
+  const ScopedEnv scoped("NENOSERPENT_BOT_DECISION_POLICY");
+  const int aggressive = runWithPolicy("aggressive");
+  const int balanced = runWithPolicy("balanced");
+  const int conservative = runWithPolicy("conservative");
+
+  QVERIFY(aggressive <= balanced);
+  QVERIFY(balanced <= conservative);
 }
 
 void BotRuntimeAdapterTest::cooldownDelaysNonPlayingActions() {

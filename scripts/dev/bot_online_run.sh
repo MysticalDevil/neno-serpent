@@ -30,6 +30,7 @@ MIN_DATASET_SAMPLES="${BOT_ONLINE_MIN_DATASET_SAMPLES:-40}"
 MIN_PUBLISH_ROUND="${BOT_ONLINE_MIN_PUBLISH_ROUND:-1}"
 PUBLISH_COOLDOWN_ROUNDS="${BOT_ONLINE_PUBLISH_COOLDOWN_ROUNDS:-1}"
 MAX_BLOCKED_STREAK="${BOT_ONLINE_MAX_BLOCKED_STREAK:-8}"
+DECISION_POLICY="${BOT_ONLINE_DECISION_POLICY:-balanced}"
 
 EPOCHS_SET=0
 BATCH_SIZE_SET=0
@@ -136,6 +137,10 @@ while (($# > 0)); do
       MAX_BLOCKED_STREAK="$2"
       shift 2
       ;;
+    --decision-policy)
+      DECISION_POLICY="$2"
+      shift 2
+      ;;
     *)
       if [[ "$1" == "-h" || "$1" == "--help" ]]; then
         cat <<'EOF'
@@ -166,6 +171,7 @@ Options:
   --min-publish-round <N>       Trainer warmup rounds before publish (default: 1)
   --publish-cooldown-rounds <N> Trainer minimum rounds between publishes (default: 1)
   --max-blocked-streak <N>      Trainer stop threshold for consecutive blocked rounds (default: 8)
+  --decision-policy <name>      Bot decision policy: aggressive|balanced|conservative (default: balanced)
 
 Behavior:
   - starts bot-online-train in background
@@ -186,6 +192,11 @@ if [[ "${UI_MODE}" != "full" && "${UI_MODE}" != "screen" ]]; then
 fi
 if ! [[ "${LEVEL_INDEX}" =~ ^[0-9]+$ ]]; then
   echo "invalid --level: ${LEVEL_INDEX} (expected non-negative integer)" >&2
+  exit 1
+fi
+if [[ "${DECISION_POLICY}" != "aggressive" && "${DECISION_POLICY}" != "balanced" &&
+  "${DECISION_POLICY}" != "conservative" ]]; then
+  echo "invalid --decision-policy: ${DECISION_POLICY} (expected aggressive|balanced|conservative)" >&2
   exit 1
 fi
 
@@ -281,6 +292,7 @@ echo "[bot-online-run] start game backend=ml-online model=${RUNTIME_JSON_PATH}"
   --build-preset "${BUILD_PRESET}" \
   --backend ml-online \
   --ml-model "${RUNTIME_JSON_PATH}" \
+  --decision-policy "${DECISION_POLICY}" \
   --level "${LEVEL_INDEX}" \
   --headful \
   --ui-mode "${UI_MODE}"

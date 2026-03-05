@@ -16,6 +16,7 @@ BOT_BACKEND="${BOT_BACKEND:-off}"
 ML_MODEL_PATH="${BOT_ML_MODEL:-}"
 HUMAN_DATASET_PATH="${NENOSERPENT_BOT_HUMAN_DATASET:-}"
 LEVEL_INDEX="${BOT_LEVEL_INDEX:-0}"
+DECISION_POLICY="${NENOSERPENT_BOT_DECISION_POLICY:-balanced}"
 
 while (($# > 0)); do
   case "$1" in
@@ -51,6 +52,10 @@ while (($# > 0)); do
       LEVEL_INDEX="$2"
       shift 2
       ;;
+    --decision-policy)
+      DECISION_POLICY="$2"
+      shift 2
+      ;;
     *)
       if [[ "$1" == "-h" || "$1" == "--help" ]]; then
         cat <<'EOF'
@@ -58,6 +63,7 @@ Usage:
   ./scripts/dev.sh bot-run [--build-preset <preset>] [--backend off|human|rule|ml|ml-online|search]
                            [--headful|--headless] [--ui-mode full|screen]
                            [--ml-model <runtime-json>] [--human-dataset <dataset-csv>] [--level <index>]
+                           [--decision-policy aggressive|balanced|conservative]
 
 Notes:
   - shell ui-mode is debug-only and is intentionally disabled for bot-run.
@@ -65,6 +71,7 @@ Notes:
   - backend=human records manual direction samples to --human-dataset
     (default: cache/dev/nenoserpent_human_dataset.csv).
   - --level sets initial menu level index by injecting SELECT N times before START.
+  - --decision-policy controls bot decision style (default: balanced).
 EOF
         exit 0
       fi
@@ -87,6 +94,11 @@ if ! [[ "${LEVEL_INDEX}" =~ ^[0-9]+$ ]]; then
   echo "invalid --level: ${LEVEL_INDEX} (expected non-negative integer)" >&2
   exit 1
 fi
+if [[ "${DECISION_POLICY}" != "aggressive" && "${DECISION_POLICY}" != "balanced" &&
+  "${DECISION_POLICY}" != "conservative" ]]; then
+  echo "invalid --decision-policy: ${DECISION_POLICY} (expected aggressive|balanced|conservative)" >&2
+  exit 1
+fi
 if [[ ("${BOT_BACKEND}" == "ml" || "${BOT_BACKEND}" == "ml-online") && -z "${ML_MODEL_PATH}" ]]; then
   echo "backend=${BOT_BACKEND} requires --ml-model <runtime-json-path>" >&2
   exit 1
@@ -107,6 +119,7 @@ if [[ ! -x "${APP_PATH}" ]]; then
 fi
 
 export NENOSERPENT_BOT_BACKEND="${BOT_BACKEND}"
+export NENOSERPENT_BOT_DECISION_POLICY="${DECISION_POLICY}"
 if [[ -n "${ML_MODEL_PATH}" ]]; then
   export NENOSERPENT_BOT_ML_MODEL="${ML_MODEL_PATH}"
 fi

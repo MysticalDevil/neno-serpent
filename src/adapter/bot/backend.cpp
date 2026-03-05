@@ -82,6 +82,26 @@ auto deriveStageSignals(const Snapshot& snapshot) -> StageSignals {
 auto stageAdjustedStrategy(const StrategyConfig& base, const Snapshot& snapshot) -> StrategyConfig {
   StrategyConfig adjusted = base;
   const StageSignals stage = deriveStageSignals(snapshot);
+  const DecisionPolicy policy = decisionPolicyFromEnvironment();
+
+  if (policy == DecisionPolicy::Conservative) {
+    adjusted.safeNeighborWeight += 8;
+    adjusted.openSpaceWeight += 2;
+    adjusted.trapPenalty += 20;
+    adjusted.targetDistanceWeight = std::max(0, adjusted.targetDistanceWeight - 2);
+    adjusted.foodConsumeBonus = std::max(0, adjusted.foodConsumeBonus - 4);
+    adjusted.straightBonus = std::max(0, adjusted.straightBonus - 2);
+    adjusted.lookaheadDepth += 1;
+    adjusted.powerTargetDistanceSlack = std::max(0, adjusted.powerTargetDistanceSlack - 1);
+  } else if (policy == DecisionPolicy::Aggressive) {
+    adjusted.safeNeighborWeight = std::max(0, adjusted.safeNeighborWeight - 6);
+    adjusted.openSpaceWeight = std::max(0, adjusted.openSpaceWeight - 1);
+    adjusted.trapPenalty = std::max(0, adjusted.trapPenalty - 14);
+    adjusted.targetDistanceWeight += 2;
+    adjusted.foodConsumeBonus += 8;
+    adjusted.straightBonus += 4;
+    adjusted.powerTargetDistanceSlack += 2;
+  }
 
   if (stage.lateGame) {
     adjusted.safeNeighborWeight += 7;
@@ -550,6 +570,7 @@ auto boardCells(const Snapshot& snapshot) -> int {
 }
 
 auto riskBudgetFor(const Snapshot& snapshot, const int repeats) -> int {
+  const DecisionPolicy policy = decisionPolicyFromEnvironment();
   const int fillPermille = (static_cast<int>(snapshot.body.size()) * 1000) / boardCells(snapshot);
   const int obstaclePermille =
     (static_cast<int>(snapshot.obstacles.size()) * 1000) / boardCells(snapshot);
@@ -563,6 +584,11 @@ auto riskBudgetFor(const Snapshot& snapshot, const int repeats) -> int {
   }
   if (snapshot.ghostActive) {
     budget += 8;
+  }
+  if (policy == DecisionPolicy::Conservative) {
+    budget -= 18;
+  } else if (policy == DecisionPolicy::Aggressive) {
+    budget += 16;
   }
   return clampInt(budget, 36, 140);
 }

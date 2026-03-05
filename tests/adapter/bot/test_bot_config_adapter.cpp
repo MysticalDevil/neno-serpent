@@ -10,6 +10,7 @@ private slots:
   void fallsBackWhenProfileMissing();
   void cyclesStrategyModesInExpectedOrder();
   void cyclesBackendModesInExpectedOrder();
+  void parsesDecisionPolicyModes();
 };
 
 void BotConfigAdapterTest::parsesProfileOverridesFromJson() {
@@ -92,6 +93,18 @@ void BotConfigAdapterTest::cyclesBackendModesInExpectedOrder() {
   QCOMPARE(nenoserpent::adapter::bot::nextBackendMode(BotBackendMode::MlOnline),
            BotBackendMode::Search);
   QCOMPARE(nenoserpent::adapter::bot::nextBackendMode(BotBackendMode::Search), BotBackendMode::Off);
+}
+
+void BotConfigAdapterTest::parsesDecisionPolicyModes() {
+  using nenoserpent::adapter::bot::DecisionPolicy;
+  QCOMPARE(nenoserpent::adapter::bot::parseDecisionPolicy(QStringLiteral("conservative")),
+           DecisionPolicy::Conservative);
+  QCOMPARE(nenoserpent::adapter::bot::parseDecisionPolicy(QStringLiteral("balanced")),
+           DecisionPolicy::Balanced);
+  QCOMPARE(nenoserpent::adapter::bot::parseDecisionPolicy(QStringLiteral("aggressive")),
+           DecisionPolicy::Aggressive);
+  QCOMPARE(nenoserpent::adapter::bot::parseDecisionPolicy(QStringLiteral("unknown")),
+           DecisionPolicy::Balanced);
 }
 
 QTEST_MAIN(BotConfigAdapterTest)

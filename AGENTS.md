@@ -72,9 +72,11 @@ PALETTE_STEPS=0 ./scripts/ui.sh palette-focus /tmp/nenoserpent_palette_focus
 - Optional just shortcuts (recommended for consistent build dirs under `build/`):
 ```bash
 just debug
+just debug-clang
 just release
 just dev
 just test
+just check
 just tidy
 just fmt
 just android

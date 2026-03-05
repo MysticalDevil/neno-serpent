@@ -66,9 +66,11 @@ cmake --build --preset release
 - Optional `just` shortcuts:
 ```bash
 just debug
+just debug-clang
 just release
 just dev
 just test
+just check
 just tidy
 just fmt
 just android
@@ -79,6 +81,7 @@ just clean
 - `Debug`: detailed runtime logs enabled.
 - `RelWithDebInfo` (`dev`): compact runtime logs enabled.
 - `Release` / `MinSizeRel`: routine runtime logs are compiled out.
+- `just check` uses `debug-clang` preset as the local bot/runtime regression gate.
 
 ### Build and Run via Zig
 ```bash

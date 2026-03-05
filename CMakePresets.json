@@ -29,6 +29,15 @@
       }
     },
     {
+      "name": "debug-clang",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
       "name": "dev",
       "inherits": "base",
       "cacheVariables": {
@@ -56,6 +65,10 @@
       "configurePreset": "debug"
     },
     {
+      "name": "debug-clang",
+      "configurePreset": "debug-clang"
+    },
+    {
       "name": "dev",
       "configurePreset": "dev"
     },
@@ -72,6 +85,16 @@
     {
       "name": "debug",
       "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "debug-clang",
+      "configurePreset": "debug-clang",
       "output": {
         "outputOnFailure": true
       },

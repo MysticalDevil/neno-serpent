@@ -10,8 +10,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 
-#include "adapter/bot/config.h"
-#include "adapter/bot/ml_backend.h"
+#include "adapter/bot/state.h"
 #include "adapter/haptics/controller.h"
 #include "adapter/ui/action.h"
 #include "app_state.h"
@@ -291,10 +290,10 @@ public:
   }
   [[nodiscard]] auto fruitLibrary() const -> QVariantList;
   [[nodiscard]] auto botAutoplayEnabled() const noexcept -> bool {
-    return m_botBackendMode != nenoserpent::adapter::bot::BotBackendMode::Off;
+    return m_botState.autoplayEnabled();
   }
   [[nodiscard]] auto botModeName() const -> QString {
-    return nenoserpent::adapter::bot::backendModeName(m_botBackendMode);
+    return m_botState.backendModeName();
   }
 
   static constexpr int BOARD_WIDTH = 20;
@@ -353,7 +352,6 @@ private:
   void applyReplayTimelineForCurrentTick(int& inputHistoryIndex, int& choiceHistoryIndex);
   void applyPostTickTasks();
   auto driveBotAutoplay() -> bool;
-  void applyBotModeDefaults();
   void updateReflectionFallback();
   [[nodiscard]] auto initialGameplayIntervalMs() const -> int;
   [[nodiscard]] auto gameplayTickIntervalMs() const -> int;
@@ -426,16 +424,7 @@ private:
   std::unique_ptr<GameState> m_fsmState;
   bool m_musicEnabled = true;
   int m_bgmVariant = 0;
-  nenoserpent::adapter::bot::BotMode m_botStrategyMode =
-    nenoserpent::adapter::bot::BotMode::Balanced;
-  nenoserpent::adapter::bot::BotBackendMode m_botBackendMode =
-    nenoserpent::adapter::bot::BotBackendMode::Off;
-  nenoserpent::adapter::bot::MlBackend m_botMlBackend;
-  QString m_lastBotBackendRoute;
-  int m_botActionCooldownTicks = 0;
-  nenoserpent::adapter::bot::StrategyConfig m_botBaseStrategyConfig =
-    nenoserpent::adapter::bot::defaultStrategyConfig();
-  nenoserpent::adapter::bot::StrategyConfig m_botStrategyConfig = m_botBaseStrategyConfig;
+  nenoserpent::adapter::bot::State m_botState;
   bool m_stateCallbackInProgress = false;
   std::optional<int> m_pendingStateChange;
 

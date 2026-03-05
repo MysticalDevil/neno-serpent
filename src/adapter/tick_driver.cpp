@@ -2,10 +2,10 @@
 
 #include <QDateTime>
 
-#include "adapter/bot/backend.h"
-#include "adapter/bot/runtime.h"
+#include "adapter/bot/decision_applier.h"
+#include "adapter/bot/orchestrator.h"
+#include "adapter/bot/snapshot_builder.h"
 #include "adapter/engine_adapter.h"
-#include "core/buff/runtime.h"
 #include "fsm/game_state.h"
 #include "logging/categories.h"
 
@@ -46,26 +46,11 @@ auto EngineAdapter::driveBotAutoplay() -> bool {
   if (!m_fsmState) {
     return false;
   }
-  const nenoserpent::adapter::bot::BotBackend* backend = nullptr;
-  switch (m_botBackendMode) {
-  case nenoserpent::adapter::bot::BotBackendMode::Off:
-    break;
-  case nenoserpent::adapter::bot::BotBackendMode::Rule:
-    backend = &nenoserpent::adapter::bot::ruleBackend();
-    break;
-  case nenoserpent::adapter::bot::BotBackendMode::Ml:
-    backend = &m_botMlBackend;
-    break;
-  case nenoserpent::adapter::bot::BotBackendMode::Search:
-    backend = &nenoserpent::adapter::bot::searchBackend();
-    break;
-  }
-  const auto decision = nenoserpent::adapter::bot::step({
-    .enabled = botAutoplayEnabled(),
-    .cooldownTicks = m_botActionCooldownTicks,
-    .state = m_state,
-    .snapshot =
-      {
+  const auto orchestratorOutput = nenoserpent::adapter::bot::runOrchestratorTick(
+    m_botState,
+    {
+      .state = m_state,
+      .snapshot = nenoserpent::adapter::bot::buildSnapshot({
         .head = m_sessionCore.headPosition(),
         .direction = m_sessionCore.direction(),
         .food = m_session.food,
@@ -73,56 +58,57 @@ auto EngineAdapter::driveBotAutoplay() -> bool {
         .powerUpType = m_session.powerUpType,
         .score = m_session.score,
         .levelIndex = m_levelIndex,
-        .ghostActive = m_session.activeBuff == static_cast<int>(nenoserpent::core::BuffId::Ghost),
+        .activeBuff = m_session.activeBuff,
         .shieldActive = m_session.shieldActive,
-        .portalActive = m_session.activeBuff == static_cast<int>(nenoserpent::core::BuffId::Portal),
-        .laserActive = m_session.activeBuff == static_cast<int>(nenoserpent::core::BuffId::Laser),
         .boardWidth = BOARD_WIDTH,
         .boardHeight = BOARD_HEIGHT,
         .obstacles = m_session.obstacles,
         .body = m_sessionCore.body(),
-      },
-    .choices = m_choices,
-    .currentChoiceIndex = m_choiceIndex,
-    .strategy = &m_botStrategyConfig,
-    .backend = backend,
-    .fallbackBackend = &nenoserpent::adapter::bot::ruleBackend(),
-  });
-  m_botActionCooldownTicks = decision.nextCooldownTicks;
+      }),
+      .choices = m_choices,
+      .currentChoiceIndex = m_choiceIndex,
+    });
+  const auto& decision = orchestratorOutput.decision;
+  const auto& routeTelemetry = orchestratorOutput.routeTelemetry;
 
-  if (botAutoplayEnabled()) {
-    const QString routeKey = decision.usedFallback
-                               ? decision.backend + u":"_s + decision.fallbackReason
-                               : decision.backend;
-    if (routeKey != m_lastBotBackendRoute) {
-      m_lastBotBackendRoute = routeKey;
-      if (decision.usedFallback) {
-        qCInfo(nenoserpentInputLog).noquote()
-          << "bot backend fallback ->" << decision.backend << "reason=" << decision.fallbackReason;
-      } else {
-        qCInfo(nenoserpentInputLog).noquote() << "bot backend route ->" << decision.backend;
-      }
+  if (routeTelemetry.changed) {
+    if (routeTelemetry.usedFallback) {
+      qCInfo(nenoserpentInputLog).noquote() << "bot backend fallback ->" << routeTelemetry.backend
+                                            << "reason=" << routeTelemetry.fallbackReason;
+    } else {
+      qCInfo(nenoserpentInputLog).noquote() << "bot backend route ->" << routeTelemetry.backend;
     }
   }
 
-  if (decision.enqueueDirection.has_value() &&
-      m_sessionCore.enqueueDirection(*decision.enqueueDirection)) {
+  const auto applyResult = nenoserpent::adapter::bot::applyDecision({
+    .decision = decision,
+    .currentChoiceIndex = m_choiceIndex,
+    .enqueueDirection = [this](const QPoint& direction) -> bool {
+      return m_sessionCore.enqueueDirection(direction);
+    },
+    .setChoiceIndex = [this](const int choiceIndex) -> void {
+      m_choiceIndex = choiceIndex;
+      emit choiceIndexChanged();
+    },
+    .triggerStart = [this]() -> void {
+      dispatchStateCallback([](GameState& state) -> void { state.handleStart(); });
+    },
+  });
+
+  if (applyResult.enqueuedDirection && applyResult.enqueueDirection.has_value()) {
     qCDebug(nenoserpentInputLog).noquote()
-      << "bot enqueue direction:" << decision.enqueueDirection->x()
-      << decision.enqueueDirection->y();
+      << "bot enqueue direction:" << applyResult.enqueueDirection->x()
+      << applyResult.enqueueDirection->y();
   }
 
-  if (decision.setChoiceIndex.has_value() && m_choiceIndex != *decision.setChoiceIndex) {
-    m_choiceIndex = *decision.setChoiceIndex;
-    emit choiceIndexChanged();
-    qCDebug(nenoserpentInputLog).noquote() << "bot pick choice index:" << *decision.setChoiceIndex;
+  if (applyResult.choiceChanged && applyResult.choiceIndex.has_value()) {
+    qCDebug(nenoserpentInputLog).noquote() << "bot pick choice index:" << *applyResult.choiceIndex;
   }
 
-  if (decision.triggerStart) {
+  if (applyResult.startTriggered) {
     qCDebug(nenoserpentInputLog).noquote()
       << "bot trigger start from state:" << static_cast<int>(m_state);
-    dispatchStateCallback([](GameState& state) -> void { state.handleStart(); });
   }
 
-  return decision.consumeTick;
+  return applyResult.consumeTick;
 }

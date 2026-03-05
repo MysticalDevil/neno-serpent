@@ -46,14 +46,24 @@ add_library(nenoserpent_adapter
     adapter/view_models/selection.cpp
     adapter/bot/controller.h
     adapter/bot/controller.cpp
+    adapter/bot/decision_applier.h
+    adapter/bot/decision_applier.cpp
+    adapter/bot/snapshot_builder.h
+    adapter/bot/snapshot_builder.cpp
     adapter/bot/backend.h
     adapter/bot/backend.cpp
     adapter/bot/features.h
     adapter/bot/features.cpp
+    adapter/bot/orchestrator.h
+    adapter/bot/orchestrator.cpp
+    adapter/bot/route_telemetry.h
+    adapter/bot/route_telemetry.cpp
     adapter/bot/ml_backend.h
     adapter/bot/ml_backend.cpp
     adapter/bot/config.h
     adapter/bot/config.cpp
+    adapter/bot/state.h
+    adapter/bot/state.cpp
     adapter/bot/runtime.h
     adapter/bot/runtime.cpp
     adapter/input/router.cpp

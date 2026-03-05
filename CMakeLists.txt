@@ -196,7 +196,7 @@ target_include_directories(bot-benchmark PRIVATE src)
 target_link_libraries(bot-benchmark PRIVATE Qt6::Core nenoserpent_core nenoserpent_adapter)
 
 add_executable(engine-adapter-tests
-    tests/test_engine_adapter.cpp
+    tests/adapter/session/test_engine_adapter.cpp
 )
 target_include_directories(engine-adapter-tests PRIVATE src)
 target_link_libraries(engine-adapter-tests PRIVATE Qt6::Test Qt6::Core Qt6::Gui Qt6::Qml nenoserpent_adapter)
@@ -212,7 +212,7 @@ add_test(NAME EngineAdapterTest COMMAND engine-adapter-tests)
 set_tests_properties(EngineAdapterTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(core-rules-tests
-    tests/test_core_rules.cpp
+    tests/core/test_core_rules.cpp
 )
 target_include_directories(core-rules-tests PRIVATE src)
 target_link_libraries(core-rules-tests PRIVATE Qt6::Test Qt6::Core Qt6::Gui nenoserpent_core nenoserpent_fsm)
@@ -220,7 +220,7 @@ add_test(NAME CoreRulesTest COMMAND core-rules-tests)
 set_tests_properties(CoreRulesTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(session-core-tests
-    tests/test_session_core.cpp
+    tests/core/test_session_core.cpp
 )
 target_include_directories(session-core-tests PRIVATE src)
 target_link_libraries(session-core-tests PRIVATE Qt6::Test Qt6::Core Qt6::Gui nenoserpent_core)
@@ -228,7 +228,7 @@ add_test(NAME SessionCoreTest COMMAND session-core-tests)
 set_tests_properties(SessionCoreTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(session-runner-tests
-    tests/test_session_runner.cpp
+    tests/core/test_session_runner.cpp
 )
 target_include_directories(session-runner-tests PRIVATE src)
 target_link_libraries(session-runner-tests PRIVATE Qt6::Test Qt6::Core Qt6::Gui nenoserpent_core)
@@ -236,7 +236,7 @@ add_test(NAME SessionRunnerTest COMMAND session-runner-tests)
 set_tests_properties(SessionRunnerTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-tests
-    tests/test_ui_action_parser.cpp
+    tests/adapter/ui/test_ui_action_parser.cpp
 )
 target_include_directories(adapter-tests PRIVATE src)
 target_link_libraries(adapter-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -244,7 +244,7 @@ add_test(NAME AdapterTest COMMAND adapter-tests)
 set_tests_properties(AdapterTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-ui-dispatch-tests
-    tests/test_ui_action_dispatch_adapter.cpp
+    tests/adapter/ui/test_ui_action_dispatch_adapter.cpp
 )
 target_include_directories(adapter-ui-dispatch-tests PRIVATE src)
 target_link_libraries(adapter-ui-dispatch-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -252,7 +252,7 @@ add_test(NAME AdapterUiDispatchTest COMMAND adapter-ui-dispatch-tests)
 set_tests_properties(AdapterUiDispatchTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-ui-command-tests
-    tests/test_ui_command_controller.cpp
+    tests/adapter/ui/test_ui_command_controller.cpp
 )
 target_include_directories(adapter-ui-command-tests PRIVATE src)
 target_link_libraries(adapter-ui-command-tests PRIVATE Qt6::Test Qt6::Core Qt6::Gui Qt6::Qml nenoserpent_adapter)
@@ -268,7 +268,7 @@ add_test(NAME AdapterUiCommandTest COMMAND adapter-ui-command-tests)
 set_tests_properties(AdapterUiCommandTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-semantics-tests
-    tests/test_input_semantics_adapter.cpp
+    tests/adapter/ui/test_input_semantics_adapter.cpp
 )
 target_include_directories(adapter-semantics-tests PRIVATE src)
 target_link_libraries(adapter-semantics-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -276,7 +276,7 @@ add_test(NAME AdapterSemanticsTest COMMAND adapter-semantics-tests)
 set_tests_properties(AdapterSemanticsTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-theme-tests
-    tests/test_theme_view_model.cpp
+    tests/adapter/ui/test_theme_view_model.cpp
 )
 target_include_directories(adapter-theme-tests PRIVATE src)
 target_link_libraries(adapter-theme-tests PRIVATE Qt6::Test Qt6::Core Qt6::Gui Qt6::Qml nenoserpent_adapter)
@@ -292,7 +292,7 @@ add_test(NAME AdapterThemeTest COMMAND adapter-theme-tests)
 set_tests_properties(AdapterThemeTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-session-status-tests
-    tests/test_session_status_view_model.cpp
+    tests/adapter/session/test_session_status_view_model.cpp
 )
 target_include_directories(adapter-session-status-tests PRIVATE src)
 target_link_libraries(adapter-session-status-tests PRIVATE Qt6::Test Qt6::Core Qt6::Gui Qt6::Qml nenoserpent_adapter)
@@ -308,7 +308,7 @@ add_test(NAME AdapterSessionStatusTest COMMAND adapter-session-status-tests)
 set_tests_properties(AdapterSessionStatusTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-session-render-tests
-    tests/test_session_render_view_model.cpp
+    tests/adapter/session/test_session_render_view_model.cpp
 )
 target_include_directories(adapter-session-render-tests PRIVATE src)
 target_link_libraries(adapter-session-render-tests PRIVATE Qt6::Test Qt6::Core Qt6::Gui Qt6::Qml nenoserpent_adapter)
@@ -324,7 +324,7 @@ add_test(NAME AdapterSessionRenderTest COMMAND adapter-session-render-tests)
 set_tests_properties(AdapterSessionRenderTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-selection-tests
-    tests/test_selection_view_model.cpp
+    tests/adapter/ui/test_selection_view_model.cpp
 )
 target_include_directories(adapter-selection-tests PRIVATE src)
 target_link_libraries(adapter-selection-tests PRIVATE Qt6::Test Qt6::Core Qt6::Gui Qt6::Qml nenoserpent_adapter)
@@ -340,7 +340,7 @@ add_test(NAME AdapterSelectionTest COMMAND adapter-selection-tests)
 set_tests_properties(AdapterSelectionTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-audio-settings-tests
-    tests/test_audio_settings_view_model.cpp
+    tests/adapter/audio/test_audio_settings_view_model.cpp
 )
 target_include_directories(adapter-audio-settings-tests PRIVATE src)
 target_link_libraries(adapter-audio-settings-tests PRIVATE Qt6::Test Qt6::Core Qt6::Gui Qt6::Qml nenoserpent_adapter)
@@ -356,7 +356,7 @@ add_test(NAME AdapterAudioSettingsTest COMMAND adapter-audio-settings-tests)
 set_tests_properties(AdapterAudioSettingsTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-level-loader-tests
-    tests/test_level_loader_adapter.cpp
+    tests/adapter/level/test_level_loader_adapter.cpp
 )
 target_include_directories(adapter-level-loader-tests PRIVATE src)
 target_link_libraries(adapter-level-loader-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -364,7 +364,7 @@ add_test(NAME AdapterLevelLoaderTest COMMAND adapter-level-loader-tests)
 set_tests_properties(AdapterLevelLoaderTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(service-level-repository-tests
-    tests/test_level_repository_service.cpp
+    tests/services/test_level_repository_service.cpp
 )
 target_include_directories(service-level-repository-tests PRIVATE src)
 target_link_libraries(service-level-repository-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -372,7 +372,7 @@ add_test(NAME ServiceLevelRepositoryTest COMMAND service-level-repository-tests)
 set_tests_properties(ServiceLevelRepositoryTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(service-audio-bus-tests
-    tests/test_audio_bus_service.cpp
+    tests/services/test_audio_bus_service.cpp
 )
 target_include_directories(service-audio-bus-tests PRIVATE src)
 target_link_libraries(service-audio-bus-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -380,7 +380,7 @@ add_test(NAME ServiceAudioBusTest COMMAND service-audio-bus-tests)
 set_tests_properties(ServiceAudioBusTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-level-applier-tests
-    tests/test_level_applier_adapter.cpp
+    tests/adapter/level/test_level_applier_adapter.cpp
 )
 target_include_directories(adapter-level-applier-tests PRIVATE src)
 target_link_libraries(adapter-level-applier-tests PRIVATE Qt6::Test Qt6::Core Qt6::Gui nenoserpent_adapter)
@@ -388,7 +388,7 @@ add_test(NAME AdapterLevelApplierTest COMMAND adapter-level-applier-tests)
 set_tests_properties(AdapterLevelApplierTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-level-script-runtime-tests
-    tests/test_level_script_runtime_adapter.cpp
+    tests/adapter/level/test_level_script_runtime_adapter.cpp
 )
 target_include_directories(adapter-level-script-runtime-tests PRIVATE src)
 target_link_libraries(adapter-level-script-runtime-tests PRIVATE Qt6::Test Qt6::Core Qt6::Qml nenoserpent_adapter)
@@ -396,7 +396,7 @@ add_test(NAME AdapterLevelScriptRuntimeTest COMMAND adapter-level-script-runtime
 set_tests_properties(AdapterLevelScriptRuntimeTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-ghost-store-tests
-    tests/test_ghost_store_adapter.cpp
+    tests/adapter/session/test_ghost_store_adapter.cpp
 )
 target_include_directories(adapter-ghost-store-tests PRIVATE src)
 target_link_libraries(adapter-ghost-store-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -404,7 +404,7 @@ add_test(NAME AdapterGhostStoreTest COMMAND adapter-ghost-store-tests)
 set_tests_properties(AdapterGhostStoreTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-session-state-tests
-    tests/test_session_state_adapter.cpp
+    tests/adapter/session/test_session_state_adapter.cpp
 )
 target_include_directories(adapter-session-state-tests PRIVATE src)
 target_link_libraries(adapter-session-state-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -412,7 +412,7 @@ add_test(NAME AdapterSessionStateTest COMMAND adapter-session-state-tests)
 set_tests_properties(AdapterSessionStateTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-library-models-tests
-    tests/test_library_models_adapter.cpp
+    tests/adapter/ui/test_library_models_adapter.cpp
 )
 target_include_directories(adapter-library-models-tests PRIVATE src)
 target_link_libraries(adapter-library-models-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -420,7 +420,7 @@ add_test(NAME AdapterLibraryModelsTest COMMAND adapter-library-models-tests)
 set_tests_properties(AdapterLibraryModelsTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-choice-models-tests
-    tests/test_choice_models_adapter.cpp
+    tests/adapter/ui/test_choice_models_adapter.cpp
 )
 target_include_directories(adapter-choice-models-tests PRIVATE src)
 target_link_libraries(adapter-choice-models-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -428,7 +428,7 @@ add_test(NAME AdapterChoiceModelsTest COMMAND adapter-choice-models-tests)
 set_tests_properties(AdapterChoiceModelsTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-bot-tests
-    tests/test_bot_controller_adapter.cpp
+    tests/adapter/bot/test_bot_controller_adapter.cpp
 )
 target_include_directories(adapter-bot-tests PRIVATE src)
 target_link_libraries(adapter-bot-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -436,7 +436,7 @@ add_test(NAME AdapterBotTest COMMAND adapter-bot-tests)
 set_tests_properties(AdapterBotTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-bot-backend-tests
-    tests/test_bot_backend_adapter.cpp
+    tests/adapter/bot/test_bot_backend_adapter.cpp
 )
 target_include_directories(adapter-bot-backend-tests PRIVATE src)
 target_link_libraries(adapter-bot-backend-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -444,7 +444,7 @@ add_test(NAME AdapterBotBackendTest COMMAND adapter-bot-backend-tests)
 set_tests_properties(AdapterBotBackendTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-bot-runtime-tests
-    tests/test_bot_runtime_adapter.cpp
+    tests/adapter/bot/test_bot_runtime_adapter.cpp
 )
 target_include_directories(adapter-bot-runtime-tests PRIVATE src)
 target_link_libraries(adapter-bot-runtime-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -452,7 +452,7 @@ add_test(NAME AdapterBotRuntimeTest COMMAND adapter-bot-runtime-tests)
 set_tests_properties(AdapterBotRuntimeTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-bot-ml-tests
-    tests/test_bot_ml_backend_adapter.cpp
+    tests/adapter/bot/test_bot_ml_backend_adapter.cpp
 )
 target_include_directories(adapter-bot-ml-tests PRIVATE src)
 target_link_libraries(adapter-bot-ml-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -460,12 +460,52 @@ add_test(NAME AdapterBotMlTest COMMAND adapter-bot-ml-tests)
 set_tests_properties(AdapterBotMlTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-bot-config-tests
-    tests/test_bot_config_adapter.cpp
+    tests/adapter/bot/test_bot_config_adapter.cpp
 )
 target_include_directories(adapter-bot-config-tests PRIVATE src)
 target_link_libraries(adapter-bot-config-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
 add_test(NAME AdapterBotConfigTest COMMAND adapter-bot-config-tests)
 set_tests_properties(AdapterBotConfigTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(adapter-bot-state-tests
+    tests/adapter/bot/test_bot_state_adapter.cpp
+)
+target_include_directories(adapter-bot-state-tests PRIVATE src)
+target_link_libraries(adapter-bot-state-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
+add_test(NAME AdapterBotStateTest COMMAND adapter-bot-state-tests)
+set_tests_properties(AdapterBotStateTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(adapter-bot-orchestrator-tests
+    tests/adapter/bot/test_bot_orchestrator_adapter.cpp
+)
+target_include_directories(adapter-bot-orchestrator-tests PRIVATE src)
+target_link_libraries(adapter-bot-orchestrator-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
+add_test(NAME AdapterBotOrchestratorTest COMMAND adapter-bot-orchestrator-tests)
+set_tests_properties(AdapterBotOrchestratorTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(adapter-bot-snapshot-tests
+    tests/adapter/bot/test_bot_snapshot_builder_adapter.cpp
+)
+target_include_directories(adapter-bot-snapshot-tests PRIVATE src)
+target_link_libraries(adapter-bot-snapshot-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
+add_test(NAME AdapterBotSnapshotTest COMMAND adapter-bot-snapshot-tests)
+set_tests_properties(AdapterBotSnapshotTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(adapter-bot-decision-applier-tests
+    tests/adapter/bot/test_bot_decision_applier_adapter.cpp
+)
+target_include_directories(adapter-bot-decision-applier-tests PRIVATE src)
+target_link_libraries(adapter-bot-decision-applier-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
+add_test(NAME AdapterBotDecisionApplierTest COMMAND adapter-bot-decision-applier-tests)
+set_tests_properties(AdapterBotDecisionApplierTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(adapter-bot-route-telemetry-tests
+    tests/adapter/bot/test_bot_route_telemetry_adapter.cpp
+)
+target_include_directories(adapter-bot-route-telemetry-tests PRIVATE src)
+target_link_libraries(adapter-bot-route-telemetry-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
+add_test(NAME AdapterBotRouteTelemetryTest COMMAND adapter-bot-route-telemetry-tests)
+set_tests_properties(AdapterBotRouteTelemetryTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endif()
 
 nenoserpent_apply_project_options(
@@ -500,6 +540,11 @@ nenoserpent_apply_project_options(
     adapter-bot-runtime-tests
     adapter-bot-ml-tests
     adapter-bot-config-tests
+    adapter-bot-state-tests
+    adapter-bot-orchestrator-tests
+    adapter-bot-snapshot-tests
+    adapter-bot-decision-applier-tests
+    adapter-bot-route-telemetry-tests
     bot-benchmark
 )
 

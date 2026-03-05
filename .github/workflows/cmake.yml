@@ -29,6 +29,7 @@ jobs:
           libpulse-dev \
           libsensors-dev \
           ripgrep \
+          python3-pip \
           xvfb \
           libxcb-cursor0 \
           libxcb-xinerama0 \
@@ -38,6 +39,11 @@ jobs:
           libxcb-render-util0 \
           libxcb-shape0 \
           libxkbcommon-x11-0
+
+    - name: Install Coverage Tooling
+      run: |
+        python3 -m pip install --user --break-system-packages gcovr
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
     - name: Install Qt6
       uses: jurplel/install-qt-action@v3
@@ -61,6 +67,32 @@ jobs:
       run: |
         export QT_QPA_PLATFORM=offscreen
         xvfb-run -a ctest --preset debug --output-on-failure
+
+    - name: Configure Coverage Build
+      run: cmake --preset coverage --fresh
+
+    - name: Build Coverage Targets
+      run: cmake --build --preset coverage
+
+    - name: Coverage Gate (Unit)
+      run: |
+        find build/coverage -name '*.gcda' -delete
+        export QT_QPA_PLATFORM=offscreen
+        xvfb-run -a ctest --preset coverage -E "EngineAdapterTest|SessionRunnerTest|AdapterUiCommandTest" --output-on-failure
+        ./scripts/ci/coverage_collect.sh build/coverage build/coverage/coverage-unit-summary.json
+        python3 ./scripts/ci/coverage_gate.py \
+          --summary build/coverage/coverage-unit-summary.json \
+          --group unit
+
+    - name: Coverage Gate (Integration)
+      run: |
+        find build/coverage -name '*.gcda' -delete
+        export QT_QPA_PLATFORM=offscreen
+        xvfb-run -a ctest --preset coverage -R "EngineAdapterTest|SessionRunnerTest|AdapterUiCommandTest" --output-on-failure
+        ./scripts/ci/coverage_collect.sh build/coverage build/coverage/coverage-integration-summary.json
+        python3 ./scripts/ci/coverage_gate.py \
+          --summary build/coverage/coverage-integration-summary.json \
+          --group integration
 
     - name: Build Bot Benchmark
       run: cmake --build --preset debug --target bot-benchmark

@@ -38,6 +38,17 @@
       }
     },
     {
+      "name": "coverage",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_FLAGS_DEBUG": "-O0 -g --coverage",
+        "CMAKE_EXE_LINKER_FLAGS_DEBUG": "--coverage",
+        "CMAKE_SHARED_LINKER_FLAGS_DEBUG": "--coverage"
+      }
+    },
+    {
       "name": "dev",
       "inherits": "base",
       "cacheVariables": {
@@ -69,6 +80,10 @@
       "configurePreset": "debug-clang"
     },
     {
+      "name": "coverage",
+      "configurePreset": "coverage"
+    },
+    {
       "name": "dev",
       "configurePreset": "dev"
     },
@@ -95,6 +110,16 @@
     {
       "name": "debug-clang",
       "configurePreset": "debug-clang",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "coverage",
+      "configurePreset": "coverage",
       "output": {
         "outputOnFailure": true
       },

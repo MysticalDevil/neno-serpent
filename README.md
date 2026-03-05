@@ -71,6 +71,7 @@ just release
 just dev
 just test
 just check
+just coverage-check
 just tidy
 just fmt
 just android
@@ -199,6 +200,7 @@ docker compose --profile cd run --rm gh-cd-android-preflight
 ## Input Architecture Notes
 - Logging system plan: `docs/LOGGING_SYSTEM_PLAN.md`
 - Modernization roadmap: `docs/MODERNIZATION_ROADMAP.md`
+- Coverage policy: `docs/COVERAGE_POLICY.md`
 - Audio authoring guide: `docs/AUDIO_AUTHORING.md`
 - Level authoring guide: `docs/LEVEL_AUTHORING.md`
 - Bot rules and tuning: `docs/BOT_RULES.md`

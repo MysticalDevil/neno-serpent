@@ -77,6 +77,7 @@ just release
 just dev
 just test
 just check
+just coverage-check
 just tidy
 just fmt
 just android

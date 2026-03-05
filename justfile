@@ -18,6 +18,7 @@ help:
   @echo "  debug-clang Configure + build Clang Debug in {{debug_clang_dir}}"
   @echo "  test      Run ctest with debug preset"
   @echo "  check     Clang debug quality gate for bot/runtime touched flows"
+  @echo "  coverage-check Run unit/integration coverage gates with coverage preset"
   @echo "  tidy      Run cached clang-tidy on changed files (uses {{debug_dir}})"
   @echo "  fmt       Run clang-format on changed C/C++ files"
   @echo "  android   Run scripts/deploy.sh android with BUILD_DIR={{android_dir}}"
@@ -51,6 +52,18 @@ check:
   env QT_QPA_PLATFORM=offscreen ./{{debug_clang_dir}}/adapter-ui-command-tests
   env QT_QPA_PLATFORM=offscreen ./{{debug_clang_dir}}/adapter-bot-config-tests
   env QT_QPA_PLATFORM=offscreen ./{{debug_clang_dir}}/engine-adapter-tests
+
+coverage-check:
+  cmake --preset coverage --fresh
+  cmake --build --preset coverage
+  find build/coverage -name '*.gcda' -delete
+  env QT_QPA_PLATFORM=offscreen ctest --preset coverage -E "EngineAdapterTest|SessionRunnerTest|AdapterUiCommandTest" --output-on-failure
+  ./scripts/ci/coverage_collect.sh build/coverage build/coverage/coverage-unit-summary.json
+  python3 ./scripts/ci/coverage_gate.py --summary build/coverage/coverage-unit-summary.json --group unit
+  find build/coverage -name '*.gcda' -delete
+  env QT_QPA_PLATFORM=offscreen ctest --preset coverage -R "EngineAdapterTest|SessionRunnerTest|AdapterUiCommandTest" --output-on-failure
+  ./scripts/ci/coverage_collect.sh build/coverage build/coverage/coverage-integration-summary.json
+  python3 ./scripts/ci/coverage_gate.py --summary build/coverage/coverage-integration-summary.json --group integration
 
 tidy:
   ./scripts/dev.sh clang-tidy {{debug_dir}}

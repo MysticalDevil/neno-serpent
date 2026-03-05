@@ -6,6 +6,9 @@
 #include <QVariantMap>
 
 class EngineAdapter;
+namespace nenoserpent::adapter::bot {
+class BotControlPort;
+}
 
 class UiCommandController final : public QObject {
   Q_OBJECT
@@ -16,10 +19,10 @@ public:
   Q_INVOKABLE void dispatch(const QString& action) const;
   Q_INVOKABLE void requestStateChange(int state) const;
   Q_INVOKABLE void cycleBgm() const;
-  Q_INVOKABLE void cycleBotMode() const;
-  Q_INVOKABLE void cycleBotStrategyMode() const;
-  Q_INVOKABLE void resetBotModeDefaults() const;
-  Q_INVOKABLE bool setBotParam(const QString& key, int value) const;
+  Q_INVOKABLE void cycleBotMode();
+  Q_INVOKABLE void cycleBotStrategyMode();
+  Q_INVOKABLE void resetBotModeDefaults();
+  Q_INVOKABLE bool setBotParam(const QString& key, int value);
   Q_INVOKABLE QVariantMap botStatus() const;
   Q_INVOKABLE void seedChoicePreview(const QVariantList& types = QVariantList()) const;
   Q_INVOKABLE void seedReplayBuffPreview() const;
@@ -32,4 +35,5 @@ signals:
 
 private:
   EngineAdapter* m_engineAdapter = nullptr;
+  nenoserpent::adapter::bot::BotControlPort* m_botControlPort = nullptr;
 };

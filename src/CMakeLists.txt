@@ -62,6 +62,11 @@ add_library(nenoserpent_adapter
     adapter/bot/ml_backend.cpp
     adapter/bot/config.h
     adapter/bot/config.cpp
+    adapter/bot/config_loader.h
+    adapter/bot/config_loader.cpp
+    adapter/bot/port.h
+    adapter/bot/runtime_facade.h
+    adapter/bot/runtime_facade.cpp
     adapter/bot/state.h
     adapter/bot/state.cpp
     adapter/bot/runtime.h

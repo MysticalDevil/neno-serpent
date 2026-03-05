@@ -112,7 +112,10 @@ void EngineAdapter::toggleBotAutoplay() {
 }
 
 void EngineAdapter::cycleBotMode() {
-  m_botState.cycleBackendMode();
+  if (m_botControlPort == nullptr) {
+    return;
+  }
+  m_botControlPort->cycleBackendMode();
   emit botAutoplayChanged();
   emit botStrategyChanged();
   emit eventPrompt(u"BOT BACKEND: "_s + botModeName().toUpper());
@@ -120,22 +123,29 @@ void EngineAdapter::cycleBotMode() {
 }
 
 void EngineAdapter::cycleBotStrategyMode() {
-  m_botState.cycleStrategyMode();
+  if (m_botControlPort == nullptr) {
+    return;
+  }
+  m_botControlPort->cycleStrategyMode();
   emit botStrategyChanged();
-  emit eventPrompt(u"BOT STRATEGY: "_s + m_botState.strategyModeName().toUpper());
-  qCInfo(nenoserpentInputLog).noquote() << "bot strategy mode ->" << m_botState.strategyModeName();
+  const QString strategyMode = m_botControlPort->status().value(u"strategyMode"_s).toString();
+  emit eventPrompt(u"BOT STRATEGY: "_s + strategyMode.toUpper());
+  qCInfo(nenoserpentInputLog).noquote() << "bot strategy mode ->" << strategyMode;
 }
 
 void EngineAdapter::resetBotModeDefaults() {
-  m_botState.resetStrategyModeDefaults();
+  if (m_botControlPort == nullptr) {
+    return;
+  }
+  m_botControlPort->resetStrategyModeDefaults();
   emit botStrategyChanged();
   emit eventPrompt(u"BOT RESET: MODE DEFAULT"_s);
-  qCInfo(nenoserpentInputLog).noquote()
-    << "bot strategy reset for mode ->" << m_botState.strategyModeName();
+  const QString strategyMode = m_botControlPort->status().value(u"strategyMode"_s).toString();
+  qCInfo(nenoserpentInputLog).noquote() << "bot strategy reset for mode ->" << strategyMode;
 }
 
 auto EngineAdapter::setBotParam(const QString& key, int value) -> bool {
-  if (!m_botState.setParam(key, value)) {
+  if (m_botControlPort == nullptr || !m_botControlPort->setParam(key, value)) {
     return false;
   }
 
@@ -147,7 +157,7 @@ auto EngineAdapter::setBotParam(const QString& key, int value) -> bool {
 }
 
 auto EngineAdapter::botStatus() const -> QVariantMap {
-  return m_botState.status();
+  return m_botControlPort != nullptr ? m_botControlPort->status() : QVariantMap{};
 }
 
 void EngineAdapter::cycleBgm() {

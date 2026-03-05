@@ -10,7 +10,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 
-#include "adapter/bot/state.h"
+#include "adapter/bot/port.h"
 #include "adapter/haptics/controller.h"
 #include "adapter/ui/action.h"
 #include "app_state.h"
@@ -290,10 +290,13 @@ public:
   }
   [[nodiscard]] auto fruitLibrary() const -> QVariantList;
   [[nodiscard]] auto botAutoplayEnabled() const noexcept -> bool {
-    return m_botState.autoplayEnabled();
+    return m_botControlPort != nullptr ? m_botControlPort->autoplayEnabled() : false;
   }
   [[nodiscard]] auto botModeName() const -> QString {
-    return m_botState.backendModeName();
+    return m_botControlPort != nullptr ? m_botControlPort->modeName() : QStringLiteral("off");
+  }
+  [[nodiscard]] auto botControlPort() const -> nenoserpent::adapter::bot::BotControlPort* {
+    return m_botControlPort;
   }
 
   static constexpr int BOARD_WIDTH = 20;
@@ -424,7 +427,9 @@ private:
   std::unique_ptr<GameState> m_fsmState;
   bool m_musicEnabled = true;
   int m_bgmVariant = 0;
-  nenoserpent::adapter::bot::State m_botState;
+  std::unique_ptr<nenoserpent::adapter::bot::BotControlPort> m_botControlOwner;
+  nenoserpent::adapter::bot::BotControlPort* m_botControlPort = nullptr;
+  nenoserpent::adapter::bot::BotRuntimePort* m_botRuntimePort = nullptr;
   bool m_stateCallbackInProgress = false;
   std::optional<int> m_pendingStateChange;
 

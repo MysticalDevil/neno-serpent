@@ -1,10 +1,16 @@
 #include "adapter/ui/controller.h"
 
+#include "adapter/bot/port.h"
 #include "adapter/engine_adapter.h"
+
+using namespace Qt::StringLiterals;
 
 UiCommandController::UiCommandController(EngineAdapter* engineAdapter, QObject* parent)
     : QObject(parent),
       m_engineAdapter(engineAdapter) {
+  if (m_engineAdapter != nullptr) {
+    m_botControlPort = m_engineAdapter->botControlPort();
+  }
   if (m_engineAdapter == nullptr) {
     return;
   }
@@ -38,34 +44,42 @@ void UiCommandController::cycleBgm() const {
   }
 }
 
-void UiCommandController::cycleBotMode() const {
-  if (m_engineAdapter != nullptr) {
-    m_engineAdapter->cycleBotMode();
+void UiCommandController::cycleBotMode() {
+  if (m_botControlPort != nullptr) {
+    m_botControlPort->cycleBackendMode();
+    emit eventPrompt(u"BOT BACKEND: "_s + m_botControlPort->modeName().toUpper());
   }
 }
 
-void UiCommandController::cycleBotStrategyMode() const {
-  if (m_engineAdapter != nullptr) {
-    m_engineAdapter->cycleBotStrategyMode();
+void UiCommandController::cycleBotStrategyMode() {
+  if (m_botControlPort != nullptr) {
+    m_botControlPort->cycleStrategyMode();
+    const QString mode = m_botControlPort->status().value(u"strategyMode"_s).toString();
+    emit eventPrompt(u"BOT STRATEGY: "_s + mode.toUpper());
   }
 }
 
-void UiCommandController::resetBotModeDefaults() const {
-  if (m_engineAdapter != nullptr) {
-    m_engineAdapter->resetBotModeDefaults();
+void UiCommandController::resetBotModeDefaults() {
+  if (m_botControlPort != nullptr) {
+    m_botControlPort->resetStrategyModeDefaults();
+    emit eventPrompt(u"BOT RESET: MODE DEFAULT"_s);
   }
 }
 
-auto UiCommandController::setBotParam(const QString& key, const int value) const -> bool {
-  if (m_engineAdapter != nullptr) {
-    return m_engineAdapter->setBotParam(key, value);
+auto UiCommandController::setBotParam(const QString& key, const int value) -> bool {
+  if (m_botControlPort != nullptr) {
+    if (!m_botControlPort->setParam(key, value)) {
+      return false;
+    }
+    emit eventPrompt(u"BOT PARAM: "_s + key.toUpper() + u"="_s + QString::number(value));
+    return true;
   }
   return false;
 }
 
 auto UiCommandController::botStatus() const -> QVariantMap {
-  if (m_engineAdapter != nullptr) {
-    return m_engineAdapter->botStatus();
+  if (m_botControlPort != nullptr) {
+    return m_botControlPort->status();
   }
   return {};
 }

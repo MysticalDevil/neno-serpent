@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QDebug>
 
+#include "adapter/bot/runtime_facade.h"
 #include "fsm/game_state.h"
 #include "fsm/state_factory.h"
 #include "logging/categories.h"
@@ -52,8 +53,15 @@ EngineAdapter::EngineAdapter(QObject* parent)
       m_profileManager(std::make_unique<ProfileManager>()),
       m_inputQueue(m_sessionCore.inputQueue()),
       m_fsmState(nullptr) {
+  auto botRuntimeFacade = std::make_unique<nenoserpent::adapter::bot::RuntimeFacade>();
+  m_botControlPort = botRuntimeFacade.get();
+  m_botRuntimePort = botRuntimeFacade.get();
+  m_botControlOwner = std::move(botRuntimeFacade);
+
   m_timer->setTimerType(Qt::PreciseTimer);
-  m_botState.initializeFromEnvironment();
+  if (m_botControlPort != nullptr) {
+    m_botControlPort->initializeFromEnvironment();
+  }
 
   m_audioBus.setCallbacks({
     .startMusic = [this](const nenoserpent::audio::ScoreTrackId trackId) -> void {

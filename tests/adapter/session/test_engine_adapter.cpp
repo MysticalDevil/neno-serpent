@@ -23,6 +23,10 @@ private:
           m_hadValue(qEnvironmentVariableIsSet(key)),
           m_previous(m_hadValue ? qgetenv(key) : QByteArray()) {
     }
+    ScopedEnv(const ScopedEnv&) = delete;
+    auto operator=(const ScopedEnv&) -> ScopedEnv& = delete;
+    ScopedEnv(ScopedEnv&&) = delete;
+    auto operator=(ScopedEnv&&) -> ScopedEnv& = delete;
     ~ScopedEnv() {
       if (m_hadValue) {
         qputenv(m_key.constData(), m_previous);
@@ -484,6 +488,25 @@ private slots:
     QCOMPARE(crashSpy.count(), 1);
     QCOMPARE(uiSpy.count(), 1);
     QCOMPARE(powerSpy.count(), 1);
+  }
+
+  void testChoiceResumeDoesNotRestartMusic() {
+    EngineAdapter game;
+    QSignalSpy startMusicSpy(&game, &EngineAdapter::audioStartMusic);
+    QSignalSpy pausedSpy(&game, &EngineAdapter::audioSetPaused);
+
+    game.setInternalState(AppState::Playing);
+    QCOMPARE(startMusicSpy.count(), 1);
+    QVERIFY(!pausedSpy.isEmpty());
+    QCOMPARE(pausedSpy.back().at(0).toBool(), false);
+
+    game.setInternalState(AppState::ChoiceSelection);
+    QVERIFY(pausedSpy.count() >= 2);
+    QCOMPARE(pausedSpy.back().at(0).toBool(), true);
+
+    game.setInternalState(AppState::Playing);
+    QCOMPARE(startMusicSpy.count(), 1);
+    QCOMPARE(pausedSpy.back().at(0).toBool(), false);
   }
 };
 

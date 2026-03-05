@@ -153,6 +153,9 @@ void TestAudioBusService::testStateChangePolicy() {
   audioBus.handleStateChanged(7, 2, true, 0, {});
   audioBus.handleStateChanged(8, 2, true, 0, {});
   QCOMPARE(startCount, 3);
+
+  audioBus.handleStateChanged(6, 2, false, 0, {});
+  QCOMPARE(startCount, 3);
 }
 
 void TestAudioBusService::testAlternateTrackSelectionPolicy() {

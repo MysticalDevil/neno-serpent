@@ -147,7 +147,7 @@ EOF
       ;;
     bot-online-run)
       cat <<'EOF'
-Usage: ./scripts/dev.sh bot-online-run [--workspace cache/<dir> --build-preset debug --ui-mode screen]
+Usage: ./scripts/dev.sh bot-online-run [--workspace cache/<dir> --build-preset dev --ui-mode screen]
        [--level N]
        [--decision-policy aggressive|balanced|conservative]
        [--quality low|medium|high|extreme]

@@ -8,7 +8,7 @@ set -euo pipefail
 #   ./scripts/dev.sh bot-run --backend search --headful
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-BUILD_PRESET="${BUILD_PRESET:-debug}"
+BUILD_PRESET="${BUILD_PRESET:-dev}"
 SKIP_BUILD="${NENOSERPENT_SKIP_BUILD:-0}"
 HEADFUL=1
 UI_MODE="full"

@@ -9,7 +9,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEV_SH="${NENOSERPENT_DEV_SCRIPT:-${ROOT_DIR}/scripts/dev.sh}"
 TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/dev}}"
 WORKSPACE="${BOT_ONLINE_WORKSPACE:-${TMP_ROOT}/nenoserpent_bot_online}"
-BUILD_PRESET="${BUILD_PRESET:-debug}"
+BUILD_PRESET="${BUILD_PRESET:-dev}"
 UI_MODE="${BOT_ONLINE_UI_MODE:-screen}"
 PROFILE="${BOT_ONLINE_PROFILE:-dev}"
 QUALITY="${BOT_ONLINE_QUALITY:-medium}"
@@ -149,7 +149,7 @@ Usage:
 
 Options:
   --workspace <dir>             Workspace for online trainer + runtime json
-  --build-preset <name>         Build preset for game binary (default: debug)
+  --build-preset <name>         Build preset for game binary (default: dev)
   --ui-mode <full|screen>       UI mode for headful game run (default: screen)
   --profile <debug|dev|release> Trainer dataset profile (default: dev)
   --level <index>               Initial gameplay level index (default: 0)

@@ -16,6 +16,7 @@ enum class BotBackendMode {
   Off,
   Rule,
   Ml,
+  Search,
 };
 
 struct StrategyConfig {

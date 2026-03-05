@@ -141,6 +141,7 @@ CMAKE_BUILD_TYPE=Release ./scripts/deploy.sh android
 # Run bot in headful mode directly (no manual F8 cycling needed)
 ./scripts/dev.sh bot-run --backend rule --headful
 ./scripts/dev.sh bot-run --backend ml --ml-model /tmp/nenoserpent_bot_policy_runtime.json --headful
+./scripts/dev.sh bot-run --backend search --headful
 ```
 
 ### Build and Deploy (WebAssembly)
@@ -190,7 +191,8 @@ docker compose --profile cd run --rm gh-cd-android-preflight
   - In pause/game over/replay/library/medal: back to menu
 - **Y / C / Tap Logo**: Cycle Console Shell Colors
 - **M**: Toggle Music
-- **F8**: Cycle Bot Backend (`off -> rule -> ml -> off`)
+- **F8**: Cycle Bot Backend (`off -> rule -> ml -> search -> off`)
+- **F10**: Cycle Bot Strategy (`safe -> balanced -> aggressive -> safe`)
 - **F9**: Toggle Bot Tuning Panel (debug UI)
 - **Back / Esc**: Quit App
 

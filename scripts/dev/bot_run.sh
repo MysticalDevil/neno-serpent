@@ -5,6 +5,7 @@ set -euo pipefail
 # Example:
 #   ./scripts/dev.sh bot-run --backend rule --headful
 #   ./scripts/dev.sh bot-run --backend ml --ml-model /tmp/policy.runtime.json --ui-mode screen
+#   ./scripts/dev.sh bot-run --backend search --headful
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BUILD_PRESET="${BUILD_PRESET:-dev}"
@@ -50,8 +51,9 @@ if [[ "${UI_MODE}" != "full" && "${UI_MODE}" != "screen" && "${UI_MODE}" != "she
   echo "invalid --ui-mode: ${UI_MODE} (expected full|screen|shell)" >&2
   exit 1
 fi
-if [[ "${BOT_BACKEND}" != "off" && "${BOT_BACKEND}" != "rule" && "${BOT_BACKEND}" != "ml" ]]; then
-  echo "invalid --backend: ${BOT_BACKEND} (expected off|rule|ml)" >&2
+if [[ "${BOT_BACKEND}" != "off" && "${BOT_BACKEND}" != "rule" && "${BOT_BACKEND}" != "ml" &&
+  "${BOT_BACKEND}" != "search" ]]; then
+  echo "invalid --backend: ${BOT_BACKEND} (expected off|rule|ml|search)" >&2
   exit 1
 fi
 if [[ "${BOT_BACKEND}" == "ml" && -z "${ML_MODEL_PATH}" ]]; then

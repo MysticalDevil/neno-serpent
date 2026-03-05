@@ -113,9 +113,12 @@ EngineAdapter::EngineAdapter(QObject* parent)
     } else if (backendOverride == QStringLiteral("ml")) {
       m_botBackendMode = nenoserpent::adapter::bot::BotBackendMode::Ml;
       qCInfo(nenoserpentInputLog).noquote() << "bot backend override -> ml";
+    } else if (backendOverride == QStringLiteral("search")) {
+      m_botBackendMode = nenoserpent::adapter::bot::BotBackendMode::Search;
+      qCInfo(nenoserpentInputLog).noquote() << "bot backend override -> search";
     } else {
       qCWarning(nenoserpentInputLog).noquote() << "invalid bot backend override:" << backendOverride
-                                               << "(expected off|rule|ml, fallback off)";
+                                               << "(expected off|rule|ml|search, fallback off)";
       m_botBackendMode = nenoserpent::adapter::bot::BotBackendMode::Off;
     }
   }

@@ -56,6 +56,9 @@ auto EngineAdapter::driveBotAutoplay() -> bool {
   case nenoserpent::adapter::bot::BotBackendMode::Ml:
     backend = &m_botMlBackend;
     break;
+  case nenoserpent::adapter::bot::BotBackendMode::Search:
+    backend = &nenoserpent::adapter::bot::searchBackend();
+    break;
   }
   const auto decision = nenoserpent::adapter::bot::step({
     .enabled = botAutoplayEnabled(),

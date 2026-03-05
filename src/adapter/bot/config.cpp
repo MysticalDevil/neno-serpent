@@ -159,6 +159,8 @@ auto backendModeName(const BotBackendMode mode) -> QString {
     return QStringLiteral("rule");
   case BotBackendMode::Ml:
     return QStringLiteral("ml");
+  case BotBackendMode::Search:
+    return QStringLiteral("search");
   }
   return QStringLiteral("off");
 }
@@ -170,6 +172,8 @@ auto nextBackendMode(const BotBackendMode mode) -> BotBackendMode {
   case BotBackendMode::Rule:
     return BotBackendMode::Ml;
   case BotBackendMode::Ml:
+    return BotBackendMode::Search;
+  case BotBackendMode::Search:
     return BotBackendMode::Off;
   }
   return BotBackendMode::Off;

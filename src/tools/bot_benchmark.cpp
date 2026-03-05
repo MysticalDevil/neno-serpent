@@ -66,6 +66,7 @@ struct BenchmarkStats {
 enum class BenchmarkBackend {
   Rule,
   Ml,
+  Search,
 };
 
 struct DatasetWriter final {
@@ -323,7 +324,7 @@ auto main(int argc, char* argv[]) -> int {
                                 QStringLiteral("name"),
                                 QStringLiteral("balanced"));
   QCommandLineOption backendOption(QStringList{QStringLiteral("backend")},
-                                   QStringLiteral("Bot backend (rule/ml)."),
+                                   QStringLiteral("Bot backend (rule/ml/search)."),
                                    QStringLiteral("name"),
                                    QStringLiteral("rule"));
   QCommandLineOption mlModelOption(QStringList{QStringLiteral("ml-model")},
@@ -430,6 +431,8 @@ auto main(int argc, char* argv[]) -> int {
   BenchmarkBackend backend = BenchmarkBackend::Rule;
   if (backendValue == QStringLiteral("ml")) {
     backend = BenchmarkBackend::Ml;
+  } else if (backendValue == QStringLiteral("search")) {
+    backend = BenchmarkBackend::Search;
   }
 
   const nenoserpent::adapter::bot::BotBackend* primaryBackend =
@@ -461,6 +464,9 @@ auto main(int argc, char* argv[]) -> int {
       std::cerr << "[bot-benchmark] ml model unavailable path=" << mlModelPath.toStdString()
                 << " reason=" << mlBackend.errorString().toStdString() << " fallback=rule\n";
     }
+  }
+  if (backend == BenchmarkBackend::Search) {
+    primaryBackend = &nenoserpent::adapter::bot::searchBackend();
   }
 
   const auto stats = runBenchmark(games,

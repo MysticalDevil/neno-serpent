@@ -15,7 +15,7 @@ Usage:
   ./scripts/dev.sh bot-eval [--dataset /tmp/bot_dataset.csv --model /tmp/bot_policy.pt]
   ./scripts/dev.sh bot-ml-gate [--workspace /tmp/nenoserpent_bot_ml_gate]
   ./scripts/dev.sh bot-ml-smoke [build-dir]
-  ./scripts/dev.sh bot-run [--backend off|rule|ml --headful|--headless --ui-mode full|screen|shell]
+  ./scripts/dev.sh bot-run [--backend off|rule|ml|search --headful|--headless --ui-mode full|screen|shell]
   ./scripts/dev.sh bot-e2e [build-dir] [baseline.tsv]
   ./scripts/dev.sh bot-leaderboard [build-dir] [suite.tsv]
 EOF

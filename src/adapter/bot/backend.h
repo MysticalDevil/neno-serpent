@@ -29,5 +29,6 @@ public:
 };
 
 [[nodiscard]] auto ruleBackend() -> const BotBackend&;
+[[nodiscard]] auto searchBackend() -> const BotBackend&;
 
 } // namespace nenoserpent::adapter::bot

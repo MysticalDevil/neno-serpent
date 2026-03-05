@@ -370,8 +370,9 @@ struct TargetDistance {
   int unreachablePenalty = 0;
 };
 
-auto resolvePrimaryTarget(const QPoint& head, const Snapshot& snapshot, const StrategyConfig& config)
-  -> QPoint {
+auto resolvePrimaryTarget(const QPoint& head,
+                          const Snapshot& snapshot,
+                          const StrategyConfig& config) -> QPoint {
   QPoint target = snapshot.food;
   const bool hasPowerUp = snapshot.powerUpPos.x() >= 0 && snapshot.powerUpPos.y() >= 0;
   const int priority = powerPriority(config, snapshot.powerUpType);
@@ -706,6 +707,33 @@ auto candidateRiskCost(const int openSpace,
   return risk;
 }
 
+auto approachTargetBonus(const QPoint& currentHead,
+                         const QPoint& nextHead,
+                         const QPoint& target,
+                         const Snapshot& snapshot,
+                         const StrategyConfig& config,
+                         const int repeats) -> int {
+  const int currentDistance =
+    toroidalDistance(currentHead, target, snapshot.boardWidth, snapshot.boardHeight);
+  const int nextDistance =
+    toroidalDistance(nextHead, target, snapshot.boardWidth, snapshot.boardHeight);
+  const int delta = currentDistance - nextDistance;
+  int scale = config.targetDistanceWeight + (config.foodConsumeBonus / 2);
+  if (target == snapshot.food && snapshot.score < 60 &&
+      static_cast<int>(snapshot.body.size()) < 12) {
+    scale += config.foodConsumeBonus / 2;
+  }
+  if (scale <= 0) {
+    return 0;
+  }
+  scale *= 3;
+  int bonus = delta * scale;
+  if (delta <= 0 && repeats >= 2 && target == snapshot.food) {
+    bonus -= 36;
+  }
+  return bonus;
+}
+
 auto selectLoopAwareDirection(const Snapshot& snapshot,
                               const StrategyConfig& config,
                               LoopMemory& memory,
@@ -728,6 +756,7 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
   const bool escapeMode = repeats >= kLoopRepeatThreshold || stagnantEscape;
   const int riskBudget = riskBudgetFor(snapshot, repeats);
   const int depth = std::clamp(tunedConfig.lookaheadDepth + 1, 2, 6);
+  const QPoint primaryTarget = resolvePrimaryTarget(initial.head, snapshot, tunedConfig);
   const auto tieRotateSeed = static_cast<std::uint64_t>(stateHash(snapshot, initial)) ^
                              static_cast<std::uint64_t>(tunedConfig.tieBreakSeed) ^
                              memory.observeTick();
@@ -758,6 +787,8 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
     int score = 0;
     if (escapeMode) {
       score = evaluateEscapeCandidate(snapshot, preview, tunedConfig, revisitCount);
+      score += approachTargetBonus(
+        initial.head, preview.next.head, primaryTarget, snapshot, tunedConfig, repeats);
     } else if (useSearchScoring) {
       int immediate = (candidate == snapshot.direction ? tunedConfig.straightBonus : 0);
       if (preview.ateFood) {
@@ -766,19 +797,17 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
       if (preview.atePower) {
         immediate += powerPriority(tunedConfig, snapshot.powerUpType);
       }
-      score =
-        immediate + searchValue(snapshot, preview.next, tunedConfig, depth - 1) -
-        (revisitCount * std::max(1, tunedConfig.loopRepeatPenalty - 8));
+      score = immediate + searchValue(snapshot, preview.next, tunedConfig, depth - 1) -
+              (revisitCount * std::max(1, tunedConfig.loopRepeatPenalty - 8));
       score += rolloutScore(snapshot, preview.next, tunedConfig) / 6;
+      score += approachTargetBonus(
+        initial.head, preview.next.head, primaryTarget, snapshot, tunedConfig, repeats);
       score -= pocketPenalty * 2;
     } else {
       const QPoint tailFallback =
         preview.next.body.empty() ? preview.next.head : preview.next.body.back();
-      const TargetDistance targetDistance = resolveTargetDistance(preview.next.head,
-                                                                  snapshot,
-                                                                  tunedConfig,
-                                                                  blocked,
-                                                                  tailFallback);
+      const TargetDistance targetDistance =
+        resolveTargetDistance(preview.next.head, snapshot, tunedConfig, blocked, tailFallback);
       int immediate = (candidate == snapshot.direction ? tunedConfig.straightBonus : 0);
       if (preview.ateFood) {
         immediate += tunedConfig.foodConsumeBonus;
@@ -792,6 +821,8 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
               (targetDistance.distance * tunedConfig.targetDistanceWeight) + immediate -
               trapPenalty - (revisitCount * tunedConfig.loopRepeatPenalty) -
               targetDistance.unreachablePenalty;
+      score += approachTargetBonus(
+        initial.head, preview.next.head, primaryTarget, snapshot, tunedConfig, repeats);
       score -= pocketPenalty;
     }
 

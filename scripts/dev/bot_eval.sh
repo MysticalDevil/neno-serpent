@@ -29,7 +29,7 @@ while (($# > 0)); do
   esac
 done
 
-exec python3 "${ROOT_DIR}/scripts/dev/bot_eval.py" \
+exec uv run python "${ROOT_DIR}/scripts/dev/bot_eval.py" \
   --dataset "${DATASET_PATH}" \
   --model "${MODEL_PATH}" \
   --report "${REPORT_PATH}"

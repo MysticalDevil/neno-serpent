@@ -61,7 +61,7 @@ while (($# > 0)); do
   esac
 done
 
-exec python3 "${ROOT_DIR}/scripts/dev/bot_train.py" \
+exec uv run python "${ROOT_DIR}/scripts/dev/bot_train.py" \
   --dataset "${DATASET_PATH}" \
   --output-model "${MODEL_PATH}" \
   --output-metadata "${METADATA_PATH}" \

@@ -60,7 +60,7 @@ while (($# > 0)); do
   esac
 done
 
-if ! python3 -c "import torch" >/dev/null 2>&1; then
+if ! uv run python -c "import torch" >/dev/null 2>&1; then
   echo "[bot-ml-gate] missing dependency: torch" >&2
   echo "[bot-ml-gate] install with: uv add --dev torch" >&2
   exit 1

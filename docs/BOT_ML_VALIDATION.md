@@ -15,7 +15,7 @@ Run a full chain with fixed seed and fixed suite:
 ## One-Command Flow
 
 ```bash
-./scripts/dev.sh bot-ml-gate --workspace /tmp/nenoserpent_bot_ml_gate
+./scripts/dev.sh bot-ml-gate --workspace cache/dev/nenoserpent_bot_ml_gate
 ```
 
 Quick smoke gate (repo tiny model):
@@ -26,11 +26,11 @@ Quick smoke gate (repo tiny model):
 
 Outputs:
 
-- `/tmp/nenoserpent_bot_ml_gate/dataset.csv`
-- `/tmp/nenoserpent_bot_ml_gate/policy.pt`
-- `/tmp/nenoserpent_bot_ml_gate/policy.runtime.json`
-- `/tmp/nenoserpent_bot_ml_gate/eval.report.json`
-- `/tmp/nenoserpent_bot_ml_gate/leaderboard.compare.tsv`
+- `cache/dev/nenoserpent_bot_ml_gate/dataset.csv`
+- `cache/dev/nenoserpent_bot_ml_gate/policy.pt`
+- `cache/dev/nenoserpent_bot_ml_gate/policy.runtime.json`
+- `cache/dev/nenoserpent_bot_ml_gate/eval.report.json`
+- `cache/dev/nenoserpent_bot_ml_gate/leaderboard.compare.tsv`
 
 ## Gate Rule
 
@@ -59,7 +59,7 @@ GitHub Actions `cmake.yml` supports optional ML no-regression gate.
 
 If repository secret `BOT_ML_MODEL_B64` is set (base64 of runtime JSON model):
 
-1. decode model to `/tmp/nenoserpent_bot_policy_runtime.json`
+1. decode model to `cache/ci/nenoserpent_bot_policy_runtime.json`
 2. run leaderboard compare with `BOT_LEADERBOARD_REQUIRE_NO_REGRESSION=1`
 3. fail CI if any `ml` case regresses below `rule`
 

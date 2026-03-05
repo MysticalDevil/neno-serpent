@@ -69,7 +69,7 @@ The benchmark reports max/avg/median/p95 score and game-over/timeout outcomes.
 Run full reproducible `rule` vs `ml` gate:
 
 ```bash
-./scripts/dev.sh bot-ml-gate --workspace /tmp/nenoserpent_bot_ml_gate
+./scripts/dev.sh bot-ml-gate --workspace cache/dev/nenoserpent_bot_ml_gate
 ```
 
 CI regression gate:
@@ -96,13 +96,13 @@ When `BOT_ML_MODEL` is set and suite contains `ml` rows, the script emits a
 Offline parameter tuning:
 
 ```bash
-./scripts/dev.sh bot-tune --mode balanced --iterations 60 --output /tmp/nenoserpent_bot_tuned.json
+./scripts/dev.sh bot-tune --mode balanced --iterations 60 --output cache/dev/nenoserpent_bot_tuned.json
 ```
 
 The tuned file can be loaded via:
 
 ```bash
-NENOSERPENT_BOT_STRATEGY_FILE=/tmp/nenoserpent_bot_tuned.json ./build/debug/NenoSerpent
+NENOSERPENT_BOT_STRATEGY_FILE=cache/dev/nenoserpent_bot_tuned.json ./build/debug/NenoSerpent
 ```
 
 PyTorch imitation-learning baseline:

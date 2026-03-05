@@ -18,7 +18,7 @@ Prerequisite:
 Use fixed leaderboard suite as data source:
 
 ```bash
-./scripts/dev.sh bot-dataset --output /tmp/nenoserpent_bot_dataset.csv
+./scripts/dev.sh bot-dataset --output cache/dev/nenoserpent_bot_dataset.csv
 ```
 
 Optional knobs:
@@ -36,10 +36,10 @@ Dataset schema is emitted by `bot-benchmark --dump-dataset` and includes:
 
 ```bash
 ./scripts/dev.sh bot-train \
-  --dataset /tmp/nenoserpent_bot_dataset.csv \
-  --model /tmp/nenoserpent_bot_policy.pt \
-  --metadata /tmp/nenoserpent_bot_policy_meta.json \
-  --runtime-json /tmp/nenoserpent_bot_policy_runtime.json
+  --dataset cache/dev/nenoserpent_bot_dataset.csv \
+  --model cache/dev/nenoserpent_bot_policy.pt \
+  --metadata cache/dev/nenoserpent_bot_policy_meta.json \
+  --runtime-json cache/dev/nenoserpent_bot_policy_runtime.json
 ```
 
 Important args:
@@ -48,7 +48,7 @@ Important args:
 - `--batch-size` (default `256`)
 - `--lr` (default `1e-3`)
 - `--train-ratio` (default `0.9`)
-- `--runtime-json` (default `/tmp/nenoserpent_bot_policy_runtime.json`)
+- `--runtime-json` (default `cache/dev/nenoserpent_bot_policy_runtime.json`)
 - `--hard-sample-scale` (default `1.0`)
 
 Training split behavior:
@@ -65,9 +65,9 @@ Training sampling behavior:
 
 ```bash
 ./scripts/dev.sh bot-eval \
-  --dataset /tmp/nenoserpent_bot_dataset.csv \
-  --model /tmp/nenoserpent_bot_policy.pt \
-  --report /tmp/nenoserpent_bot_eval_report.json
+  --dataset cache/dev/nenoserpent_bot_dataset.csv \
+  --model cache/dev/nenoserpent_bot_policy.pt \
+  --report cache/dev/nenoserpent_bot_eval_report.json
 ```
 
 Current eval metric:
@@ -77,7 +77,7 @@ Current eval metric:
 Runtime backend can load the exported JSON directly:
 
 ```bash
-NENOSERPENT_BOT_ML_MODEL=/tmp/nenoserpent_bot_policy_runtime.json ./build/dev/NenoSerpent
+NENOSERPENT_BOT_ML_MODEL=cache/dev/nenoserpent_bot_policy_runtime.json ./build/dev/NenoSerpent
 ```
 
 ## 4. Offline Tuning + Training Loop
@@ -95,7 +95,7 @@ Recommended loop:
 After training a new model, run a compare gate before adoption:
 
 ```bash
-BOT_ML_MODEL=/tmp/nenoserpent_bot_policy_runtime.json \
+BOT_ML_MODEL=cache/dev/nenoserpent_bot_policy_runtime.json \
 BOT_LEADERBOARD_REQUIRE_NO_REGRESSION=1 \
 ./scripts/dev.sh bot-leaderboard build/dev
 ```

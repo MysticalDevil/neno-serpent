@@ -13,27 +13,141 @@ export TMPDIR="${TMP_ROOT}"
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/dev.sh clang-tidy <build-dir> [files...]
-  ./scripts/dev.sh android-icons
-  ./scripts/dev.sh bot-benchmark [--games N --max-ticks M ...]
-  ./scripts/dev.sh bot-dataset [--output cache/bot_dataset.csv]
-  ./scripts/dev.sh bot-tune [--mode balanced --iterations 60 --output cache/tuned.json]
-  ./scripts/dev.sh bot-train [--dataset cache/bot_dataset.csv --model cache/bot_policy.pt]
-  ./scripts/dev.sh bot-eval [--dataset cache/bot_dataset.csv --model cache/bot_policy.pt]
-  ./scripts/dev.sh bot-ml-gate [--workspace cache/nenoserpent_bot_ml_gate]
-  ./scripts/dev.sh bot-ml-smoke [build-dir]
-  ./scripts/dev.sh bot-run [--backend off|rule|ml|search --headful|--headless --ui-mode full|screen|shell]
-  ./scripts/dev.sh bot-e2e [build-dir] [baseline.tsv]
-  ./scripts/dev.sh bot-leaderboard [build-dir] [suite.tsv]
+  ./scripts/dev.sh <command> [args...]
+  ./scripts/dev.sh help [command]
+  ./scripts/dev.sh --help
+
+Commands:
+  clang-tidy       Run clang-tidy wrapper on specific files/build-dir.
+  android-icons    Generate Android launcher icon assets.
+  bot-benchmark    Run bot benchmark suite.
+  bot-dataset      Build training dataset from simulations.
+  bot-tune         Tune rule-bot parameters.
+  bot-train        Train ML model from dataset.
+  bot-eval         Evaluate model offline.
+  bot-ml-gate      Run ML quality gate pipeline.
+  bot-ml-smoke     Quick smoke gate for ML flow.
+  bot-run          Run bot in headful/headless mode.
+  bot-e2e          Run bot E2E regression.
+  bot-leaderboard  Run bot leaderboard regression.
+
+Examples:
+  ./scripts/dev.sh clang-tidy build/debug src/sound_manager.cpp
+  ./scripts/dev.sh help bot-run
+  ./scripts/dev.sh bot-run --backend rule --headful --ui-mode full
 EOF
+}
+
+subcommand_help() {
+  case "${1:-}" in
+    clang-tidy)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh clang-tidy <build-dir> [files...]
+Purpose: run clang-tidy through scripts/dev/clang_tidy.sh.
+EOF
+      ;;
+    android-icons)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh android-icons
+Purpose: regenerate Android icon assets (mipmap + Play Store assets).
+EOF
+      ;;
+    bot-benchmark)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-benchmark [--games N --max-ticks M ...]
+Purpose: run benchmark scenarios for bot performance.
+EOF
+      ;;
+    bot-dataset)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-dataset [--output cache/<name>.csv]
+Purpose: generate bot training dataset from scripted sessions.
+EOF
+      ;;
+    bot-tune)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-tune [--mode balanced --iterations 60 --output cache/<name>.json]
+Purpose: tune rule strategy parameters.
+EOF
+      ;;
+    bot-train)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-train [--dataset cache/<name>.csv --model cache/<name>.pt]
+Purpose: train bot model via Python training entrypoint.
+EOF
+      ;;
+    bot-eval)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-eval [--dataset cache/<name>.csv --model cache/<name>.pt]
+Purpose: evaluate trained model on dataset.
+EOF
+      ;;
+    bot-ml-gate)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-ml-gate [--workspace cache/<dir>]
+Purpose: execute ML gate pipeline (dataset + training + compare).
+EOF
+      ;;
+    bot-ml-smoke)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-ml-smoke [build-dir]
+Purpose: fast smoke verification of ML gate path.
+EOF
+      ;;
+    bot-run)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-run [--backend off|rule|ml|search] [--headful|--headless] \
+[--ui-mode full|screen|shell]
+Purpose: run gameplay with selected bot backend and UI mode.
+EOF
+      ;;
+    bot-e2e)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-e2e [build-dir] [baseline.tsv]
+Purpose: run E2E bot regression versus baseline.
+EOF
+      ;;
+    bot-leaderboard)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-leaderboard [build-dir] [suite.tsv]
+Purpose: run leaderboard suite and compare stability/perf.
+EOF
+      ;;
+    *)
+      echo "Unknown command: ${1:-<empty>}" >&2
+      usage >&2
+      return 1
+      ;;
+  esac
 }
 
 subcommand="${1:-}"
 if [[ -z "${subcommand}" ]]; then
   usage
-  exit 1
+  exit 0
 fi
+
+case "${subcommand}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  help)
+    if [[ $# -ge 2 ]]; then
+      subcommand_help "${2}"
+    else
+      usage
+    fi
+    exit $?
+    ;;
+esac
+
 shift
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+  subcommand_help "${subcommand}"
+  exit $?
+fi
 
 case "${subcommand}" in
   clang-tidy)

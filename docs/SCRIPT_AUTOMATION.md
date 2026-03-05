@@ -1,6 +1,6 @@
 # Script Automation Guide
 
-Last updated: 2026-02-28
+Last updated: 2026-03-06
 
 ## Purpose
 
@@ -16,6 +16,26 @@ Top-level script entry points are intentionally small and centralized:
 - `scripts/dev.sh`
 
 Old single-purpose wrapper names have been removed. Use these entry points for manual runs, docs, and automation examples.
+
+## Help and CLI Conventions
+
+All top-level entry points should implement the same help behavior:
+
+- `<script> --help` and `<script> -h` print top-level help.
+- `<script> help` prints top-level help.
+- `<script> help <subcommand>` prints subcommand help.
+- `<script> <subcommand> --help` and `<script> <subcommand> -h` print the same subcommand help.
+
+Top-level help should include:
+
+- `Usage`
+- `Commands`
+- `Examples`
+
+Subcommand help should include:
+
+- specific usage line
+- one-line purpose
 
 ## Helper Layers
 

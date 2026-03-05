@@ -63,7 +63,7 @@ QtObject {
         ICON: "ToggleIconLab",
         COLOR: "ToggleShellColor",
         SHELL: "ToggleShellColor",
-        MUSIC: "ToggleMusic"
+        MUSIC: "ToggleMusic",
         BOTMODE: "ToggleBot",
         BOTPANEL: "ToggleBotPanel"
     })

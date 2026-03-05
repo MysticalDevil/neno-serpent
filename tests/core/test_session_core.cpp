@@ -1,4 +1,5 @@
 #include <QtTest>
+#include <algorithm>
 
 #include "core/session/core.h"
 
@@ -163,13 +164,22 @@ void TestSessionCore::testSpawnMagnetAndBuffCountdownMutateCoreState() {
     Q_UNUSED(size);
     return 0;
   }));
-  QCOMPARE(core.state().food, QPoint(0, 0));
+  const QPoint spawnedFood = core.state().food;
+  QVERIFY(spawnedFood.x() >= 0 && spawnedFood.x() < 20);
+  QVERIFY(spawnedFood.y() >= 0 && spawnedFood.y() < 18);
+  QVERIFY(!core.state().obstacles.contains(spawnedFood));
+  QVERIFY(std::find(core.body().cbegin(), core.body().cend(), spawnedFood) == core.body().cend());
 
   QVERIFY(core.spawnPowerUp(20, 18, [](int size) {
     Q_UNUSED(size);
     return 0;
   }));
-  QCOMPARE(core.state().powerUpPos, QPoint(0, 1));
+  const QPoint spawnedPower = core.state().powerUpPos;
+  QVERIFY(spawnedPower.x() >= 0 && spawnedPower.x() < 20);
+  QVERIFY(spawnedPower.y() >= 0 && spawnedPower.y() < 18);
+  QVERIFY(spawnedPower != core.state().food);
+  QVERIFY(!core.state().obstacles.contains(spawnedPower));
+  QVERIFY(std::find(core.body().cbegin(), core.body().cend(), spawnedPower) == core.body().cend());
   QCOMPARE(core.state().powerUpType, static_cast<int>(nenoserpent::core::BuffId::Ghost));
 
   core.state().activeBuff = static_cast<int>(nenoserpent::core::BuffId::Magnet);
@@ -239,7 +249,7 @@ void TestSessionCore::testAdvanceSessionStepResetsTargetWhenStateRepeatsWithoutS
       {
         .boardWidth = 2,
         .boardHeight = 1,
-        .consumeInputQueue = false,
+        .consumeInputQueue = true,
         .pauseOnChoiceTrigger = false,
       },
       [](const int upperBound) {

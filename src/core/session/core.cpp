@@ -1,7 +1,12 @@
 #include "core/session/core.h"
 
 #include <algorithm>
+#include <array>
+#include <deque>
+#include <limits>
+#include <tuple>
 #include <utility>
+#include <vector>
 
 namespace nenoserpent::core {
 
@@ -10,6 +15,303 @@ constexpr int PowerUpLifetimeTicks = 100;
 constexpr int StallHashWindow = 128;
 constexpr int StallNoScoreTicksThreshold = 120;
 constexpr int StallRepeatThreshold = 6;
+constexpr int SpawnMinHeadDistance = 2;
+constexpr int SpawnMinObstacleDistance = 2;
+constexpr int SpawnTopKMin = 3;
+constexpr int SpawnTopKMax = 8;
+
+auto boardIndex(const QPoint& p, const int boardWidth) -> int {
+  return p.y() * boardWidth + p.x();
+}
+
+auto tryBoardIndex(const QPoint& p, const int boardWidth, const int boardHeight)
+  -> std::optional<int> {
+  if (p.x() < 0 || p.y() < 0 || p.x() >= boardWidth || p.y() >= boardHeight) {
+    return std::nullopt;
+  }
+  return boardIndex(p, boardWidth);
+}
+
+auto toroidalDistance(const QPoint& a, const QPoint& b, const int boardWidth, const int boardHeight)
+  -> int {
+  const int dx = std::abs(a.x() - b.x());
+  const int dy = std::abs(a.y() - b.y());
+  return std::min(dx, boardWidth - dx) + std::min(dy, boardHeight - dy);
+}
+
+auto buildSpawnBlockedMap(const int boardWidth,
+                          const int boardHeight,
+                          const std::function<bool(const QPoint&)>& isBlocked)
+  -> std::vector<bool> {
+  std::vector<bool> blocked(static_cast<std::size_t>(boardWidth * boardHeight), false);
+  for (int x = 0; x < boardWidth; ++x) {
+    for (int y = 0; y < boardHeight; ++y) {
+      const QPoint p{x, y};
+      blocked[static_cast<std::size_t>(boardIndex(p, boardWidth))] = isBlocked(p);
+    }
+  }
+  return blocked;
+}
+
+auto countFreeNeighbors(const QPoint& point,
+                        const int boardWidth,
+                        const int boardHeight,
+                        const std::vector<bool>& blocked) -> int {
+  constexpr std::array<QPoint, 4> kDirs = {
+    QPoint{1, 0},
+    QPoint{-1, 0},
+    QPoint{0, 1},
+    QPoint{0, -1},
+  };
+  int freeNeighbors = 0;
+  for (const QPoint& d : kDirs) {
+    const QPoint next = wrapPoint(point + d, boardWidth, boardHeight);
+    const auto index = tryBoardIndex(next, boardWidth, boardHeight);
+    if (!index.has_value()) {
+      continue;
+    }
+    if (!blocked[static_cast<std::size_t>(*index)]) {
+      ++freeNeighbors;
+    }
+  }
+  return freeNeighbors;
+}
+
+auto bfsDistances(const QPoint& start,
+                  const int boardWidth,
+                  const int boardHeight,
+                  const std::vector<bool>& blocked) -> std::vector<int> {
+  std::vector<int> distances(blocked.size(), -1);
+  const QPoint wrappedStart = wrapPoint(start, boardWidth, boardHeight);
+  const auto startIndex = tryBoardIndex(wrappedStart, boardWidth, boardHeight);
+  if (!startIndex.has_value()) {
+    return distances;
+  }
+  std::deque<QPoint> queue;
+  queue.push_back(wrappedStart);
+  distances[static_cast<std::size_t>(*startIndex)] = 0;
+
+  constexpr std::array<QPoint, 4> kDirs = {
+    QPoint{1, 0},
+    QPoint{-1, 0},
+    QPoint{0, 1},
+    QPoint{0, -1},
+  };
+  while (!queue.empty()) {
+    const QPoint current = queue.front();
+    queue.pop_front();
+    const auto currentIndex = tryBoardIndex(current, boardWidth, boardHeight);
+    if (!currentIndex.has_value()) {
+      continue;
+    }
+    const int nextDistance = distances[static_cast<std::size_t>(*currentIndex)] + 1;
+    for (const QPoint& d : kDirs) {
+      const QPoint next = wrapPoint(current + d, boardWidth, boardHeight);
+      const auto nextIndex = tryBoardIndex(next, boardWidth, boardHeight);
+      if (!nextIndex.has_value()) {
+        continue;
+      }
+      const auto idx = static_cast<std::size_t>(*nextIndex);
+      if (blocked[idx] || distances[idx] >= 0) {
+        continue;
+      }
+      distances[idx] = nextDistance;
+      queue.push_back(next);
+    }
+  }
+  return distances;
+}
+
+auto buildConnectedComponents(const int boardWidth,
+                              const int boardHeight,
+                              const std::vector<bool>& blocked) -> std::pair<std::vector<int>, std::vector<int>> {
+  std::vector<int> componentOf(blocked.size(), -1);
+  std::vector<int> componentSizes;
+  int nextComponent = 0;
+  constexpr std::array<QPoint, 4> kDirs = {
+    QPoint{1, 0},
+    QPoint{-1, 0},
+    QPoint{0, 1},
+    QPoint{0, -1},
+  };
+
+  for (int x = 0; x < boardWidth; ++x) {
+    for (int y = 0; y < boardHeight; ++y) {
+      const QPoint seed{x, y};
+      const auto seedIndex = tryBoardIndex(seed, boardWidth, boardHeight);
+      if (!seedIndex.has_value()) {
+        continue;
+      }
+      const auto idx = static_cast<std::size_t>(*seedIndex);
+      if (blocked[idx] || componentOf[idx] >= 0) {
+        continue;
+      }
+      int size = 0;
+      std::deque<QPoint> queue;
+      queue.push_back(seed);
+      componentOf[idx] = nextComponent;
+      while (!queue.empty()) {
+        const QPoint current = queue.front();
+        queue.pop_front();
+        ++size;
+        for (const QPoint& d : kDirs) {
+          const QPoint next = wrapPoint(current + d, boardWidth, boardHeight);
+          const auto nextIndex = tryBoardIndex(next, boardWidth, boardHeight);
+          if (!nextIndex.has_value()) {
+            continue;
+          }
+          const auto nextIdx = static_cast<std::size_t>(*nextIndex);
+          if (blocked[nextIdx] || componentOf[nextIdx] >= 0) {
+            continue;
+          }
+          componentOf[nextIdx] = nextComponent;
+          queue.push_back(next);
+        }
+      }
+      componentSizes.push_back(size);
+      ++nextComponent;
+    }
+  }
+  return {componentOf, componentSizes};
+}
+
+struct SpawnCandidate {
+  QPoint point{0, 0};
+  int score = std::numeric_limits<int>::min();
+};
+
+auto pickSpawnPointWithSafety(const int boardWidth,
+                              const int boardHeight,
+                              const QPoint& head,
+                              const std::optional<QPoint>& tail,
+                              const QList<QPoint>& obstacles,
+                              const std::function<bool(const QPoint&)>& isBlocked,
+                              const std::function<int(int)>& randomBounded,
+                              QPoint& pickedPoint) -> bool {
+  const QList<QPoint> freeSpots = collectFreeSpots(boardWidth, boardHeight, isBlocked);
+  if (freeSpots.isEmpty()) {
+    return false;
+  }
+
+  auto blocked = buildSpawnBlockedMap(boardWidth, boardHeight, isBlocked);
+  if (const auto headIndex = tryBoardIndex(wrapPoint(head, boardWidth, boardHeight),
+                                           boardWidth,
+                                           boardHeight);
+      headIndex.has_value()) {
+    blocked[static_cast<std::size_t>(*headIndex)] = false;
+  }
+
+  const auto distanceFromHead = bfsDistances(head, boardWidth, boardHeight, blocked);
+  const auto [componentOf, componentSizes] =
+    buildConnectedComponents(boardWidth, boardHeight, blocked);
+  int tailComponent = -1;
+  if (tail.has_value()) {
+    if (const auto tailIndex = tryBoardIndex(wrapPoint(*tail, boardWidth, boardHeight),
+                                             boardWidth,
+                                             boardHeight);
+        tailIndex.has_value()) {
+      tailComponent = componentOf[static_cast<std::size_t>(*tailIndex)];
+    }
+  }
+
+  auto minObstacleDistance = [&](const QPoint& point) -> int {
+    if (obstacles.isEmpty()) {
+      return std::numeric_limits<int>::max();
+    }
+    int minDistance = std::numeric_limits<int>::max();
+    for (const QPoint& obstacle : obstacles) {
+      minDistance =
+        std::min(minDistance, toroidalDistance(point, obstacle, boardWidth, boardHeight));
+    }
+    return minDistance;
+  };
+
+  auto gatherCandidates = [&](const bool requireDistances,
+                              const bool requirePocketFilter,
+                              const bool requireTailReachable) {
+    std::vector<SpawnCandidate> candidates;
+    candidates.reserve(static_cast<std::size_t>(freeSpots.size()));
+    for (const QPoint& point : freeSpots) {
+      const auto pointIndex = tryBoardIndex(point, boardWidth, boardHeight);
+      if (!pointIndex.has_value()) {
+        continue;
+      }
+      const auto idx = static_cast<std::size_t>(*pointIndex);
+      const int reachableDistance = distanceFromHead[idx];
+      if (reachableDistance < 0) {
+        continue;
+      }
+      const int freeNeighbors = countFreeNeighbors(point, boardWidth, boardHeight, blocked);
+      if (requirePocketFilter && freeNeighbors < 2) {
+        continue;
+      }
+      const int obstacleDistance = minObstacleDistance(point);
+      const int headDistance = toroidalDistance(point, head, boardWidth, boardHeight);
+      if (requireDistances &&
+          (headDistance < SpawnMinHeadDistance || obstacleDistance < SpawnMinObstacleDistance)) {
+        continue;
+      }
+      const int component = componentOf[idx];
+      if (component < 0) {
+        continue;
+      }
+      const bool tailReachable = tailComponent >= 0 && component == tailComponent;
+      if (requireTailReachable && tailComponent >= 0 && !tailReachable) {
+        continue;
+      }
+
+      const int reachableArea = componentSizes[static_cast<std::size_t>(component)];
+      int score = (reachableArea * 10) + (freeNeighbors * 28);
+      if (tailReachable) {
+        score += 120;
+      }
+      if (obstacleDistance != std::numeric_limits<int>::max()) {
+        score += std::min(obstacleDistance, 6) * 8;
+      }
+      score += std::min(headDistance, 6) * 4;
+      candidates.push_back({.point = point, .score = score});
+    }
+    std::sort(candidates.begin(), candidates.end(), [](const SpawnCandidate& a,
+                                                       const SpawnCandidate& b) {
+      if (a.score != b.score) {
+        return a.score > b.score;
+      }
+      if (a.point.x() != b.point.x()) {
+        return a.point.x() < b.point.x();
+      }
+      return a.point.y() < b.point.y();
+    });
+    return candidates;
+  };
+
+  const std::array<std::tuple<bool, bool, bool>, 4> passes = {
+    std::tuple{true, true, true},
+    std::tuple{true, true, false},
+    std::tuple{false, true, false},
+    std::tuple{false, false, false},
+  };
+  for (const auto& [requireDistances, requirePocketFilter, requireTailReachable] : passes) {
+    auto candidates =
+      gatherCandidates(requireDistances, requirePocketFilter, requireTailReachable);
+    if (candidates.empty()) {
+      continue;
+    }
+    const int topK = std::clamp(static_cast<int>(candidates.size()) / 3, SpawnTopKMin, SpawnTopKMax);
+    const int selected = randomBounded(topK);
+    if (selected < 0 || selected >= topK) {
+      return false;
+    }
+    pickedPoint = candidates[static_cast<std::size_t>(selected)].point;
+    return true;
+  }
+
+  const int selected = randomBounded(freeSpots.size());
+  if (selected < 0 || selected >= freeSpots.size()) {
+    return false;
+  }
+  pickedPoint = freeSpots[selected];
+  return true;
+}
 
 auto mixHash(std::uint64_t seed, const std::uint64_t value) -> std::uint64_t {
   constexpr std::uint64_t kPrime = 1099511628211ULL;
@@ -320,14 +622,17 @@ auto SessionCore::spawnFood(const int boardWidth,
                             const int boardHeight,
                             const std::function<int(int)>& randomBounded) -> bool {
   QPoint pickedPoint;
-  const bool found = pickRandomFreeSpot(
-    boardWidth,
-    boardHeight,
-    [this](const QPoint& point) -> bool {
-      return isOccupied(point) || point == m_state.powerUpPos;
-    },
-    randomBounded,
-    pickedPoint);
+  const std::optional<QPoint> tail = m_body.empty() ? std::nullopt : std::optional{m_body.back()};
+  const bool found = pickSpawnPointWithSafety(boardWidth,
+                                              boardHeight,
+                                              headPosition(),
+                                              tail,
+                                              m_state.obstacles,
+                                              [this](const QPoint& point) -> bool {
+                                                return isOccupied(point) || point == m_state.powerUpPos;
+                                              },
+                                              randomBounded,
+                                              pickedPoint);
   if (found) {
     m_state.food = pickedPoint;
   }
@@ -338,12 +643,17 @@ auto SessionCore::spawnPowerUp(const int boardWidth,
                                const int boardHeight,
                                const std::function<int(int)>& randomBounded) -> bool {
   QPoint pickedPoint;
-  const bool found = pickRandomFreeSpot(
-    boardWidth,
-    boardHeight,
-    [this](const QPoint& point) -> bool { return isOccupied(point) || point == m_state.food; },
-    randomBounded,
-    pickedPoint);
+  const std::optional<QPoint> tail = m_body.empty() ? std::nullopt : std::optional{m_body.back()};
+  const bool found = pickSpawnPointWithSafety(boardWidth,
+                                              boardHeight,
+                                              headPosition(),
+                                              tail,
+                                              m_state.obstacles,
+                                              [this](const QPoint& point) -> bool {
+                                                return isOccupied(point) || point == m_state.food;
+                                              },
+                                              randomBounded,
+                                              pickedPoint);
   if (found) {
     m_state.powerUpPos = pickedPoint;
     m_state.powerUpType = static_cast<int>(weightedRandomBuffId(randomBounded));

@@ -21,10 +21,17 @@ fi
 
 mkdir -p "$(dirname "${OUTPUT_JSON}")"
 
+if ! command -v gcovr >/dev/null 2>&1; then
+  echo "[coverage] missing gcovr in PATH" >&2
+  exit 1
+fi
+
+GCOV_EXECUTABLE="${GCOV_EXECUTABLE:-/usr/lib/llvm/21/bin/llvm-cov gcov}"
 gcovr \
   --root "${ROOT_DIR}" \
   --object-directory "${BUILD_DIR}" \
   --filter "${ROOT_DIR}/src" \
+  --gcov-executable "${GCOV_EXECUTABLE}" \
   --json-summary-pretty \
   --output "${OUTPUT_JSON}"
 

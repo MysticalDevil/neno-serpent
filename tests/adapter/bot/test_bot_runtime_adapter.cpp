@@ -9,6 +9,7 @@ class BotRuntimeAdapterTest final : public QObject {
 private slots:
   void startMenuTriggersStartWhenEnabled();
   void choiceSelectionPicksChoiceAndConfirms();
+  void choiceSelectionContextBoostsLaserOnDenseObstacles();
   void cooldownDelaysNonPlayingActions();
   void usesCustomCooldownFromStrategy();
   void usesInjectedBackendForDirectionAndChoice();
@@ -50,6 +51,33 @@ void BotRuntimeAdapterTest::choiceSelectionPicksChoiceAndConfirms() {
   QVERIFY(result.setChoiceIndex.has_value());
   QCOMPARE(*result.setChoiceIndex, 1);
   QCOMPARE(result.nextCooldownTicks, 2);
+}
+
+void BotRuntimeAdapterTest::choiceSelectionContextBoostsLaserOnDenseObstacles() {
+  const QVariantList choices = {
+    QVariantMap{{"type", 5}}, // Portal
+    QVariantMap{{"type", 8}}, // Laser
+    QVariantMap{{"type", 7}}, // Rich
+  };
+
+  nenoserpent::adapter::bot::RuntimeInput input{};
+  input.enabled = true;
+  input.cooldownTicks = 0;
+  input.state = AppState::ChoiceSelection;
+  input.choices = choices;
+  input.currentChoiceIndex = 0;
+  input.snapshot.boardWidth = 20;
+  input.snapshot.boardHeight = 18;
+  input.snapshot.obstacles.reserve(16);
+  for (int i = 0; i < 16; ++i) {
+    input.snapshot.obstacles.push_back(QPoint(i % 8, i / 8));
+  }
+
+  const auto result = nenoserpent::adapter::bot::step(input);
+  QVERIFY(result.triggerStart);
+  QVERIFY(result.consumeTick);
+  QVERIFY(result.setChoiceIndex.has_value());
+  QCOMPARE(*result.setChoiceIndex, 1);
 }
 
 void BotRuntimeAdapterTest::cooldownDelaysNonPlayingActions() {

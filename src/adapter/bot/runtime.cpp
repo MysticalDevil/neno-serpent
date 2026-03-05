@@ -1,5 +1,9 @@
 #include "adapter/bot/runtime.h"
 
+#include <algorithm>
+
+#include "power_up_id.h"
+
 namespace nenoserpent::adapter::bot {
 
 namespace {
@@ -33,6 +37,34 @@ auto resolveBackend(const RuntimeInput& input) -> ResolvedBackend {
     return {.primary = input.backend, .reason = {}, .usedFallback = false};
   }
   return {.primary = &ruleBackend(), .reason = {}, .usedFallback = false};
+}
+
+auto contextualChoiceStrategy(const StrategyConfig& base, const Snapshot& snapshot)
+  -> StrategyConfig {
+  StrategyConfig contextual = base;
+  const int boardCells = std::max(1, snapshot.boardWidth * snapshot.boardHeight);
+  const int bodyPermille = (static_cast<int>(snapshot.body.size()) * 1000) / boardCells;
+  const int obstaclePermille =
+    (static_cast<int>(snapshot.obstacles.size()) * 1000) / boardCells;
+
+  auto boostPriority = [&contextual](const int type, const int delta) {
+    const int current = powerPriority(contextual, type);
+    contextual.powerPriorityByType.insert(type, current + delta);
+  };
+
+  if (bodyPermille >= 200 || snapshot.body.size() >= 18) {
+    boostPriority(PowerUpId::Mini, 24);
+    boostPriority(PowerUpId::Shield, 8);
+  }
+  if (obstaclePermille >= 90 || static_cast<int>(snapshot.obstacles.size()) >= 12) {
+    boostPriority(PowerUpId::Laser, 32);
+    boostPriority(PowerUpId::Portal, 22);
+  }
+  if (snapshot.score >= 120 && snapshot.body.size() <= 12) {
+    boostPriority(PowerUpId::Double, 16);
+    boostPriority(PowerUpId::Rich, 18);
+  }
+  return contextual;
 }
 
 } // namespace
@@ -75,10 +107,11 @@ auto step(const RuntimeInput& input) -> RuntimeOutput {
   }
 
   if (input.state == AppState::ChoiceSelection) {
-    int bestIndex = backend.decideChoice(input.choices, strategy);
+    const StrategyConfig choiceStrategy = contextualChoiceStrategy(strategy, input.snapshot);
+    int bestIndex = backend.decideChoice(input.choices, choiceStrategy);
     if (bestIndex < 0 && input.fallbackBackend != nullptr && input.fallbackBackend != &backend &&
         input.fallbackBackend->isAvailable()) {
-      bestIndex = input.fallbackBackend->decideChoice(input.choices, strategy);
+      bestIndex = input.fallbackBackend->decideChoice(input.choices, choiceStrategy);
       if (bestIndex >= 0) {
         output.backend = input.fallbackBackend->name();
         output.usedFallback = true;

@@ -282,6 +282,99 @@ auto countSafeNeighbors(const QPoint& from,
   return safe;
 }
 
+auto shortestReachableDistance(const QPoint& from,
+                               const QPoint& to,
+                               const Snapshot& snapshot,
+                               const std::vector<bool>& blocked) -> std::optional<int> {
+  if (snapshot.boardWidth <= 0 || snapshot.boardHeight <= 0) {
+    return std::nullopt;
+  }
+  const auto fromIndex = tryBoardIndex(from, snapshot.boardWidth, snapshot.boardHeight);
+  const auto toIndex = tryBoardIndex(to, snapshot.boardWidth, snapshot.boardHeight);
+  if (!fromIndex.has_value() || !toIndex.has_value()) {
+    return std::nullopt;
+  }
+  if (from == to) {
+    return 0;
+  }
+
+  std::vector<int> distance(blocked.size(), -1);
+  std::deque<QPoint> queue;
+  queue.push_back(from);
+  distance[*fromIndex] = 0;
+
+  while (!queue.empty()) {
+    const QPoint current = queue.front();
+    queue.pop_front();
+    const auto currentIndex = tryBoardIndex(current, snapshot.boardWidth, snapshot.boardHeight);
+    if (!currentIndex.has_value()) {
+      continue;
+    }
+    const int nextDistance = distance[*currentIndex] + 1;
+    for (const QPoint& dir : kDirections) {
+      const QPoint next =
+        nenoserpent::core::wrapPoint(current + dir, snapshot.boardWidth, snapshot.boardHeight);
+      const auto nextIndex = tryBoardIndex(next, snapshot.boardWidth, snapshot.boardHeight);
+      if (!nextIndex.has_value() || blocked[*nextIndex] || distance[*nextIndex] >= 0) {
+        continue;
+      }
+      if (next == to) {
+        return nextDistance;
+      }
+      distance[*nextIndex] = nextDistance;
+      queue.push_back(next);
+    }
+  }
+  return std::nullopt;
+}
+
+struct TargetDistance {
+  int distance = 0;
+  int unreachablePenalty = 0;
+};
+
+auto resolveTargetDistance(const QPoint& head,
+                           const Snapshot& snapshot,
+                           const StrategyConfig& config,
+                           const std::vector<bool>& blocked,
+                           const QPoint& tailFallback) -> TargetDistance {
+  QPoint target = snapshot.food;
+  const bool hasPowerUp = snapshot.powerUpPos.x() >= 0 && snapshot.powerUpPos.y() >= 0;
+  const int priority = powerPriority(config, snapshot.powerUpType);
+
+  if (hasPowerUp && priority >= config.powerTargetPriorityThreshold) {
+    const int foodDistance =
+      toroidalDistance(head, snapshot.food, snapshot.boardWidth, snapshot.boardHeight);
+    const int powerDistance =
+      toroidalDistance(head, snapshot.powerUpPos, snapshot.boardWidth, snapshot.boardHeight);
+    if (powerDistance <= foodDistance + config.powerTargetDistanceSlack) {
+      target = snapshot.powerUpPos;
+    }
+  }
+
+  if (const auto reachable = shortestReachableDistance(head, target, snapshot, blocked);
+      reachable.has_value()) {
+    return {.distance = *reachable, .unreachablePenalty = 0};
+  }
+
+  if (target != snapshot.food) {
+    if (const auto foodReachable =
+          shortestReachableDistance(head, snapshot.food, snapshot, blocked);
+        foodReachable.has_value()) {
+      return {.distance = *foodReachable, .unreachablePenalty = 64};
+    }
+  }
+
+  if (const auto tailReachable = shortestReachableDistance(head, tailFallback, snapshot, blocked);
+      tailReachable.has_value()) {
+    return {.distance = *tailReachable, .unreachablePenalty = 96};
+  }
+
+  const int fallbackDistance =
+    toroidalDistance(head, target, snapshot.boardWidth, snapshot.boardHeight);
+  return {.distance = fallbackDistance, .unreachablePenalty = 180};
+}
+
 auto previewMove(const Snapshot& snapshot, const MoveState& state, const QPoint& candidate)
   -> MovePreview {
   MovePreview preview{};
@@ -335,24 +428,13 @@ auto evaluateLeaf(const Snapshot& snapshot, const MoveState& state, const Strate
   }
   const int openSpace = floodReachable(state.head, snapshot, blocked);
   const int safeNeighbors = countSafeNeighbors(state.head, snapshot, blocked);
-
-  QPoint target = snapshot.food;
-  const bool hasPowerUp = snapshot.powerUpPos.x() >= 0 && snapshot.powerUpPos.y() >= 0;
-  const int powerPriorityValue = powerPriority(config, snapshot.powerUpType);
-  if (hasPowerUp && powerPriorityValue >= config.powerTargetPriorityThreshold) {
-    const int foodDistance =
-      toroidalDistance(state.head, snapshot.food, snapshot.boardWidth, snapshot.boardHeight);
-    const int powerDistance =
-      toroidalDistance(state.head, snapshot.powerUpPos, snapshot.boardWidth, snapshot.boardHeight);
-    if (powerDistance <= foodDistance + config.powerTargetDistanceSlack) {
-      target = snapshot.powerUpPos;
-    }
-  }
-  const int distanceToTarget =
-    toroidalDistance(state.head, target, snapshot.boardWidth, snapshot.boardHeight);
+  const QPoint tailFallback = state.body.empty() ? state.head : state.body.back();
+  const TargetDistance targetDistance =
+    resolveTargetDistance(state.head, snapshot, config, blocked, tailFallback);
   const int trapPenalty = safeNeighbors <= 1 ? config.trapPenalty : 0;
   return (openSpace * config.openSpaceWeight) + (safeNeighbors * config.safeNeighborWeight) -
-         (distanceToTarget * config.targetDistanceWeight) - trapPenalty + (state.score * 48);
+         (targetDistance.distance * config.targetDistanceWeight) - trapPenalty +
+         (state.score * 48) - targetDistance.unreachablePenalty;
 }
 
 auto searchValue(const Snapshot& snapshot,
@@ -476,14 +558,13 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
       }
       const int openSpace = floodReachable(preview.next.head, snapshot, blocked);
       const int safeNeighbors = countSafeNeighbors(preview.next.head, snapshot, blocked);
-      const QPoint target =
-        (snapshot.powerUpPos.x() >= 0 && snapshot.powerUpPos.y() >= 0 &&
-         powerPriority(tunedConfig, snapshot.powerUpType) >=
-           tunedConfig.powerTargetPriorityThreshold)
-          ? snapshot.powerUpPos
-          : snapshot.food;
-      const int targetDistance =
-        toroidalDistance(preview.next.head, target, snapshot.boardWidth, snapshot.boardHeight);
+      const QPoint tailFallback =
+        preview.next.body.empty() ? preview.next.head : preview.next.body.back();
+      const TargetDistance targetDistance = resolveTargetDistance(preview.next.head,
+                                                                  snapshot,
+                                                                  tunedConfig,
+                                                                  blocked,
+                                                                  tailFallback);
       int immediate = (candidate == snapshot.direction ? tunedConfig.straightBonus : 0);
       if (preview.ateFood) {
         immediate += tunedConfig.foodConsumeBonus;
@@ -494,8 +575,8 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
       const int trapPenalty = safeNeighbors <= 1 ? tunedConfig.trapPenalty : 0;
       score = (openSpace * tunedConfig.openSpaceWeight) +
               (safeNeighbors * tunedConfig.safeNeighborWeight) -
-              (targetDistance * tunedConfig.targetDistanceWeight) + immediate - trapPenalty -
-              (revisitCount * 56);
+              (targetDistance.distance * tunedConfig.targetDistanceWeight) + immediate -
+              trapPenalty - (revisitCount * 56) - targetDistance.unreachablePenalty;
     }
 
     const int rawIndex = directionIndex(candidate);

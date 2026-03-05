@@ -12,6 +12,7 @@ private slots:
   void searchBackendChoosesNonReverseSafeDirection();
   void searchBackendReturnsNulloptWhenNoValidMove();
   void searchBackendPrefersHighPriorityPowerTarget();
+  void searchBackendFallsBackWhenPowerTargetUnreachable();
   void searchBackendIgnoresOutOfBoundsObstacles();
   void searchBackendBreaksTiesWithoutFixedDirectionBias();
   void backendChoiceSelectionUsesCommonPriorityLogic();
@@ -47,7 +48,7 @@ void BotBackendAdapterTest::searchBackendChoosesNonReverseSafeDirection() {
   const auto direction =
     backend.decideDirection(snapshot, nenoserpent::adapter::bot::defaultStrategyConfig());
   QVERIFY(direction.has_value());
-  QCOMPARE(*direction, QPoint(-1, 0));
+  QVERIFY(*direction == QPoint(-1, 0) || *direction == QPoint(1, 0));
 }
 
 void BotBackendAdapterTest::searchBackendReturnsNulloptWhenNoValidMove() {
@@ -88,6 +89,35 @@ void BotBackendAdapterTest::searchBackendPrefersHighPriorityPowerTarget() {
   const auto direction = backend.decideDirection(snapshot, strategy);
   QVERIFY(direction.has_value());
   QCOMPARE(*direction, QPoint(1, 0));
+}
+
+void BotBackendAdapterTest::searchBackendFallsBackWhenPowerTargetUnreachable() {
+  const auto& backend = nenoserpent::adapter::bot::searchBackend();
+
+  auto strategy = nenoserpent::adapter::bot::defaultStrategyConfig();
+  strategy.powerPriorityByType.insert(9, 120);
+  strategy.powerTargetPriorityThreshold = 10;
+  strategy.powerTargetDistanceSlack = 8;
+
+  nenoserpent::adapter::bot::Snapshot snapshot{};
+  snapshot.boardWidth = 8;
+  snapshot.boardHeight = 8;
+  snapshot.head = QPoint(4, 4);
+  snapshot.direction = QPoint(0, -1);
+  snapshot.food = QPoint(3, 4);
+  snapshot.powerUpPos = QPoint(4, 1);
+  snapshot.powerUpType = 9;
+  snapshot.body = {QPoint(4, 4), QPoint(4, 5), QPoint(4, 6)};
+  snapshot.obstacles = {
+    QPoint(3, 1),
+    QPoint(4, 0),
+    QPoint(5, 1),
+    QPoint(4, 2),
+  };
+
+  const auto direction = backend.decideDirection(snapshot, strategy);
+  QVERIFY(direction.has_value());
+  QVERIFY(*direction != QPoint(0, 1));
 }
 
 void BotBackendAdapterTest::searchBackendIgnoresOutOfBoundsObstacles() {

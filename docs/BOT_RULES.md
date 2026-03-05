@@ -22,6 +22,9 @@ Startup backend override:
 
 - `NENOSERPENT_BOT_BACKEND=off|rule|ml`
 - optional `NENOSERPENT_BOT_ML_MODEL=/abs/path/policy.runtime.json`
+- optional confidence gate:
+  - `NENOSERPENT_BOT_ML_MIN_CONF` (default `0.90`)
+  - `NENOSERPENT_BOT_ML_MIN_MARGIN` (default `1.20`)
 
 Strategy behavior:
 

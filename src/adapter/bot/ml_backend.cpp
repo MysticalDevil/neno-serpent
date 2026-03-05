@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <numeric>
 #include <ranges>
 
@@ -43,6 +44,11 @@ auto isReverseDirection(const QPoint& a, const QPoint& b) -> bool {
 }
 
 } // namespace
+
+void MlBackend::setConfidenceGate(const float minConfidence, const float minMargin) {
+  m_minConfidence = std::clamp(minConfidence, 0.0F, 1.0F);
+  m_minMargin = std::max(0.0F, minMargin);
+}
 
 auto MlBackend::loadFromFile(const QString& path) -> bool {
   QFile file(path);
@@ -192,6 +198,30 @@ auto MlBackend::inferLogits(const Snapshot& snapshot) const -> std::optional<std
   return std::array<float, 4>{input[0], input[1], input[2], input[3]};
 }
 
+auto MlBackend::passesConfidenceGate(const std::array<float, 4>& logits) const -> bool {
+  const float maxLogit = *std::ranges::max_element(logits);
+  std::array<float, 4> exps{};
+  float sum = 0.0F;
+  for (std::size_t i = 0; i < logits.size(); ++i) {
+    exps[i] = std::exp(logits[i] - maxLogit);
+    sum += exps[i];
+  }
+  if (sum <= 0.0F) {
+    return false;
+  }
+
+  std::array<int, 4> indices = {0, 1, 2, 3};
+  std::ranges::sort(indices, [&](const int a, const int b) {
+    return logits[static_cast<std::size_t>(a)] > logits[static_cast<std::size_t>(b)];
+  });
+  const int bestIndex = indices[0];
+  const int secondIndex = indices[1];
+  const float confidence = exps[static_cast<std::size_t>(bestIndex)] / sum;
+  const float margin =
+    logits[static_cast<std::size_t>(bestIndex)] - logits[static_cast<std::size_t>(secondIndex)];
+  return confidence >= m_minConfidence && margin >= m_minMargin;
+}
+
 auto MlBackend::isDirectionAllowed(const Snapshot& snapshot, const QPoint& candidate) const
   -> bool {
   if (isReverseDirection(candidate, snapshot.direction)) {
@@ -224,6 +254,9 @@ auto MlBackend::decideDirection(const Snapshot& snapshot, const StrategyConfig& 
   Q_UNUSED(config);
   const auto logits = inferLogits(snapshot);
   if (!logits.has_value()) {
+    return std::nullopt;
+  }
+  if (!passesConfidenceGate(*logits)) {
     return std::nullopt;
   }
 

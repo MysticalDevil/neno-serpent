@@ -12,6 +12,7 @@
 #endif
 
 #include <algorithm>
+#include <utility>
 
 namespace {
 auto stateName(const int state) -> const char* {
@@ -69,6 +70,26 @@ EngineAdapter::EngineAdapter(QObject* parent)
   }
 
   const QString mlModelPath = qEnvironmentVariable("NENOSERPENT_BOT_ML_MODEL").trimmed();
+  const QString minConfidenceRaw = qEnvironmentVariable("NENOSERPENT_BOT_ML_MIN_CONF").trimmed();
+  const QString minMarginRaw = qEnvironmentVariable("NENOSERPENT_BOT_ML_MIN_MARGIN").trimmed();
+  const auto parseFloatOrDefault = [](const QString& text,
+                                      const float fallback) -> std::pair<float, bool> {
+    if (text.isEmpty()) {
+      return {fallback, true};
+    }
+    bool ok = false;
+    const float value = text.toFloat(&ok);
+    return {ok ? value : fallback, ok};
+  };
+  const auto [minConfidence, confOk] = parseFloatOrDefault(minConfidenceRaw, 0.90F);
+  const auto [minMargin, marginOk] = parseFloatOrDefault(minMarginRaw, 1.20F);
+  m_botMlBackend.setConfidenceGate(minConfidence, minMargin);
+  qCInfo(nenoserpentInputLog).noquote()
+    << "bot ml gate conf=" << minConfidence << "margin=" << minMargin;
+  if ((!minConfidenceRaw.isEmpty() && !confOk) || (!minMarginRaw.isEmpty() && !marginOk)) {
+    qCWarning(nenoserpentInputLog).noquote()
+      << "invalid ml gate env override, using defaults when parse fails";
+  }
   if (!mlModelPath.isEmpty()) {
     if (m_botMlBackend.loadFromFile(mlModelPath)) {
       qCInfo(nenoserpentInputLog).noquote() << "bot ml model loaded source=" << mlModelPath;
@@ -80,7 +101,8 @@ EngineAdapter::EngineAdapter(QObject* parent)
     qCInfo(nenoserpentInputLog).noquote() << "bot ml model not configured";
   }
 
-  const QString backendOverride = qEnvironmentVariable("NENOSERPENT_BOT_BACKEND").trimmed().toLower();
+  const QString backendOverride =
+    qEnvironmentVariable("NENOSERPENT_BOT_BACKEND").trimmed().toLower();
   if (!backendOverride.isEmpty()) {
     if (backendOverride == QStringLiteral("off")) {
       m_botBackendMode = nenoserpent::adapter::bot::BotBackendMode::Off;
@@ -92,9 +114,8 @@ EngineAdapter::EngineAdapter(QObject* parent)
       m_botBackendMode = nenoserpent::adapter::bot::BotBackendMode::Ml;
       qCInfo(nenoserpentInputLog).noquote() << "bot backend override -> ml";
     } else {
-      qCWarning(nenoserpentInputLog).noquote()
-        << "invalid bot backend override:" << backendOverride
-        << "(expected off|rule|ml, fallback off)";
+      qCWarning(nenoserpentInputLog).noquote() << "invalid bot backend override:" << backendOverride
+                                               << "(expected off|rule|ml, fallback off)";
       m_botBackendMode = nenoserpent::adapter::bot::BotBackendMode::Off;
     }
   }

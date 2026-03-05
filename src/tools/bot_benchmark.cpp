@@ -400,10 +400,25 @@ auto main(int argc, char* argv[]) -> int {
     &nenoserpent::adapter::bot::ruleBackend();
   nenoserpent::adapter::bot::MlBackend mlBackend;
   if (backend == BenchmarkBackend::Ml) {
+    const auto parseFloatOrDefault = [](const QString& text, const float fallback) -> float {
+      if (text.trimmed().isEmpty()) {
+        return fallback;
+      }
+      bool ok = false;
+      const float value = text.toFloat(&ok);
+      return ok ? value : fallback;
+    };
+    const float minConfidence =
+      parseFloatOrDefault(qEnvironmentVariable("NENOSERPENT_BOT_ML_MIN_CONF"), 0.90F);
+    const float minMargin =
+      parseFloatOrDefault(qEnvironmentVariable("NENOSERPENT_BOT_ML_MIN_MARGIN"), 1.20F);
+    mlBackend.setConfidenceGate(minConfidence, minMargin);
     if (mlModelPath.isEmpty()) {
       std::cerr << "[bot-benchmark] ml backend requested without --ml-model, fallback to rule\n";
     } else if (mlBackend.loadFromFile(mlModelPath)) {
       primaryBackend = &mlBackend;
+      std::cout << "[bot-benchmark] ml-gate.conf=" << minConfidence
+                << " ml-gate.margin=" << minMargin << '\n';
     } else {
       std::cerr << "[bot-benchmark] ml model unavailable path=" << mlModelPath.toStdString()
                 << " reason=" << mlBackend.errorString().toStdString() << " fallback=rule\n";

@@ -10,3 +10,8 @@ dependencies = [
 
 [tool.uv]
 package = false
+
+[dependency-groups]
+dev = [
+    "torch>=2.10.0",
+]

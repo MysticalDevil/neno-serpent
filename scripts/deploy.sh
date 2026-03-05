@@ -9,6 +9,7 @@ mkdir -p "${TMP_ROOT}"
 export NENOSERPENT_CACHE_DIR="${CACHE_ROOT}"
 export NENOSERPENT_TMP_DIR="${TMP_ROOT}"
 export TMPDIR="${TMP_ROOT}"
+export PYTHONDONTWRITEBYTECODE=1
 
 usage() {
   cat <<'EOF'

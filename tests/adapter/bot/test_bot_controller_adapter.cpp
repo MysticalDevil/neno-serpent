@@ -8,6 +8,7 @@ class BotControllerAdapterTest final : public QObject {
 private slots:
   void avoidsImmediateCollisionWhenChoosingDirection();
   void picksShieldOverOtherChoices();
+  void picksMiniAsTopPriorityChoiceByDefault();
   void respectsCustomChoicePriorityFromStrategy();
 };
 
@@ -31,6 +32,16 @@ void BotControllerAdapterTest::picksShieldOverOtherChoices() {
     QVariantMap{{"type", 3}, {"name", "Magnet"}},
     QVariantMap{{"type", 4}, {"name", "Shield"}},
     QVariantMap{{"type", 7}, {"name", "Diamond"}},
+  };
+
+  QCOMPARE(nenoserpent::adapter::bot::pickChoiceIndex(choices), 1);
+}
+
+void BotControllerAdapterTest::picksMiniAsTopPriorityChoiceByDefault() {
+  const QVariantList choices = {
+    QVariantMap{{"type", 4}, {"name", "Shield"}},
+    QVariantMap{{"type", 9}, {"name", "Mini"}},
+    QVariantMap{{"type", 8}, {"name", "Laser"}},
   };
 
   QCOMPARE(nenoserpent::adapter::bot::pickChoiceIndex(choices), 1);

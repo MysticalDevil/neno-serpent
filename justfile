@@ -21,6 +21,7 @@ help:
   @echo "  coverage-check Run unit/integration coverage gates with coverage preset"
   @echo "  tidy      Run cached clang-tidy on changed files (uses {{debug_dir}})"
   @echo "  fmt       Run clang-format on changed C/C++ files"
+  @echo "  bot-headful [backend] [ui_mode]  Run bot in headful mode (default: rule/full)"
   @echo "  android   Run scripts/deploy.sh android with BUILD_DIR={{android_dir}}"
   @echo "  wasm      Run scripts/deploy.sh wasm with BUILD_DIR={{wasm_dir}}"
   @echo "  clean     Remove {{build_root}}"
@@ -75,6 +76,9 @@ fmt:
     else \
       echo "$$files" | xargs clang-format -i; \
     fi
+
+bot-headful backend="rule" ui_mode="full":
+  ./scripts/dev.sh bot-run --backend {{backend}} --headful --ui-mode {{ui_mode}}
 
 android:
   BUILD_DIR={{android_dir}} ./scripts/deploy.sh android

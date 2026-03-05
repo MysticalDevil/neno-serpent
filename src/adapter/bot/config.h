@@ -32,6 +32,7 @@ struct StrategyConfig {
   int lookaheadWeight = 10;
   int powerTargetPriorityThreshold = 14;
   int powerTargetDistanceSlack = 2;
+  int tieBreakSeed = 0;
 
   int choiceCooldownTicks = 2;
   int stateActionCooldownTicks = 4;

@@ -95,6 +95,7 @@ public:
   auto clear() -> void {
     m_recent.clear();
     m_counts.clear();
+    m_observeTick = 0;
   }
 
   auto observe(const Snapshot& snapshot, const MoveState& state) -> int {
@@ -102,6 +103,7 @@ public:
     const int repeats = ++m_counts[hash];
     m_recent.push_back(hash);
     trim();
+    ++m_observeTick;
     return repeats;
   }
 
@@ -111,10 +113,15 @@ public:
     return it == m_counts.end() ? 0 : it->second;
   }
 
+  [[nodiscard]] auto observeTick() const -> std::uint64_t {
+    return m_observeTick;
+  }
+
 private:
   static constexpr int kWindow = 96;
   std::deque<std::uint64_t> m_recent;
   std::unordered_map<std::uint64_t, int> m_counts;
+  std::uint64_t m_observeTick = 0;
 
   auto trim() -> void {
     while (static_cast<int>(m_recent.size()) > kWindow) {
@@ -153,6 +160,15 @@ auto buildBlockedMap(const Snapshot& snapshot, const std::deque<QPoint>& body)
     }
   }
   return blocked;
+}
+
+auto directionIndex(const QPoint& direction) -> int {
+  for (int i = 0; i < static_cast<int>(kDirections.size()); ++i) {
+    if (kDirections[static_cast<std::size_t>(i)] == direction) {
+      return i;
+    }
+  }
+  return 0;
 }
 
 auto floodReachable(const QPoint& start, const Snapshot& snapshot, const std::vector<bool>& blocked)
@@ -358,8 +374,13 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
   const int repeats = memory.observe(snapshot, initial);
   const bool escapeMode = repeats >= kLoopRepeatThreshold;
   const int depth = std::clamp(config.lookaheadDepth + 1, 2, 6);
+  const auto tieRotateSeed = static_cast<std::uint64_t>(stateHash(snapshot, initial)) ^
+                             static_cast<std::uint64_t>(config.tieBreakSeed) ^ memory.observeTick();
+  const int tieRotateOffset =
+    static_cast<int>(tieRotateSeed % static_cast<std::uint64_t>(kDirections.size()));
 
   int bestScore = std::numeric_limits<int>::min();
+  int bestTieRank = std::numeric_limits<int>::max();
   std::optional<QPoint> bestDirection;
   for (const QPoint& candidate : kDirections) {
     const auto preview = previewMove(snapshot, initial, candidate);
@@ -410,8 +431,12 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
               (revisitCount * 56);
     }
 
-    if (score > bestScore) {
+    const int rawIndex = directionIndex(candidate);
+    const int tieRank = (rawIndex - tieRotateOffset + static_cast<int>(kDirections.size())) %
+                        static_cast<int>(kDirections.size());
+    if (score > bestScore || (score == bestScore && tieRank < bestTieRank)) {
       bestScore = score;
+      bestTieRank = tieRank;
       bestDirection = candidate;
     }
   }

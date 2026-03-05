@@ -11,6 +11,7 @@ private slots:
   void searchBackendReturnsNulloptWhenNoValidMove();
   void searchBackendPrefersHighPriorityPowerTarget();
   void searchBackendIgnoresOutOfBoundsObstacles();
+  void searchBackendBreaksTiesWithoutFixedDirectionBias();
   void backendChoiceSelectionUsesCommonPriorityLogic();
 };
 
@@ -102,6 +103,37 @@ void BotBackendAdapterTest::searchBackendIgnoresOutOfBoundsObstacles() {
   const auto direction =
     backend.decideDirection(snapshot, nenoserpent::adapter::bot::defaultStrategyConfig());
   QVERIFY(direction.has_value());
+}
+
+void BotBackendAdapterTest::searchBackendBreaksTiesWithoutFixedDirectionBias() {
+  auto& backend =
+    const_cast<nenoserpent::adapter::bot::BotBackend&>(nenoserpent::adapter::bot::searchBackend());
+  backend.reset();
+
+  auto strategy = nenoserpent::adapter::bot::defaultStrategyConfig();
+  strategy.openSpaceWeight = 0;
+  strategy.safeNeighborWeight = 0;
+  strategy.targetDistanceWeight = 0;
+  strategy.straightBonus = 0;
+  strategy.foodConsumeBonus = 0;
+  strategy.trapPenalty = 0;
+  strategy.tieBreakSeed = 1;
+
+  nenoserpent::adapter::bot::Snapshot snapshot{};
+  snapshot.boardWidth = 10;
+  snapshot.boardHeight = 10;
+  snapshot.head = QPoint(5, 5);
+  snapshot.direction = QPoint(0, -1);
+  snapshot.food = QPoint(0, 0);
+  snapshot.body = {QPoint(5, 5), QPoint(5, 6), QPoint(5, 7)};
+
+  const auto first = backend.decideDirection(snapshot, strategy);
+  const auto second = backend.decideDirection(snapshot, strategy);
+  QVERIFY(first.has_value());
+  QVERIFY(second.has_value());
+  QVERIFY(*first != QPoint(0, 1));
+  QVERIFY(*second != QPoint(0, 1));
+  QVERIFY(*first != *second);
 }
 
 void BotBackendAdapterTest::backendChoiceSelectionUsesCommonPriorityLogic() {

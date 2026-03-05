@@ -23,6 +23,7 @@ void BotConfigAdapterTest::parsesProfileOverridesFromJson() {
     "debug": {
       "safeNeighborWeight": 16,
       "stateActionCooldownTicks": 9,
+      "tieBreakSeed": 23,
       "powerPriorityByType": {
         "4": 99
       }
@@ -37,6 +38,7 @@ void BotConfigAdapterTest::parsesProfileOverridesFromJson() {
   QCOMPARE(result.config.safeNeighborWeight, 16);
   QCOMPARE(result.config.choiceCooldownTicks, 3);
   QCOMPARE(result.config.stateActionCooldownTicks, 9);
+  QCOMPARE(result.config.tieBreakSeed, 23);
   QCOMPARE(nenoserpent::adapter::bot::powerPriority(result.config, 4), 99);
 }
 

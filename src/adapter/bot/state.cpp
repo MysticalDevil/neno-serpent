@@ -141,6 +141,9 @@ auto State::setParam(const QString& key, const int value) -> bool {
   } else if (normalized == u"powertargetdistanceslack"_s) {
     m_strategyConfig.powerTargetDistanceSlack = clampRange(value, 0, 20);
     changed = true;
+  } else if (normalized == u"tiebreakseed"_s) {
+    m_strategyConfig.tieBreakSeed = value;
+    changed = true;
   } else if (normalized == u"choicecooldownticks"_s) {
     m_strategyConfig.choiceCooldownTicks = clampRange(value, 0, 60);
     changed = true;
@@ -168,6 +171,7 @@ auto State::status() const -> QVariantMap {
     {u"trapPenalty"_s, m_strategyConfig.trapPenalty},
     {u"lookaheadDepth"_s, m_strategyConfig.lookaheadDepth},
     {u"lookaheadWeight"_s, m_strategyConfig.lookaheadWeight},
+    {u"tieBreakSeed"_s, m_strategyConfig.tieBreakSeed},
     {u"choiceCooldownTicks"_s, m_strategyConfig.choiceCooldownTicks},
     {u"stateActionCooldownTicks"_s, m_strategyConfig.stateActionCooldownTicks},
   };

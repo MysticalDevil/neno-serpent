@@ -1,5 +1,7 @@
 #include <QtTest/QtTest>
 
+#include <QSet>
+
 #include "adapter/bot/backend.h"
 
 class BotBackendAdapterTest final : public QObject {
@@ -108,7 +110,6 @@ void BotBackendAdapterTest::searchBackendIgnoresOutOfBoundsObstacles() {
 void BotBackendAdapterTest::searchBackendBreaksTiesWithoutFixedDirectionBias() {
   auto& backend =
     const_cast<nenoserpent::adapter::bot::BotBackend&>(nenoserpent::adapter::bot::searchBackend());
-  backend.reset();
 
   auto strategy = nenoserpent::adapter::bot::defaultStrategyConfig();
   strategy.openSpaceWeight = 0;
@@ -127,13 +128,18 @@ void BotBackendAdapterTest::searchBackendBreaksTiesWithoutFixedDirectionBias() {
   snapshot.food = QPoint(0, 0);
   snapshot.body = {QPoint(5, 5), QPoint(5, 6), QPoint(5, 7)};
 
-  const auto first = backend.decideDirection(snapshot, strategy);
-  const auto second = backend.decideDirection(snapshot, strategy);
-  QVERIFY(first.has_value());
-  QVERIFY(second.has_value());
-  QVERIFY(*first != QPoint(0, 1));
-  QVERIFY(*second != QPoint(0, 1));
-  QVERIFY(*first != *second);
+  QSet<QPoint> pickedDirections;
+  for (int seed = 1; seed <= 12; ++seed) {
+    backend.reset();
+    strategy.tieBreakSeed = seed;
+    const auto direction = backend.decideDirection(snapshot, strategy);
+    QVERIFY(direction.has_value());
+    QVERIFY(*direction != QPoint(0, 1));
+    pickedDirections.insert(*direction);
+  }
+
+  // Tie-breaking should not collapse to a single fixed direction across seeds.
+  QVERIFY(pickedDirections.size() >= 2);
 }
 
 void BotBackendAdapterTest::backendChoiceSelectionUsesCommonPriorityLogic() {

@@ -11,7 +11,8 @@ private slots:
 
 void BotRuntimeFacadeAdapterTest::runTickInvokesCallbacksForStartMenu() {
   nenoserpent::adapter::bot::RuntimeFacade facade;
-  facade.cycleBackendMode(); // off -> rule
+  facade.cycleBackendMode(); // off -> human
+  facade.cycleBackendMode(); // human -> rule
 
   int choiceSetTo = -1;
   bool startTriggered = false;

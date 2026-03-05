@@ -12,7 +12,8 @@ private slots:
 
 void BotRouteTelemetryAdapterTest::emitsWhenRouteChanges() {
   nenoserpent::adapter::bot::State state;
-  state.cycleBackendMode(); // off -> rule
+  state.cycleBackendMode(); // off -> human
+  state.cycleBackendMode(); // human -> rule
 
   nenoserpent::adapter::bot::RuntimeOutput decision{};
   decision.backend = QStringLiteral("rule");
@@ -29,7 +30,8 @@ void BotRouteTelemetryAdapterTest::emitsWhenRouteChanges() {
 
 void BotRouteTelemetryAdapterTest::suppressesWhenRouteUnchanged() {
   nenoserpent::adapter::bot::State state;
-  state.cycleBackendMode();
+  state.cycleBackendMode(); // off -> human
+  state.cycleBackendMode(); // human -> rule
   state.setLastBackendRoute(QStringLiteral("rule"));
 
   nenoserpent::adapter::bot::RuntimeOutput decision{};

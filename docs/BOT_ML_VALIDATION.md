@@ -1,6 +1,7 @@
 # Bot ML Validation
 
 This document defines the reproducible local validation flow for `rule` vs `ml`.
+It also defines the reproducible publish-loop validation for `ml-online`.
 
 ## Goal
 
@@ -24,6 +25,12 @@ Quick smoke gate (repo tiny model):
 ./scripts/dev.sh bot-ml-smoke build/dev
 ```
 
+`ml-online` loop gate:
+
+```bash
+./scripts/dev.sh bot-ml-online-gate --workspace cache/dev/nenoserpent_bot_ml_online_gate --rounds 3
+```
+
 Outputs:
 
 - `cache/dev/nenoserpent_bot_ml_gate/dataset.csv`
@@ -31,6 +38,7 @@ Outputs:
 - `cache/dev/nenoserpent_bot_ml_gate/policy.runtime.json`
 - `cache/dev/nenoserpent_bot_ml_gate/eval.report.json`
 - `cache/dev/nenoserpent_bot_ml_gate/leaderboard.compare.tsv`
+- `cache/dev/nenoserpent_bot_ml_online_gate/online.summary.env`
 
 ## Gate Rule
 
@@ -62,6 +70,24 @@ If repository secret `BOT_ML_MODEL_B64` is set (base64 of runtime JSON model):
 1. decode model to `cache/ci/nenoserpent_bot_policy_runtime.json`
 2. run leaderboard compare with `BOT_LEADERBOARD_REQUIRE_NO_REGRESSION=1`
 3. fail CI if any `ml` case regresses below `rule`
+
+## ML-Online Gate Rule
+
+Validation entrypoint:
+
+```bash
+./scripts/dev.sh bot-ml-online-gate --workspace cache/dev/nenoserpent_bot_ml_online_gate --rounds 3
+```
+
+Pass conditions:
+
+- `online.summary.env` exists
+- `rounds >= requested rounds`
+- `published >= 1`
+- `runtime_json` exists
+
+This gate validates the online training/publish control loop itself.  
+Score-strength comparison against `rule` remains covered by the existing `bot-ml-gate`.
 
 ## CI Always-On Smoke
 

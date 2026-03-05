@@ -27,6 +27,7 @@ Commands:
   bot-eval         Evaluate model offline.
   bot-ml-gate      Run ML quality gate pipeline.
   bot-ml-smoke     Quick smoke gate for ML flow.
+  bot-ml-online-gate Validate ml-online training/publish loop.
   bot-online-train Continuous online training loop for ml-online hot reload.
   bot-run          Run bot in headful/headless mode.
   bot-e2e          Run bot E2E regression.
@@ -94,6 +95,12 @@ EOF
       cat <<'EOF'
 Usage: ./scripts/dev.sh bot-ml-smoke [build-dir]
 Purpose: fast smoke verification of ML gate path.
+EOF
+      ;;
+    bot-ml-online-gate)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-ml-online-gate [--workspace cache/<dir> --rounds N]
+Purpose: validate ml-online training/publish loop with reproducible pass conditions.
 EOF
       ;;
     bot-online-train)
@@ -192,6 +199,9 @@ case "${subcommand}" in
     ;;
   bot-ml-smoke)
     exec "${ROOT_DIR}/ci/bot_ml_smoke_gate.sh" "$@"
+    ;;
+  bot-ml-online-gate)
+    exec "${ROOT_DIR}/dev/bot_ml_online_gate.sh" "$@"
     ;;
   bot-online-train)
     exec "${ROOT_DIR}/dev/bot_online_train.sh" "$@"

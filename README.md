@@ -139,6 +139,9 @@ CMAKE_BUILD_TYPE=Release ./scripts/deploy.sh android
 # Quick ml smoke gate with repository tiny model
 ./scripts/dev.sh bot-ml-smoke build/dev
 
+# Reproducible ml-online publish-loop gate
+./scripts/dev.sh bot-ml-online-gate --workspace cache/dev/nenoserpent_bot_ml_online_gate --rounds 3
+
 # Run bot in headful mode directly (no manual F8 cycling needed)
 ./scripts/dev.sh bot-run --backend rule --headful
 ./scripts/dev.sh bot-run --backend ml --ml-model cache/dev/nenoserpent_bot_policy_runtime.json --headful
@@ -201,7 +204,7 @@ docker compose --profile cd run --rm gh-cd-android-preflight
   - In pause/game over/replay/library/medal: back to menu
 - **Y / C / Tap Logo**: Cycle Console Shell Colors
 - **M**: Toggle Music
-- **F8**: Cycle Bot Backend (`off -> rule -> ml -> search -> off`)
+- **F8**: Cycle Bot Backend (`off -> rule -> ml -> ml-online -> search -> off`)
 - **F10**: Cycle Bot Strategy (`safe -> balanced -> aggressive -> safe`)
 - **F9**: Toggle Bot Tuning Panel (debug UI)
 - **Back / Esc**: Quit App

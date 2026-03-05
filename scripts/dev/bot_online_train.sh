@@ -22,6 +22,8 @@ GATE_MODE="${BOT_ONLINE_GATE_MODE:-balanced}"
 GATE_NO_REGRESSION_EPS="${BOT_ONLINE_GATE_NO_REGRESSION_EPS:-0.0}"
 CACHE_MAX_MB="${BOT_ONLINE_CACHE_MAX_MB:-1024}"
 CACHE_TARGET_MB="${BOT_ONLINE_CACHE_TARGET_MB:-768}"
+MAX_ROUNDS="${BOT_ONLINE_MAX_ROUNDS:-0}"
+SUMMARY_PATH="${BOT_ONLINE_SUMMARY_PATH:-}"
 
 while (($# > 0)); do
   case "$1" in
@@ -81,6 +83,14 @@ while (($# > 0)); do
       CACHE_TARGET_MB="$2"
       shift 2
       ;;
+    --max-rounds)
+      MAX_ROUNDS="$2"
+      shift 2
+      ;;
+    --summary)
+      SUMMARY_PATH="$2"
+      shift 2
+      ;;
     *)
       if [[ "$1" == "-h" || "$1" == "--help" ]]; then
         cat <<'EOF'
@@ -102,6 +112,8 @@ Options:
   --gate-eps <float>            Allowed regression epsilon (default: 0.0)
   --cache-max-mb <N>            Workspace high-water mark in MB (default: 1024)
   --cache-target-mb <N>         Prune target size in MB when high-water exceeded (default: 768)
+  --max-rounds <N>              Run finite rounds then exit (default: 0=infinite)
+  --summary <path>              Optional summary output file (key=value lines)
 
 Notes:
   - Keep this running in terminal A.
@@ -123,6 +135,9 @@ MODEL_PATH="${WORKSPACE}/nenoserpent_bot_policy.pt"
 METADATA_PATH="${WORKSPACE}/nenoserpent_bot_policy_meta.json"
 RUNTIME_JSON_PATH="${WORKSPACE}/nenoserpent_bot_policy_runtime.json"
 ROUND=0
+PUBLISHED_COUNT=0
+BLOCKED_COUNT=0
+LAST_GATE_REASON="none"
 
 extract_score_pair() {
   local text="$1"
@@ -187,6 +202,7 @@ echo "[bot-online-train] workspace=${WORKSPACE}"
 echo "[bot-online-train] profile=${PROFILE} intervalSec=${INTERVAL_SEC} epochs=${EPOCHS} batchSize=${BATCH_SIZE}"
 echo "[bot-online-train] gate games=${GATE_GAMES} maxTicks=${GATE_MAX_TICKS} level=${GATE_LEVEL} mode=${GATE_MODE} eps=${GATE_NO_REGRESSION_EPS}"
 echo "[bot-online-train] cache maxMb=${CACHE_MAX_MB} targetMb=${CACHE_TARGET_MB}"
+echo "[bot-online-train] maxRounds=${MAX_ROUNDS} summary=${SUMMARY_PATH:-<none>}"
 
 while true; do
   ROUND=$((ROUND + 1))
@@ -220,22 +236,42 @@ while true; do
     if ! awk -v cand="${CANDIDATE_AVG}" -v base="${BASELINE_AVG}" -v eps="${GATE_NO_REGRESSION_EPS}" \
       'BEGIN { exit ((cand + eps) >= base ? 0 : 1) }'; then
       SHOULD_PUBLISH=0
+      LAST_GATE_REASON="avg-regression"
       echo "[bot-online-train] round=${ROUND} gate=blocked reason=avg-regression"
     fi
     if ! awk -v cand="${CANDIDATE_P95}" -v base="${BASELINE_P95}" -v eps="${GATE_NO_REGRESSION_EPS}" \
       'BEGIN { exit ((cand + eps) >= base ? 0 : 1) }'; then
       SHOULD_PUBLISH=0
+      LAST_GATE_REASON="p95-regression"
       echo "[bot-online-train] round=${ROUND} gate=blocked reason=p95-regression"
     fi
   fi
 
   if [[ "${SHOULD_PUBLISH}" == "1" ]]; then
     mv "${TMP_RUNTIME_JSON}" "${RUNTIME_JSON_PATH}"
+    PUBLISHED_COUNT=$((PUBLISHED_COUNT + 1))
+    LAST_GATE_REASON="published"
     echo "[bot-online-train] round=${ROUND} published=${RUNTIME_JSON_PATH}"
   else
     rm -f "${TMP_RUNTIME_JSON}"
+    BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
     echo "[bot-online-train] round=${ROUND} kept-current=${RUNTIME_JSON_PATH}"
   fi
   prune_workspace_if_needed
+  if [[ "${MAX_ROUNDS}" -gt 0 && "${ROUND}" -ge "${MAX_ROUNDS}" ]]; then
+    break
+  fi
   sleep "${INTERVAL_SEC}"
 done
+
+if [[ -n "${SUMMARY_PATH}" ]]; then
+  mkdir -p "$(dirname "${SUMMARY_PATH}")"
+  {
+    echo "rounds=${ROUND}"
+    echo "published=${PUBLISHED_COUNT}"
+    echo "blocked=${BLOCKED_COUNT}"
+    echo "runtime_json=${RUNTIME_JSON_PATH}"
+    echo "last_reason=${LAST_GATE_REASON}"
+  } > "${SUMMARY_PATH}"
+  echo "[bot-online-train] summary=${SUMMARY_PATH}"
+fi

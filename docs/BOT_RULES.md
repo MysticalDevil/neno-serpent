@@ -84,6 +84,12 @@ Online evolution loop (`ml-online` backend + external trainer):
   --ml-model cache/dev/nenoserpent_bot_online/nenoserpent_bot_policy_runtime.json --headful
 ```
 
+Online loop validation gate:
+
+```bash
+./scripts/dev.sh bot-ml-online-gate --workspace cache/dev/nenoserpent_bot_ml_online_gate --rounds 3
+```
+
 CI regression gate:
 
 ```bash

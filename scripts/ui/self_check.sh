@@ -7,7 +7,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/build_paths.sh"
 BUILD_DIR="$(resolve_build_dir dev)"
 APP_BIN="${APP_BIN:-${BUILD_DIR}/NenoSerpent}"
-OUT_PNG="${1:-/tmp/nenoserpent_ui_check.png}"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/ui}}"
+mkdir -p "${TMP_ROOT}"
+OUT_PNG="${1:-${TMP_ROOT}/nenoserpent_ui_check.png}"
 WINDOW_CLASS="${WINDOW_CLASS:-devil.org.NenoSerpent}"
 WINDOW_TITLE="${WINDOW_TITLE:-Snake GB Edition}"
 WAIT_SECONDS="${WAIT_SECONDS:-12}"
@@ -38,7 +40,7 @@ if [[ ! -x "${APP_BIN}" ]]; then
 fi
 
 echo "[info] Launching ${APP_BIN}"
-"${APP_BIN}" >/tmp/nenoserpent_ui_check_runtime.log 2>&1 &
+"${APP_BIN}" >"${TMP_ROOT}/nenoserpent_ui_check_runtime.log" 2>&1 &
 APP_PID=$!
 cleanup() {
   kill "${APP_PID}" >/dev/null 2>&1 || true

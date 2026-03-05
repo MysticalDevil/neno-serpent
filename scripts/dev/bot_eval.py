@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 from pathlib import Path
 
 try:
@@ -66,10 +67,14 @@ def load_dataset(path: Path) -> tuple[torch.Tensor, torch.Tensor]:
 
 
 def main() -> int:
+    repo_root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description="Evaluate imitation model on dataset CSV.")
     parser.add_argument("--dataset", required=True)
     parser.add_argument("--model", required=True)
-    parser.add_argument("--report", default="/tmp/nenoserpent_bot_eval_report.json")
+    tmp_root = os.environ.get("NENOSERPENT_TMP_DIR") or os.environ.get(
+        "NENOSERPENT_CACHE_DIR"
+    ) or str(repo_root / "cache" / "dev")
+    parser.add_argument("--report", default=f"{tmp_root}/nenoserpent_bot_eval_report.json")
     args = parser.parse_args()
 
     ckpt = torch.load(Path(args.model).resolve(), map_location="cpu", weights_only=False)

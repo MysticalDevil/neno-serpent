@@ -3,6 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+CACHE_ROOT="${NENOSERPENT_CACHE_DIR:-${PROJECT_ROOT}/cache}"
+mkdir -p "${CACHE_ROOT}"
 # shellcheck source=lib/build_paths.sh
 # shellcheck disable=SC1091
 source "${PROJECT_ROOT}/scripts/lib/build_paths.sh"
@@ -12,7 +14,7 @@ source "${PROJECT_ROOT}/scripts/lib/build_paths.sh"
 QT_CMAKE_BIN="${QT_CMAKE_BIN:-${QT_WASM_PREFIX}/bin/qt-cmake}"
 BUILD_DIR="${BUILD_DIR:-$(resolve_build_dir wasm)}"
 CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE:-Release}"
-DIST_DIR="${DIST_DIR:-/tmp/neno-serpent-wasm-dist}"
+DIST_DIR="${DIST_DIR:-${CACHE_ROOT}/deploy/neno-serpent-wasm-dist}"
 WASM_SHIMS_DIR="${WASM_SHIMS_DIR:-${PROJECT_ROOT}/cmake/wasm-shims}"
 EMSDK_ROOT="${EMSDK_ROOT:-${HOME}/qt-toolchains/emsdk}"
 SERVE="${SERVE:-1}"

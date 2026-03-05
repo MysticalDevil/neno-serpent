@@ -3,9 +3,11 @@ set -euo pipefail
 
 # Purpose: build bot-benchmark and run offline bot tuning.
 # Example:
-#   ./scripts/dev.sh bot-tune --mode balanced --iterations 60 --output /tmp/bot_tuned.json
+#   ./scripts/dev.sh bot-tune --mode balanced --iterations 60 --output cache/dev/nenoserpent_bot_tuned_balanced.json
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/dev}}"
+mkdir -p "${TMP_ROOT}"
 BUILD_PRESET="${BUILD_PRESET:-dev}"
 PROFILE="${BOT_TUNE_PROFILE:-debug}"
 MODE="${BOT_TUNE_MODE:-balanced}"
@@ -14,8 +16,8 @@ SEEDS="${BOT_TUNE_SEEDS:-1337,1438,1539,1640}"
 GAMES="${BOT_TUNE_GAMES:-20}"
 MAX_TICKS="${BOT_TUNE_MAX_TICKS:-2400}"
 ITERATIONS="${BOT_TUNE_ITERATIONS:-60}"
-OUTPUT_PATH="${BOT_TUNE_OUTPUT:-/tmp/nenoserpent_bot_tuned_${MODE}.json}"
-REPORT_PATH="${BOT_TUNE_REPORT:-/tmp/nenoserpent_bot_tune_report_${MODE}.json}"
+OUTPUT_PATH="${BOT_TUNE_OUTPUT:-${TMP_ROOT}/nenoserpent_bot_tuned_${MODE}.json}"
+REPORT_PATH="${BOT_TUNE_REPORT:-${TMP_ROOT}/nenoserpent_bot_tune_report_${MODE}.json}"
 RANDOM_SEED="${BOT_TUNE_RANDOM_SEED:-20260304}"
 
 while (($# > 0)); do

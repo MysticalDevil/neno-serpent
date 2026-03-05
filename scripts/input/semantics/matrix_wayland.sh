@@ -2,6 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+CACHE_ROOT="${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache}"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${CACHE_ROOT}/input}"
+mkdir -p "${TMP_ROOT}"
 # shellcheck source=lib/build_paths.sh
 # shellcheck disable=SC1091
 source "${ROOT_DIR}/scripts/lib/build_paths.sh"
@@ -16,7 +19,7 @@ WAIT_SECONDS="${WAIT_SECONDS:-14}"
 BOOT_SETTLE_SECONDS="${BOOT_SETTLE_SECONDS:-4.2}"
 STEP_DELAY="${STEP_DELAY:-0.22}"
 POST_CASE_WAIT="${POST_CASE_WAIT:-0.45}"
-FAIL_DIR="${FAIL_DIR:-/tmp/nenoserpent_input_matrix_fail}"
+FAIL_DIR="${FAIL_DIR:-${TMP_ROOT}/nenoserpent_input_matrix_fail}"
 CASE_TIMEOUT="${CASE_TIMEOUT:-120}"
 
 source "${ROOT_DIR}/scripts/lib/input_matrix_common.sh"

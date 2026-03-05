@@ -3,6 +3,8 @@ set -euo pipefail
 
 MODE="${1:-ci}"
 ROOT_DIR="/workspace"
+CACHE_ROOT="${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache}"
+mkdir -p "${CACHE_ROOT}/ci"
 
 if [[ ! -f "${ROOT_DIR}/CMakeLists.txt" ]]; then
   echo "[error] CMakeLists.txt not found under ${ROOT_DIR}"
@@ -44,16 +46,16 @@ case "${MODE}" in
       exit 1
     fi
 
-    mkdir -p /tmp/gh-android-secrets
-    echo "${ANDROID_KEYSTORE_B64}" | base64 -d > /tmp/gh-android-secrets/nenoserpent-release.jks
-    if [[ ! -s /tmp/gh-android-secrets/nenoserpent-release.jks ]]; then
+    mkdir -p "${CACHE_ROOT}/ci/gh-android-secrets"
+    echo "${ANDROID_KEYSTORE_B64}" | base64 -d > "${CACHE_ROOT}/ci/gh-android-secrets/nenoserpent-release.jks"
+    if [[ ! -s "${CACHE_ROOT}/ci/gh-android-secrets/nenoserpent-release.jks" ]]; then
       echo "[error] decoded keystore is empty"
       exit 1
     fi
 
     echo "[ok] Android signing secrets decoded"
     echo "[info] alias=${ANDROID_KEY_ALIAS}"
-    echo "[info] keystore=/tmp/gh-android-secrets/nenoserpent-release.jks"
+    echo "[info] keystore=${CACHE_ROOT}/ci/gh-android-secrets/nenoserpent-release.jks"
     echo "[info] This preflight container does not include full Android Qt toolchain."
     ;;
   *)

@@ -12,6 +12,8 @@ APP_PID=""
 WINDOW_ADDR=""
 GEOM=""
 CFG_TMP=""
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/input}}"
+mkdir -p "${TMP_ROOT}"
 
 app_is_alive() {
   ui_window_app_is_alive "${APP_PID}"
@@ -34,8 +36,8 @@ capture_failure() {
   if [[ -n "${GEOM}" ]]; then
     grim -g "${GEOM}" "${FAIL_DIR}/${case_name}.png" >/dev/null 2>&1 || true
   fi
-  if [[ -f /tmp/nenoserpent_input_matrix_runtime.log ]]; then
-    cp /tmp/nenoserpent_input_matrix_runtime.log "${FAIL_DIR}/${case_name}.log" >/dev/null 2>&1 || true
+  if [[ -f "${TMP_ROOT}/nenoserpent_input_matrix_runtime.log" ]]; then
+    cp "${TMP_ROOT}/nenoserpent_input_matrix_runtime.log" "${FAIL_DIR}/${case_name}.log" >/dev/null 2>&1 || true
   fi
 }
 
@@ -58,12 +60,12 @@ wait_window_ready() {
 }
 
 launch_app() {
-  ui_window_setup_isolated_config "/tmp/nenoserpent_input_matrix_cfg"
+  ui_window_setup_isolated_config "${TMP_ROOT}/nenoserpent_input_matrix_cfg"
   CFG_TMP="${UI_WINDOW_CFG_TMP}"
 
   ui_window_kill_existing "${APP_BIN}"
 
-  "${APP_BIN}" >/tmp/nenoserpent_input_matrix_runtime.log 2>&1 &
+  "${APP_BIN}" >"${TMP_ROOT}/nenoserpent_input_matrix_runtime.log" 2>&1 &
   APP_PID=$!
 
   if ! wait_window_ready; then

@@ -9,7 +9,9 @@ HTML_RENDER_SCRIPT="${HTML_RENDER_SCRIPT:-${ROOT_DIR}/scripts/ui/palette/render_
 # shellcheck disable=SC1091
 source "${ROOT_DIR}/scripts/lib/script_common.sh"
 
-OUT_DIR="${1:-/tmp/nenoserpent_palette_review}"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/ui}}"
+mkdir -p "${TMP_ROOT}"
+OUT_DIR="${1:-${TMP_ROOT}/nenoserpent_palette_review}"
 HTML_OUT="${HTML_OUT:-${OUT_DIR}/index.html}"
 FOCUS_TARGETS="${FOCUS_TARGETS:-menu,game,dbg-replay-buff,dbg-choice}"
 MATRIX_TARGETS="${MATRIX_TARGETS:-menu,achievements,catalog,icons}"

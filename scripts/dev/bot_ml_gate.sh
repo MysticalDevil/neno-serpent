@@ -5,7 +5,7 @@ set -euo pipefail
 # Inputs:
 #   --build-preset <name>   CMake preset (default: dev)
 #   --profile <name>        Bot strategy profile for benchmark/train data (default: debug)
-#   --workspace <path>      Output workspace (default: /tmp/nenoserpent_bot_ml_gate)
+#   --workspace <path>      Output workspace (default: cache/dev/nenoserpent_bot_ml_gate)
 #   --epochs <count>        Training epochs (default: 24)
 #   --batch-size <count>    Training batch size (default: 256)
 #   --lr <value>            Learning rate (default: 0.001)
@@ -15,9 +15,11 @@ set -euo pipefail
 #   - leaderboard compare report with rule vs ml
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/dev}}"
+mkdir -p "${TMP_ROOT}"
 BUILD_PRESET="${BOT_ML_GATE_BUILD_PRESET:-dev}"
 PROFILE="${BOT_ML_GATE_PROFILE:-debug}"
-WORKSPACE="${BOT_ML_GATE_WORKSPACE:-/tmp/nenoserpent_bot_ml_gate}"
+WORKSPACE="${BOT_ML_GATE_WORKSPACE:-${TMP_ROOT}/nenoserpent_bot_ml_gate}"
 EPOCHS="${BOT_ML_GATE_EPOCHS:-24}"
 BATCH_SIZE="${BOT_ML_GATE_BATCH_SIZE:-256}"
 LR="${BOT_ML_GATE_LR:-0.001}"

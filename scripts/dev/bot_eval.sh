@@ -4,9 +4,11 @@ set -euo pipefail
 # Purpose: evaluate imitation model checkpoint against dataset CSV.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-DATASET_PATH="${BOT_EVAL_DATASET:-/tmp/nenoserpent_bot_dataset.csv}"
-MODEL_PATH="${BOT_EVAL_MODEL:-/tmp/nenoserpent_bot_policy.pt}"
-REPORT_PATH="${BOT_EVAL_REPORT:-/tmp/nenoserpent_bot_eval_report.json}"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/dev}}"
+mkdir -p "${TMP_ROOT}"
+DATASET_PATH="${BOT_EVAL_DATASET:-${TMP_ROOT}/nenoserpent_bot_dataset.csv}"
+MODEL_PATH="${BOT_EVAL_MODEL:-${TMP_ROOT}/nenoserpent_bot_policy.pt}"
+REPORT_PATH="${BOT_EVAL_REPORT:-${TMP_ROOT}/nenoserpent_bot_eval_report.json}"
 
 while (($# > 0)); do
   case "$1" in

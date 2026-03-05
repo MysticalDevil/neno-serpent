@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 import re
 import subprocess
@@ -187,6 +188,10 @@ def parse_int_list(raw: str) -> list[int]:
 
 
 def main() -> int:
+    repo_root = Path(__file__).resolve().parents[2]
+    tmp_root = os.environ.get("NENOSERPENT_TMP_DIR") or os.environ.get(
+        "NENOSERPENT_CACHE_DIR"
+    ) or str(repo_root / "cache" / "dev")
     parser = argparse.ArgumentParser(description="Tune bot strategy parameters via offline random search.")
     parser.add_argument("--benchmark-bin", required=True, help="Path to bot-benchmark binary")
     parser.add_argument(
@@ -203,7 +208,7 @@ def main() -> int:
     parser.add_argument("--iterations", type=int, default=60)
     parser.add_argument("--explore-ratio", type=float, default=0.3)
     parser.add_argument("--output", required=True, help="Output strategy JSON path")
-    parser.add_argument("--report", default="/tmp/nenoserpent_bot_tune_report.json")
+    parser.add_argument("--report", default=f"{tmp_root}/nenoserpent_bot_tune_report.json")
     parser.add_argument("--seed", type=int, default=20260304, help="Random seed for reproducible tuning")
     args = parser.parse_args()
 

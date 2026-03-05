@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/dev}}"
+mkdir -p "${TMP_ROOT}"
 SOURCE_FOREGROUND="${ROOT_DIR}/android/res/icon-src/snake-foreground.png"
 RES_DIR="${ROOT_DIR}/android/res"
 PLAYSTORE_DIR="${ROOT_DIR}/android/playstore"
@@ -18,7 +20,7 @@ if ! command -v magick >/dev/null 2>&1; then
 fi
 
 mkdir -p "${PLAYSTORE_DIR}"
-TMP_DIR="$(mktemp -d /tmp/nenoserpent-icons-XXXXXX)"
+TMP_DIR="$(mktemp -d "${TMP_ROOT}/nenoserpent-icons-XXXXXX")"
 trap 'rm -rf "${TMP_DIR}"' EXIT
 
 FG_CLEAN="${TMP_DIR}/snake-foreground-clean.png"

@@ -3,13 +3,15 @@ set -euo pipefail
 
 # Purpose: train imitation policy from bot dataset.
 # Example:
-#   ./scripts/dev.sh bot-train --dataset /tmp/nenoserpent_bot_dataset.csv
+#   ./scripts/dev.sh bot-train --dataset cache/dev/nenoserpent_bot_dataset.csv
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-DATASET_PATH="${BOT_TRAIN_DATASET:-/tmp/nenoserpent_bot_dataset.csv}"
-MODEL_PATH="${BOT_TRAIN_MODEL:-/tmp/nenoserpent_bot_policy.pt}"
-METADATA_PATH="${BOT_TRAIN_METADATA:-/tmp/nenoserpent_bot_policy_meta.json}"
-RUNTIME_JSON_PATH="${BOT_TRAIN_RUNTIME_JSON:-/tmp/nenoserpent_bot_policy_runtime.json}"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/dev}}"
+mkdir -p "${TMP_ROOT}"
+DATASET_PATH="${BOT_TRAIN_DATASET:-${TMP_ROOT}/nenoserpent_bot_dataset.csv}"
+MODEL_PATH="${BOT_TRAIN_MODEL:-${TMP_ROOT}/nenoserpent_bot_policy.pt}"
+METADATA_PATH="${BOT_TRAIN_METADATA:-${TMP_ROOT}/nenoserpent_bot_policy_meta.json}"
+RUNTIME_JSON_PATH="${BOT_TRAIN_RUNTIME_JSON:-${TMP_ROOT}/nenoserpent_bot_policy_runtime.json}"
 EPOCHS="${BOT_TRAIN_EPOCHS:-30}"
 BATCH_SIZE="${BOT_TRAIN_BATCH_SIZE:-256}"
 LR="${BOT_TRAIN_LR:-0.001}"

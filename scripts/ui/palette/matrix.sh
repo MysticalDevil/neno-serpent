@@ -10,7 +10,9 @@ source "${ROOT_DIR}/scripts/lib/script_common.sh"
 # shellcheck disable=SC1091
 source "${ROOT_DIR}/scripts/lib/capture_batch.sh"
 
-OUT_DIR="${1:-/tmp/nenoserpent_palette_matrix}"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/ui}}"
+mkdir -p "${TMP_ROOT}"
+OUT_DIR="${1:-${TMP_ROOT}/nenoserpent_palette_matrix}"
 TARGETS_CSV="${TARGETS:-menu,achievements,catalog,icons}"
 PALETTES_CSV="${PALETTES:-0,1,2,3,4}"
 ISOLATED_CONFIG="${ISOLATED_CONFIG:-1}"

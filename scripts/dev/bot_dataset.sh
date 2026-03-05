@@ -3,13 +3,15 @@ set -euo pipefail
 
 # Purpose: generate supervised bot dataset CSV by replaying fixed leaderboard suite.
 # Example:
-#   ./scripts/dev.sh bot-dataset --output /tmp/bot_dataset.csv
+#   ./scripts/dev.sh bot-dataset --output cache/dev/nenoserpent_bot_dataset.csv
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/dev}}"
+mkdir -p "${TMP_ROOT}"
 BUILD_PRESET="${BUILD_PRESET:-dev}"
 PROFILE="${BOT_DATASET_PROFILE:-debug}"
 SUITE_FILE="${BOT_DATASET_SUITE:-${ROOT_DIR}/scripts/ci/bot_leaderboard_suite.tsv}"
-OUTPUT_PATH="${BOT_DATASET_OUTPUT:-/tmp/nenoserpent_bot_dataset.csv}"
+OUTPUT_PATH="${BOT_DATASET_OUTPUT:-${TMP_ROOT}/nenoserpent_bot_dataset.csv}"
 MAX_SAMPLES_PER_CASE="${BOT_DATASET_MAX_SAMPLES_PER_CASE:-0}"
 ML_MODEL_PATH="${BOT_ML_MODEL:-}"
 

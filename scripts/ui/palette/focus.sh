@@ -9,7 +9,9 @@ source "${ROOT_DIR}/scripts/lib/script_common.sh"
 # shellcheck disable=SC1091
 source "${ROOT_DIR}/scripts/lib/capture_batch.sh"
 
-OUT_DIR="${1:-/tmp/nenoserpent_palette_focus}"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/ui}}"
+mkdir -p "${TMP_ROOT}"
+OUT_DIR="${1:-${TMP_ROOT}/nenoserpent_palette_focus}"
 TARGETS="${TARGETS:-menu,game,dbg-replay-buff,dbg-choice}"
 PALETTE_STEPS="${PALETTE_STEPS:-0}"
 POST_NAV_WAIT="${POST_NAV_WAIT:-1.6}"

@@ -6,12 +6,14 @@ set -euo pipefail
 #   1) build dir (default: build/debug)
 #   2) baseline file (default: scripts/ci/bot_e2e_baseline.tsv)
 # Output:
-#   tab-separated report (default: /tmp/nenoserpent_bot_e2e_results.tsv)
+#   tab-separated report (default: cache/ci/nenoserpent_bot_e2e_results.tsv)
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/ci}}"
+mkdir -p "${TMP_ROOT}"
 BUILD_DIR="${1:-build/debug}"
 BASELINE_FILE="${2:-${ROOT_DIR}/scripts/ci/bot_e2e_baseline.tsv}"
-RESULT_FILE="${BOT_E2E_RESULT_FILE:-/tmp/nenoserpent_bot_e2e_results.tsv}"
+RESULT_FILE="${BOT_E2E_RESULT_FILE:-${TMP_ROOT}/nenoserpent_bot_e2e_results.tsv}"
 PROFILE="${BOT_E2E_PROFILE:-debug}"
 
 BIN_PATH="${ROOT_DIR}/${BUILD_DIR}/bot-benchmark"

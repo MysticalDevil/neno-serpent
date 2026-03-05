@@ -6,16 +6,18 @@ set -euo pipefail
 #   1) build dir (default: build/debug)
 #   2) suite file (default: scripts/ci/bot_leaderboard_suite.tsv)
 # Output:
-#   row report: /tmp/nenoserpent_bot_leaderboard.tsv
-#   mode summary: /tmp/nenoserpent_bot_leaderboard_summary.tsv
+#   row report: cache/ci/nenoserpent_bot_leaderboard.tsv
+#   mode summary: cache/ci/nenoserpent_bot_leaderboard_summary.tsv
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/ci}}"
+mkdir -p "${TMP_ROOT}"
 BUILD_DIR="${1:-build/debug}"
 SUITE_FILE="${2:-${ROOT_DIR}/scripts/ci/bot_leaderboard_suite.tsv}"
 PROFILE="${BOT_LEADERBOARD_PROFILE:-debug}"
-RESULT_FILE="${BOT_LEADERBOARD_RESULT_FILE:-/tmp/nenoserpent_bot_leaderboard.tsv}"
-SUMMARY_FILE="${BOT_LEADERBOARD_SUMMARY_FILE:-/tmp/nenoserpent_bot_leaderboard_summary.tsv}"
-COMPARE_FILE="${BOT_LEADERBOARD_COMPARE_FILE:-/tmp/nenoserpent_bot_leaderboard_compare.tsv}"
+RESULT_FILE="${BOT_LEADERBOARD_RESULT_FILE:-${TMP_ROOT}/nenoserpent_bot_leaderboard.tsv}"
+SUMMARY_FILE="${BOT_LEADERBOARD_SUMMARY_FILE:-${TMP_ROOT}/nenoserpent_bot_leaderboard_summary.tsv}"
+COMPARE_FILE="${BOT_LEADERBOARD_COMPARE_FILE:-${TMP_ROOT}/nenoserpent_bot_leaderboard_compare.tsv}"
 ML_MODEL_PATH="${BOT_ML_MODEL:-}"
 REQUIRE_NO_REGRESSION="${BOT_LEADERBOARD_REQUIRE_NO_REGRESSION:-0}"
 

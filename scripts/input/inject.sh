@@ -7,7 +7,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/build_paths.sh"
 DEFAULT_BUILD_DIR="$(resolve_build_dir dev)"
 
-ENDPOINT="${NENOSERPENT_INPUT_PIPE:-${NENOSERPENT_INPUT_FILE:-/tmp/nenoserpent-input.pipe}}"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/input}}"
+mkdir -p "${TMP_ROOT}"
+ENDPOINT="${NENOSERPENT_INPUT_PIPE:-${NENOSERPENT_INPUT_FILE:-${TMP_ROOT}/nenoserpent-input.pipe}}"
 if [[ "${1:-}" == "-p" ]]; then
   if [[ $# -lt 2 ]]; then
     echo "[error] Missing value for -p"

@@ -2,6 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${ROOT_DIR}/.." && pwd)"
+CACHE_ROOT="${NENOSERPENT_CACHE_DIR:-${REPO_ROOT}/cache}"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${CACHE_ROOT}/dev}"
+mkdir -p "${TMP_ROOT}"
+export NENOSERPENT_CACHE_DIR="${CACHE_ROOT}"
+export NENOSERPENT_TMP_DIR="${TMP_ROOT}"
+export TMPDIR="${TMP_ROOT}"
 
 usage() {
   cat <<'EOF'
@@ -9,11 +16,11 @@ Usage:
   ./scripts/dev.sh clang-tidy <build-dir> [files...]
   ./scripts/dev.sh android-icons
   ./scripts/dev.sh bot-benchmark [--games N --max-ticks M ...]
-  ./scripts/dev.sh bot-dataset [--output /tmp/bot_dataset.csv]
-  ./scripts/dev.sh bot-tune [--mode balanced --iterations 60 --output /tmp/tuned.json]
-  ./scripts/dev.sh bot-train [--dataset /tmp/bot_dataset.csv --model /tmp/bot_policy.pt]
-  ./scripts/dev.sh bot-eval [--dataset /tmp/bot_dataset.csv --model /tmp/bot_policy.pt]
-  ./scripts/dev.sh bot-ml-gate [--workspace /tmp/nenoserpent_bot_ml_gate]
+  ./scripts/dev.sh bot-dataset [--output cache/bot_dataset.csv]
+  ./scripts/dev.sh bot-tune [--mode balanced --iterations 60 --output cache/tuned.json]
+  ./scripts/dev.sh bot-train [--dataset cache/bot_dataset.csv --model cache/bot_policy.pt]
+  ./scripts/dev.sh bot-eval [--dataset cache/bot_dataset.csv --model cache/bot_policy.pt]
+  ./scripts/dev.sh bot-ml-gate [--workspace cache/nenoserpent_bot_ml_gate]
   ./scripts/dev.sh bot-ml-smoke [build-dir]
   ./scripts/dev.sh bot-run [--backend off|rule|ml|search --headful|--headless --ui-mode full|screen|shell]
   ./scripts/dev.sh bot-e2e [build-dir] [baseline.tsv]

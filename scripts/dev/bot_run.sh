@@ -4,7 +4,7 @@ set -euo pipefail
 # Purpose: run NenoSerpent in bot-oriented manual mode (headful/headless switchable).
 # Example:
 #   ./scripts/dev.sh bot-run --backend rule --headful
-#   ./scripts/dev.sh bot-run --backend ml --ml-model /tmp/policy.runtime.json --ui-mode screen
+#   ./scripts/dev.sh bot-run --backend ml --ml-model cache/dev/policy.runtime.json --ui-mode screen
 #   ./scripts/dev.sh bot-run --backend search --headful
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

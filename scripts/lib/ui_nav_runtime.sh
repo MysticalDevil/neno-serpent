@@ -44,10 +44,12 @@ ui_nav_build_app() {
 
 ui_nav_setup_isolated_config() {
   local enabled="$1"
+  local tmp_root="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/ui}}"
+  mkdir -p "${tmp_root}"
 
   UI_NAV_CFG_TMP=""
   if [[ "${enabled}" == "1" ]]; then
-    ui_window_setup_isolated_config "/tmp/nenoserpent_ui_cfg"
+    ui_window_setup_isolated_config "${tmp_root}/nenoserpent_ui_cfg"
     UI_NAV_CFG_TMP="${UI_WINDOW_CFG_TMP}"
   fi
 }

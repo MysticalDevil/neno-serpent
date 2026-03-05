@@ -3,6 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+CACHE_ROOT="${NENOSERPENT_CACHE_DIR:-${PROJECT_ROOT}/cache}"
+mkdir -p "${CACHE_ROOT}/deploy"
 # shellcheck source=lib/build_paths.sh
 # shellcheck disable=SC1091
 source "${PROJECT_ROOT}/scripts/lib/build_paths.sh"
@@ -292,8 +294,8 @@ if [[ -n "${SIGNED_INPUT_APK}" ]]; then
   SIGNED_APK="${SIGNED_APK:-${SIGNED_INPUT_APK}}"
 else
   log_phase "zipalign + apksigner"
-  ALIGNED_APK="${ALIGNED_APK:-/tmp/${APP_ID}-${ANDROID_ABI}-aligned.apk}"
-  SIGNED_APK="${SIGNED_APK:-/tmp/${APP_ID}-${ANDROID_ABI}.apk}"
+  ALIGNED_APK="${ALIGNED_APK:-${CACHE_ROOT}/deploy/${APP_ID}-${ANDROID_ABI}-aligned.apk}"
+  SIGNED_APK="${SIGNED_APK:-${CACHE_ROOT}/deploy/${APP_ID}-${ANDROID_ABI}.apk}"
   "${ZIPALIGN_BIN}" -f 4 "${UNSIGNED_APK}" "${ALIGNED_APK}"
   "${APKSIGNER_BIN}" sign \
     --ks "${DEBUG_KEYSTORE_PATH}" \

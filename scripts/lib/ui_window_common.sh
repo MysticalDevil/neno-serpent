@@ -29,7 +29,7 @@ ui_window_stop_app() {
 }
 
 ui_window_setup_isolated_config() {
-  local template_prefix="${1:-/tmp/nenoserpent_ui_cfg}"
+  local template_prefix="${1:-${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/ui}}/nenoserpent_ui_cfg}"
 
   # shellcheck disable=SC2034 # Consumed by callers after this shared helper returns.
   UI_WINDOW_CFG_TMP="$(mktemp -d "${template_prefix}.XXXXXX")"

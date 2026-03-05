@@ -2,6 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+CACHE_ROOT="${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache}"
+TMP_ROOT="${NENOSERPENT_TMP_DIR:-${CACHE_ROOT}/input}"
+mkdir -p "${TMP_ROOT}"
 # shellcheck source=lib/build_paths.sh
 # shellcheck disable=SC1091
 source "${ROOT_DIR}/scripts/lib/build_paths.sh"
@@ -10,7 +13,7 @@ APP_BIN="${APP_BIN:-${BUILD_DIR}/NenoSerpent}"
 ITERATIONS="${ITERATIONS:-5}"
 BOOT_WAIT="${BOOT_WAIT:-3.8}"
 STEP_DELAY="${STEP_DELAY:-0.20}"
-LOG_DIR="${LOG_DIR:-/tmp/nenoserpent_konami_probe}"
+LOG_DIR="${LOG_DIR:-${TMP_ROOT}/nenoserpent_konami_probe}"
 
 mkdir -p "${LOG_DIR}"
 
@@ -61,8 +64,8 @@ run_case() {
   local with_konami="$2"
   local iter="$3"
   local cfg_dir input_file log_file
-  cfg_dir="$(mktemp -d /tmp/nenoserpent_konami_cfg.XXXXXX)"
-  input_file="/tmp/nenoserpent_konami_input_${case_name}_${iter}.txt"
+  cfg_dir="$(mktemp -d "${TMP_ROOT}/nenoserpent_konami_cfg.XXXXXX")"
+  input_file="${TMP_ROOT}/nenoserpent_konami_input_${case_name}_${iter}.txt"
   log_file="${LOG_DIR}/${case_name}_${iter}.log"
   : > "${input_file}"
 

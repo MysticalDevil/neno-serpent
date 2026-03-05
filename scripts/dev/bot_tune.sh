@@ -19,6 +19,11 @@ ITERATIONS="${BOT_TUNE_ITERATIONS:-60}"
 OUTPUT_PATH="${BOT_TUNE_OUTPUT:-${TMP_ROOT}/nenoserpent_bot_tuned_${MODE}.json}"
 REPORT_PATH="${BOT_TUNE_REPORT:-${TMP_ROOT}/nenoserpent_bot_tune_report_${MODE}.json}"
 RANDOM_SEED="${BOT_TUNE_RANDOM_SEED:-20260304}"
+MAX_LOOP_RATE="${BOT_TUNE_MAX_LOOP_RATE:-0.45}"
+OBJ_AVG_WEIGHT="${BOT_TUNE_OBJECTIVE_AVG_WEIGHT:-1.0}"
+OBJ_P95_WEIGHT="${BOT_TUNE_OBJECTIVE_P95_WEIGHT:-0.35}"
+OBJ_TIMEOUT_PENALTY="${BOT_TUNE_OBJECTIVE_TIMEOUT_PENALTY:-0.4}"
+OBJ_LOOP_PENALTY="${BOT_TUNE_OBJECTIVE_LOOP_PENALTY:-60.0}"
 
 while (($# > 0)); do
   case "$1" in
@@ -62,6 +67,26 @@ while (($# > 0)); do
       RANDOM_SEED="$2"
       shift 2
       ;;
+    --max-loop-rate)
+      MAX_LOOP_RATE="$2"
+      shift 2
+      ;;
+    --objective-avg-weight)
+      OBJ_AVG_WEIGHT="$2"
+      shift 2
+      ;;
+    --objective-p95-weight)
+      OBJ_P95_WEIGHT="$2"
+      shift 2
+      ;;
+    --objective-timeout-penalty)
+      OBJ_TIMEOUT_PENALTY="$2"
+      shift 2
+      ;;
+    --objective-loop-penalty)
+      OBJ_LOOP_PENALTY="$2"
+      shift 2
+      ;;
     *)
       echo "unknown arg: $1" >&2
       exit 1
@@ -82,6 +107,11 @@ exec uv run python "${ROOT_DIR}/scripts/dev/bot_tune.py" \
   --games "${GAMES}" \
   --max-ticks "${MAX_TICKS}" \
   --iterations "${ITERATIONS}" \
+  --max-loop-rate "${MAX_LOOP_RATE}" \
+  --objective-avg-weight "${OBJ_AVG_WEIGHT}" \
+  --objective-p95-weight "${OBJ_P95_WEIGHT}" \
+  --objective-timeout-penalty "${OBJ_TIMEOUT_PENALTY}" \
+  --objective-loop-penalty "${OBJ_LOOP_PENALTY}" \
   --output "${OUTPUT_PATH}" \
   --report "${REPORT_PATH}" \
   --seed "${RANDOM_SEED}"

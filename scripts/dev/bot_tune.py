@@ -31,6 +31,7 @@ from pathlib import Path
 SCORE_AVG_RE = re.compile(r"score\.avg=([0-9]+(?:\.[0-9]+)?)")
 SCORE_P95_RE = re.compile(r"score\.p95=([0-9]+)")
 TIMEOUT_RE = re.compile(r"outcomes\.timeout=([0-9]+)")
+LOOP_RATE_RE = re.compile(r"loop\.rate=([0-9]+(?:\.[0-9]+)?)")
 
 
 @dataclass(frozen=True)
@@ -65,13 +66,19 @@ def clamp_param(name: str, value: int) -> int:
     return r.lo + bucket * r.step
 
 
-def parse_output(text: str) -> tuple[float, int, int]:
+def parse_output(text: str) -> tuple[float, int, int, float]:
     avg_match = SCORE_AVG_RE.search(text)
     p95_match = SCORE_P95_RE.search(text)
     timeout_match = TIMEOUT_RE.search(text)
-    if avg_match is None or p95_match is None or timeout_match is None:
+    loop_rate_match = LOOP_RATE_RE.search(text)
+    if avg_match is None or p95_match is None or timeout_match is None or loop_rate_match is None:
         raise RuntimeError(f"failed to parse bot-benchmark output:\n{text}")
-    return float(avg_match.group(1)), int(p95_match.group(1)), int(timeout_match.group(1))
+    return (
+        float(avg_match.group(1)),
+        int(p95_match.group(1)),
+        int(timeout_match.group(1)),
+        float(loop_rate_match.group(1)),
+    )
 
 
 def load_base_profiles(strategy_file: Path) -> dict:
@@ -134,9 +141,10 @@ def run_scenarios(
     seeds: list[int],
     games: int,
     max_ticks: int,
-) -> tuple[float, float, int]:
+) -> tuple[float, float, int, float]:
     avg_values: list[float] = []
     p95_values: list[int] = []
+    loop_rate_values: list[float] = []
     timeout_total = 0
 
     for level in levels:
@@ -161,18 +169,39 @@ def run_scenarios(
                 str(strategy_override),
             ]
             out = subprocess.check_output(cmd, text=True)
-            avg, p95, timeout = parse_output(out)
+            avg, p95, timeout, loop_rate = parse_output(out)
             avg_values.append(avg)
             p95_values.append(p95)
+            loop_rate_values.append(loop_rate)
             timeout_total += timeout
 
     avg_mean = sum(avg_values) / len(avg_values)
     p95_mean = sum(p95_values) / len(p95_values)
-    return avg_mean, p95_mean, timeout_total
+    loop_rate_mean = sum(loop_rate_values) / len(loop_rate_values)
+    return avg_mean, p95_mean, timeout_total, loop_rate_mean
 
 
-def objective(avg_mean: float, p95_mean: float, timeout_total: int) -> float:
-    return avg_mean + 0.35 * p95_mean - 0.4 * timeout_total
+@dataclass(frozen=True)
+class ObjectiveWeights:
+    avg: float
+    p95: float
+    timeout: float
+    loop: float
+
+
+def objective(
+    avg_mean: float,
+    p95_mean: float,
+    timeout_total: int,
+    loop_rate_mean: float,
+    weights: ObjectiveWeights,
+) -> float:
+    return (
+        (weights.avg * avg_mean)
+        + (weights.p95 * p95_mean)
+        - (weights.timeout * timeout_total)
+        - (weights.loop * loop_rate_mean)
+    )
 
 
 def parse_int_list(raw: str) -> list[int]:
@@ -207,6 +236,11 @@ def main() -> int:
     parser.add_argument("--max-ticks", type=int, default=2400)
     parser.add_argument("--iterations", type=int, default=60)
     parser.add_argument("--explore-ratio", type=float, default=0.3)
+    parser.add_argument("--max-loop-rate", type=float, default=0.45)
+    parser.add_argument("--objective-avg-weight", type=float, default=1.0)
+    parser.add_argument("--objective-p95-weight", type=float, default=0.35)
+    parser.add_argument("--objective-timeout-penalty", type=float, default=0.4)
+    parser.add_argument("--objective-loop-penalty", type=float, default=60.0)
     parser.add_argument("--output", required=True, help="Output strategy JSON path")
     parser.add_argument("--report", default=f"{tmp_root}/nenoserpent_bot_tune_report.json")
     parser.add_argument("--seed", type=int, default=20260304, help="Random seed for reproducible tuning")
@@ -224,6 +258,12 @@ def main() -> int:
     current = make_candidate_from_profile(base_profiles, args.profile)
     best = dict(current)
     best_score = float("-inf")
+    weights = ObjectiveWeights(
+        avg=args.objective_avg_weight,
+        p95=args.objective_p95_weight,
+        timeout=args.objective_timeout_penalty,
+        loop=args.objective_loop_penalty,
+    )
     history: list[dict] = []
 
     with tempfile.TemporaryDirectory(prefix="nenoserpent-bot-tune-", dir=tmp_root) as tmp_dir:
@@ -238,7 +278,7 @@ def main() -> int:
                 candidate = mutate_candidate(best, edits=edits)
 
             write_strategy_override(base_profiles, args.profile, candidate, tmp_path)
-            avg_mean, p95_mean, timeout_total = run_scenarios(
+            avg_mean, p95_mean, timeout_total, loop_rate_mean = run_scenarios(
                 benchmark_bin=benchmark_bin,
                 strategy_override=tmp_path,
                 profile=args.profile,
@@ -248,7 +288,8 @@ def main() -> int:
                 games=max(1, args.games),
                 max_ticks=max(200, args.max_ticks),
             )
-            score = objective(avg_mean, p95_mean, timeout_total)
+            score = objective(avg_mean, p95_mean, timeout_total, loop_rate_mean, weights)
+            gate_failed = loop_rate_mean > args.max_loop_rate
             history.append(
                 {
                     "iteration": idx + 1,
@@ -256,17 +297,31 @@ def main() -> int:
                     "avg_mean": avg_mean,
                     "p95_mean": p95_mean,
                     "timeout_total": timeout_total,
+                    "loop_rate_mean": loop_rate_mean,
+                    "gate_failed": gate_failed,
                     "candidate": candidate,
                 }
             )
 
-            if score > best_score:
+            if not gate_failed and score > best_score:
                 best_score = score
                 best = dict(candidate)
                 print(
                     f"[bot-tune] iter={idx + 1} new-best "
-                    f"score={score:.3f} avg={avg_mean:.3f} p95={p95_mean:.3f} timeout={timeout_total}"
+                    f"score={score:.3f} avg={avg_mean:.3f} p95={p95_mean:.3f} "
+                    f"timeout={timeout_total} loop={loop_rate_mean:.3f}"
                 )
+            elif gate_failed:
+                print(
+                    f"[bot-tune] iter={idx + 1} skip loop gate "
+                    f"loop={loop_rate_mean:.3f} > max={args.max_loop_rate:.3f}"
+                )
+
+    if best_score == float("-inf"):
+        raise RuntimeError(
+            "all tuning candidates were filtered by loop-rate gate; "
+            "relax --max-loop-rate or objective penalties"
+        )
 
     output_path = Path(args.output).resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -282,6 +337,13 @@ def main() -> int:
         "iterations": args.iterations,
         "best_score": best_score,
         "best_candidate": best,
+        "weights": {
+            "avg": weights.avg,
+            "p95": weights.p95,
+            "timeout": weights.timeout,
+            "loop": weights.loop,
+        },
+        "max_loop_rate": args.max_loop_rate,
         "output": str(output_path),
         "history_tail": history[-10:],
     }

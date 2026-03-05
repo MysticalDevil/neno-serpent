@@ -88,6 +88,7 @@ EOF
     bot-tune)
       cat <<'EOF'
 Usage: ./scripts/dev.sh bot-tune [--mode balanced --iterations 60 --output cache/<name>.json]
+       [--max-loop-rate F --objective-loop-penalty F]
 Purpose: tune rule strategy parameters.
 EOF
       ;;

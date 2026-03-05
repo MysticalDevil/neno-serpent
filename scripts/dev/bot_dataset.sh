@@ -9,6 +9,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/dev}}"
 mkdir -p "${TMP_ROOT}"
 BUILD_PRESET="${BUILD_PRESET:-dev}"
+SKIP_BUILD="${NENOSERPENT_SKIP_BUILD:-0}"
 PROFILE="${BOT_DATASET_PROFILE:-debug}"
 SUITE_FILE="${BOT_DATASET_SUITE:-${ROOT_DIR}/scripts/ci/bot_leaderboard_suite.tsv}"
 OUTPUT_PATH="${BOT_DATASET_OUTPUT:-${TMP_ROOT}/nenoserpent_bot_dataset.csv}"
@@ -40,8 +41,10 @@ while (($# > 0)); do
   esac
 done
 
-cmake --preset "${BUILD_PRESET}"
-cmake --build --preset "${BUILD_PRESET}" --target bot-benchmark
+if [[ "${SKIP_BUILD}" != "1" ]]; then
+  cmake --preset "${BUILD_PRESET}"
+  cmake --build --preset "${BUILD_PRESET}" --target bot-benchmark
+fi
 
 rm -f "${OUTPUT_PATH}"
 while IFS=$'\t' read -r case_id backend mode level seed games max_ticks; do

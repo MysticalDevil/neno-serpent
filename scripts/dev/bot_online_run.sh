@@ -240,6 +240,11 @@ mkdir -p "${WORKSPACE}"
 RUNTIME_JSON_PATH="${WORKSPACE}/nenoserpent_bot_policy_runtime.json"
 TRAINER_PID=0
 
+echo "[bot-online-run] prebuild preset=${BUILD_PRESET} targets=bot-benchmark,NenoSerpent"
+cmake --preset "${BUILD_PRESET}"
+cmake --build --preset "${BUILD_PRESET}" --target bot-benchmark NenoSerpent
+export NENOSERPENT_SKIP_BUILD=1
+
 cleanup() {
   if [[ "${TRAINER_PID}" -gt 0 ]] && kill -0 "${TRAINER_PID}" 2>/dev/null; then
     kill "${TRAINER_PID}" 2>/dev/null || true

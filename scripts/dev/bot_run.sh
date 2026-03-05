@@ -9,6 +9,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BUILD_PRESET="${BUILD_PRESET:-dev}"
+SKIP_BUILD="${NENOSERPENT_SKIP_BUILD:-0}"
 HEADFUL=1
 UI_MODE="full"
 BOT_BACKEND="${BOT_BACKEND:-off}"
@@ -94,8 +95,10 @@ if [[ "${BOT_BACKEND}" == "human" && -z "${HUMAN_DATASET_PATH}" ]]; then
   HUMAN_DATASET_PATH="${NENOSERPENT_TMP_DIR:-${ROOT_DIR}/cache/dev}/nenoserpent_human_dataset.csv"
 fi
 
-cmake --preset "${BUILD_PRESET}"
-cmake --build --preset "${BUILD_PRESET}" --target NenoSerpent
+if [[ "${SKIP_BUILD}" != "1" ]]; then
+  cmake --preset "${BUILD_PRESET}"
+  cmake --build --preset "${BUILD_PRESET}" --target NenoSerpent
+fi
 
 APP_PATH="${ROOT_DIR}/build/${BUILD_PRESET}/NenoSerpent"
 if [[ ! -x "${APP_PATH}" ]]; then

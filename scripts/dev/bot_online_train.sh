@@ -30,6 +30,7 @@ MIN_DATASET_SAMPLES="${BOT_ONLINE_MIN_DATASET_SAMPLES:-40}"
 MIN_PUBLISH_ROUND="${BOT_ONLINE_MIN_PUBLISH_ROUND:-1}"
 PUBLISH_COOLDOWN_ROUNDS="${BOT_ONLINE_PUBLISH_COOLDOWN_ROUNDS:-1}"
 MAX_BLOCKED_STREAK="${BOT_ONLINE_MAX_BLOCKED_STREAK:-8}"
+BUILD_PRESET="${BUILD_PRESET:-dev}"
 
 while (($# > 0)); do
   case "$1" in
@@ -292,6 +293,13 @@ echo "[bot-online-train] maxRounds=${MAX_ROUNDS} summary=${SUMMARY_PATH:-<none>}
 echo "[bot-online-train] stability minSamples=${MIN_DATASET_SAMPLES} minPublishRound=${MIN_PUBLISH_ROUND} cooldownRounds=${PUBLISH_COOLDOWN_ROUNDS} maxBlockedStreak=${MAX_BLOCKED_STREAK}"
 echo "[bot-online-train] publishHistory=${PUBLISH_HISTORY_PATH}"
 ensure_publish_history_header
+
+if [[ "${NENOSERPENT_SKIP_BUILD:-0}" != "1" ]]; then
+  echo "[bot-online-train] prebuild preset=${BUILD_PRESET} target=bot-benchmark"
+  cmake --preset "${BUILD_PRESET}"
+  cmake --build --preset "${BUILD_PRESET}" --target bot-benchmark
+  export NENOSERPENT_SKIP_BUILD=1
+fi
 
 while true; do
   ROUND=$((ROUND + 1))

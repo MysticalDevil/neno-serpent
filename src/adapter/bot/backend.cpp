@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <limits>
+#include <optional>
 #include <vector>
 
 #include "core/game/rules.h"
@@ -24,6 +25,18 @@ auto isReverseDirection(const QPoint& a, const QPoint& b) -> bool {
 
 auto boardIndex(const QPoint& p, const int width) -> int {
   return p.y() * width + p.x();
+}
+
+auto isInsideBoard(const QPoint& p, const int width, const int height) -> bool {
+  return p.x() >= 0 && p.y() >= 0 && p.x() < width && p.y() < height;
+}
+
+auto tryBoardIndex(const QPoint& p, const int width, const int height)
+  -> std::optional<std::size_t> {
+  if (!isInsideBoard(p, width, height)) {
+    return std::nullopt;
+  }
+  return static_cast<std::size_t>(boardIndex(p, width));
 }
 
 auto toroidalDistance(const QPoint& from, const QPoint& to, const int width, const int height)
@@ -53,12 +66,18 @@ auto buildBlockedMap(const Snapshot& snapshot, const std::deque<QPoint>& body)
                             false);
   if (!snapshot.portalActive && !snapshot.laserActive) {
     for (const QPoint& obstacle : snapshot.obstacles) {
-      blocked[static_cast<std::size_t>(boardIndex(obstacle, snapshot.boardWidth))] = true;
+      if (const auto index = tryBoardIndex(obstacle, snapshot.boardWidth, snapshot.boardHeight);
+          index.has_value()) {
+        blocked[*index] = true;
+      }
     }
   }
   if (!snapshot.ghostActive) {
     for (const QPoint& segment : body) {
-      blocked[static_cast<std::size_t>(boardIndex(segment, snapshot.boardWidth))] = true;
+      if (const auto index = tryBoardIndex(segment, snapshot.boardWidth, snapshot.boardHeight);
+          index.has_value()) {
+        blocked[*index] = true;
+      }
     }
   }
   return blocked;
@@ -71,8 +90,14 @@ auto floodReachable(const QPoint& start, const Snapshot& snapshot, const std::ve
   }
   std::vector<bool> visited(blocked.size(), false);
   std::deque<QPoint> queue;
-  queue.push_back(start);
-  visited[static_cast<std::size_t>(boardIndex(start, snapshot.boardWidth))] = true;
+  const QPoint wrappedStart =
+    nenoserpent::core::wrapPoint(start, snapshot.boardWidth, snapshot.boardHeight);
+  const auto startIndex = tryBoardIndex(wrappedStart, snapshot.boardWidth, snapshot.boardHeight);
+  if (!startIndex.has_value()) {
+    return 0;
+  }
+  queue.push_back(wrappedStart);
+  visited[*startIndex] = true;
   int reachable = 0;
   while (!queue.empty()) {
     const QPoint current = queue.front();
@@ -81,11 +106,11 @@ auto floodReachable(const QPoint& start, const Snapshot& snapshot, const std::ve
     for (const QPoint& dir : kDirections) {
       const QPoint next =
         nenoserpent::core::wrapPoint(current + dir, snapshot.boardWidth, snapshot.boardHeight);
-      const auto nextIndex = static_cast<std::size_t>(boardIndex(next, snapshot.boardWidth));
-      if (visited[nextIndex] || blocked[nextIndex]) {
+      const auto nextIndex = tryBoardIndex(next, snapshot.boardWidth, snapshot.boardHeight);
+      if (!nextIndex.has_value() || visited[*nextIndex] || blocked[*nextIndex]) {
         continue;
       }
-      visited[nextIndex] = true;
+      visited[*nextIndex] = true;
       queue.push_back(next);
     }
   }
@@ -99,8 +124,8 @@ auto countSafeNeighbors(const QPoint& from,
   for (const QPoint& dir : kDirections) {
     const QPoint next =
       nenoserpent::core::wrapPoint(from + dir, snapshot.boardWidth, snapshot.boardHeight);
-    const auto index = static_cast<std::size_t>(boardIndex(next, snapshot.boardWidth));
-    if (!blocked[index]) {
+    const auto index = tryBoardIndex(next, snapshot.boardWidth, snapshot.boardHeight);
+    if (index.has_value() && !blocked[*index]) {
       ++safe;
     }
   }
@@ -154,8 +179,10 @@ auto previewMove(const Snapshot& snapshot, const MoveState& state, const QPoint&
 auto evaluateLeaf(const Snapshot& snapshot, const MoveState& state, const StrategyConfig& config)
   -> int {
   auto blocked = buildBlockedMap(snapshot, state.body);
-  const auto headIndex = static_cast<std::size_t>(boardIndex(state.head, snapshot.boardWidth));
-  blocked[headIndex] = false;
+  if (const auto headIndex = tryBoardIndex(state.head, snapshot.boardWidth, snapshot.boardHeight);
+      headIndex.has_value()) {
+    blocked[*headIndex] = false;
+  }
   const int openSpace = floodReachable(state.head, snapshot, blocked);
   const int safeNeighbors = countSafeNeighbors(state.head, snapshot, blocked);
 

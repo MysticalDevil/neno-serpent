@@ -10,6 +10,7 @@ private slots:
   void searchBackendChoosesNonReverseSafeDirection();
   void searchBackendReturnsNulloptWhenNoValidMove();
   void searchBackendPrefersHighPriorityPowerTarget();
+  void searchBackendIgnoresOutOfBoundsObstacles();
   void backendChoiceSelectionUsesCommonPriorityLogic();
 };
 
@@ -84,6 +85,23 @@ void BotBackendAdapterTest::searchBackendPrefersHighPriorityPowerTarget() {
   const auto direction = backend.decideDirection(snapshot, strategy);
   QVERIFY(direction.has_value());
   QCOMPARE(*direction, QPoint(1, 0));
+}
+
+void BotBackendAdapterTest::searchBackendIgnoresOutOfBoundsObstacles() {
+  const auto& backend = nenoserpent::adapter::bot::searchBackend();
+
+  nenoserpent::adapter::bot::Snapshot snapshot{};
+  snapshot.boardWidth = 20;
+  snapshot.boardHeight = 18;
+  snapshot.head = QPoint(19, 0);
+  snapshot.direction = QPoint(1, 0);
+  snapshot.food = QPoint(5, 5);
+  snapshot.body = {QPoint(19, 0), QPoint(18, 0), QPoint(17, 0)};
+  snapshot.obstacles = {QPoint(20, 0), QPoint(-1, 8), QPoint(0, 18)};
+
+  const auto direction =
+    backend.decideDirection(snapshot, nenoserpent::adapter::bot::defaultStrategyConfig());
+  QVERIFY(direction.has_value());
 }
 
 void BotBackendAdapterTest::backendChoiceSelectionUsesCommonPriorityLogic() {

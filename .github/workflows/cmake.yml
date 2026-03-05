@@ -69,3 +69,12 @@ jobs:
       run: |
         BOT_E2E_PROFILE=debug \
         ./scripts/ci/bot_e2e_regression.sh build/debug
+
+    - name: Bot ML No-Regression Gate (optional)
+      if: ${{ secrets.BOT_ML_MODEL_B64 != '' }}
+      run: |
+        echo "${{ secrets.BOT_ML_MODEL_B64 }}" | base64 -d > /tmp/nenoserpent_bot_policy_runtime.json
+        BOT_ML_MODEL=/tmp/nenoserpent_bot_policy_runtime.json \
+        BOT_LEADERBOARD_PROFILE=debug \
+        BOT_LEADERBOARD_REQUIRE_NO_REGRESSION=1 \
+        ./scripts/ci/bot_leaderboard_regression.sh build/debug

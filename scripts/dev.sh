@@ -31,6 +31,7 @@ Commands:
   bot-run          Run bot in headful/headless mode.
   bot-e2e          Run bot E2E regression.
   bot-leaderboard  Run bot leaderboard regression.
+  cache-prune      Prune repository cache by age and size watermarks.
 
 Examples:
   ./scripts/dev.sh clang-tidy build/debug src/sound_manager.cpp
@@ -122,6 +123,12 @@ Usage: ./scripts/dev.sh bot-leaderboard [build-dir] [suite.tsv]
 Purpose: run leaderboard suite and compare stability/perf.
 EOF
       ;;
+    cache-prune)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh cache-prune [--cache-dir path --max-mb N --target-mb N --max-age-days N]
+Purpose: prune cache directory to prevent uncontrolled growth.
+EOF
+      ;;
     *)
       echo "Unknown command: ${1:-<empty>}" >&2
       usage >&2
@@ -197,6 +204,9 @@ case "${subcommand}" in
     ;;
   bot-leaderboard)
     exec "${ROOT_DIR}/ci/bot_leaderboard_regression.sh" "$@"
+    ;;
+  cache-prune)
+    exec "${ROOT_DIR}/dev/cache_prune.sh" "$@"
     ;;
   *)
     usage

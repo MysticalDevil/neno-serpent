@@ -20,6 +20,8 @@ GATE_MAX_TICKS="${BOT_ONLINE_GATE_MAX_TICKS:-1600}"
 GATE_LEVEL="${BOT_ONLINE_GATE_LEVEL:-0}"
 GATE_MODE="${BOT_ONLINE_GATE_MODE:-balanced}"
 GATE_NO_REGRESSION_EPS="${BOT_ONLINE_GATE_NO_REGRESSION_EPS:-0.0}"
+CACHE_MAX_MB="${BOT_ONLINE_CACHE_MAX_MB:-1024}"
+CACHE_TARGET_MB="${BOT_ONLINE_CACHE_TARGET_MB:-768}"
 
 while (($# > 0)); do
   case "$1" in
@@ -71,6 +73,14 @@ while (($# > 0)); do
       GATE_NO_REGRESSION_EPS="$2"
       shift 2
       ;;
+    --cache-max-mb)
+      CACHE_MAX_MB="$2"
+      shift 2
+      ;;
+    --cache-target-mb)
+      CACHE_TARGET_MB="$2"
+      shift 2
+      ;;
     *)
       if [[ "$1" == "-h" || "$1" == "--help" ]]; then
         cat <<'EOF'
@@ -90,6 +100,8 @@ Options:
   --gate-level <N>              Benchmark level for publish gate (default: 0)
   --gate-mode <name>            Benchmark mode for publish gate (default: balanced)
   --gate-eps <float>            Allowed regression epsilon (default: 0.0)
+  --cache-max-mb <N>            Workspace high-water mark in MB (default: 1024)
+  --cache-target-mb <N>         Prune target size in MB when high-water exceeded (default: 768)
 
 Notes:
   - Keep this running in terminal A.
@@ -144,9 +156,37 @@ run_gate_benchmark() {
     --seed "${seed}"
 }
 
+workspace_size_mb() {
+  du -sm "${WORKSPACE}" | awk '{print $1}'
+}
+
+prune_workspace_if_needed() {
+  local current_mb
+  current_mb="$(workspace_size_mb)"
+  if [[ "${current_mb}" -lt "${CACHE_MAX_MB}" ]]; then
+    return
+  fi
+  echo "[bot-online-train] cache high-water hit sizeMb=${current_mb} maxMb=${CACHE_MAX_MB}; pruning to <=${CACHE_TARGET_MB}MB"
+  while [[ "${current_mb}" -gt "${CACHE_TARGET_MB}" ]]; do
+    local oldest_file
+    oldest_file="$(find "${WORKSPACE}" -maxdepth 1 -type f \
+      ! -name 'nenoserpent_bot_policy_runtime.json' \
+      ! -name '.gitignore' \
+      -printf '%T@ %p\n' | sort -n | awk 'NR==1 {print $2}')"
+    if [[ -z "${oldest_file}" ]]; then
+      echo "[bot-online-train] prune stopped: no removable files in workspace"
+      break
+    fi
+    rm -f "${oldest_file}"
+    current_mb="$(workspace_size_mb)"
+    echo "[bot-online-train] pruned file=${oldest_file} sizeMb=${current_mb}"
+  done
+}
+
 echo "[bot-online-train] workspace=${WORKSPACE}"
 echo "[bot-online-train] profile=${PROFILE} intervalSec=${INTERVAL_SEC} epochs=${EPOCHS} batchSize=${BATCH_SIZE}"
 echo "[bot-online-train] gate games=${GATE_GAMES} maxTicks=${GATE_MAX_TICKS} level=${GATE_LEVEL} mode=${GATE_MODE} eps=${GATE_NO_REGRESSION_EPS}"
+echo "[bot-online-train] cache maxMb=${CACHE_MAX_MB} targetMb=${CACHE_TARGET_MB}"
 
 while true; do
   ROUND=$((ROUND + 1))
@@ -196,5 +236,6 @@ while true; do
     rm -f "${TMP_RUNTIME_JSON}"
     echo "[bot-online-train] round=${ROUND} kept-current=${RUNTIME_JSON_PATH}"
   fi
+  prune_workspace_if_needed
   sleep "${INTERVAL_SEC}"
 done

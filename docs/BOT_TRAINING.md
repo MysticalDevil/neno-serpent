@@ -94,6 +94,9 @@ Online publish gate (enabled by default in `bot-online-train`):
 - Each round benchmarks `current` vs `candidate` runtime JSON with identical seed/settings.
 - Candidate is published only when both `score.avg` and `score.p95` are not lower than current.
 - Optional tolerance: `--gate-eps <float>` (or `BOT_ONLINE_GATE_NO_REGRESSION_EPS`).
+- Cache growth guard in loop:
+  - `--cache-max-mb` high-water mark
+  - `--cache-target-mb` prune target after high-water is exceeded
 
 ## 4. Offline Tuning + Training Loop
 

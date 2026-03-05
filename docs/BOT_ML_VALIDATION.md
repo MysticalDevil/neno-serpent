@@ -18,6 +18,12 @@ Run a full chain with fixed seed and fixed suite:
 ./scripts/dev.sh bot-ml-gate --workspace /tmp/nenoserpent_bot_ml_gate
 ```
 
+Quick smoke gate (repo tiny model):
+
+```bash
+./scripts/dev.sh bot-ml-smoke build/dev
+```
+
 Outputs:
 
 - `/tmp/nenoserpent_bot_ml_gate/dataset.csv`
@@ -56,3 +62,11 @@ If repository secret `BOT_ML_MODEL_B64` is set (base64 of runtime JSON model):
 1. decode model to `/tmp/nenoserpent_bot_policy_runtime.json`
 2. run leaderboard compare with `BOT_LEADERBOARD_REQUIRE_NO_REGRESSION=1`
 3. fail CI if any `ml` case regresses below `rule`
+
+## CI Always-On Smoke
+
+`cmake.yml` also runs an always-on smoke gate using repository tiny model:
+
+- script: `scripts/ci/bot_ml_smoke_gate.sh`
+- model: `scripts/ci/assets/bot_ml_smoke.runtime.json`
+- policy: `ml_avg >= rule_avg` and `ml_p95 >= rule_p95` on a fixed quick scenario

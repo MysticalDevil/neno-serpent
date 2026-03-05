@@ -70,6 +70,11 @@ jobs:
         BOT_E2E_PROFILE=debug \
         ./scripts/ci/bot_e2e_regression.sh build/debug
 
+    - name: Bot ML Smoke Gate (Repo Tiny Model)
+      run: |
+        BOT_ML_SMOKE_PROFILE=debug \
+        ./scripts/ci/bot_ml_smoke_gate.sh build/debug
+
     - name: Bot ML No-Regression Gate (optional)
       if: ${{ secrets.BOT_ML_MODEL_B64 != '' }}
       run: |

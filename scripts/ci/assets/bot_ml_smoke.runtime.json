@@ -1,0 +1,44 @@
+{
+  "format": "nenoserpent-bot-mlp-v1",
+  "normalization": {
+    "mean": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "std": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  },
+  "feature_columns": [
+    "level",
+    "score",
+    "body_len",
+    "head_x",
+    "head_y",
+    "dir_x",
+    "dir_y",
+    "food_dx",
+    "food_dy",
+    "power_dx",
+    "power_dy",
+    "power_type",
+    "power_active",
+    "ghost_active",
+    "shield_active",
+    "portal_active",
+    "laser_active",
+    "danger_up",
+    "danger_right",
+    "danger_down",
+    "danger_left"
+  ],
+  "layers": [
+    {
+      "input_dim": 21,
+      "output_dim": 4,
+      "activation": "none",
+      "weights": [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      ],
+      "bias": [0, 0, 0, 0]
+    }
+  ]
+}

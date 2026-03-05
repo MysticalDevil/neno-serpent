@@ -14,6 +14,7 @@ Usage:
   ./scripts/dev.sh bot-train [--dataset /tmp/bot_dataset.csv --model /tmp/bot_policy.pt]
   ./scripts/dev.sh bot-eval [--dataset /tmp/bot_dataset.csv --model /tmp/bot_policy.pt]
   ./scripts/dev.sh bot-ml-gate [--workspace /tmp/nenoserpent_bot_ml_gate]
+  ./scripts/dev.sh bot-ml-smoke [build-dir]
   ./scripts/dev.sh bot-run [--backend off|rule|ml --headful|--headless --ui-mode full|screen|shell]
   ./scripts/dev.sh bot-e2e [build-dir] [baseline.tsv]
   ./scripts/dev.sh bot-leaderboard [build-dir] [suite.tsv]
@@ -51,6 +52,9 @@ case "${subcommand}" in
     ;;
   bot-ml-gate)
     exec "${ROOT_DIR}/dev/bot_ml_gate.sh" "$@"
+    ;;
+  bot-ml-smoke)
+    exec "${ROOT_DIR}/ci/bot_ml_smoke_gate.sh" "$@"
     ;;
   bot-run)
     exec "${ROOT_DIR}/dev/bot_run.sh" "$@"

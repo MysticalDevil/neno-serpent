@@ -119,6 +119,9 @@ CMAKE_BUILD_TYPE=Release ./scripts/deploy.sh android
 # Reproducible rule-vs-ml full gate (dataset -> train -> eval -> no-regression compare)
 ./scripts/dev.sh bot-ml-gate --workspace /tmp/nenoserpent_bot_ml_gate
 
+# Quick ml smoke gate with repository tiny model
+./scripts/dev.sh bot-ml-smoke build/dev
+
 # Run bot in headful mode directly (no manual F8 cycling needed)
 ./scripts/dev.sh bot-run --backend rule --headful
 ./scripts/dev.sh bot-run --backend ml --ml-model /tmp/nenoserpent_bot_policy_runtime.json --headful

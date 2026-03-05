@@ -145,3 +145,6 @@ BOT_ML_MODEL=cache/dev/nenoserpent_bot_policy_runtime.json \
 BOT_LEADERBOARD_REQUIRE_NO_REGRESSION=1 \
 ./scripts/dev.sh bot-leaderboard build/dev
 ```
+
+The no-regression gate checks both gameplay score metrics and choice decision metrics
+(`choice_match_rate`, `choice_avg_gap`) when `rule` and `ml` rows are both present.

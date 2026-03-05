@@ -111,7 +111,7 @@ Leaderboard benchmark suite (fixed 20 scenarios):
 Suite definition is tracked in `scripts/ci/bot_leaderboard_suite.tsv`.
 This is used to compare long-run relative strength across modes and seeds.
 When `BOT_ML_MODEL` is set and suite contains `ml` rows, the script emits a
-`rule vs ml` compare table and can enforce no-regression via
+`rule vs ml` compare table (score + choice decision quality) and can enforce no-regression via
 `BOT_LEADERBOARD_REQUIRE_NO_REGRESSION=1`.
 
 Offline parameter tuning:

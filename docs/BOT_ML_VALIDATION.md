@@ -64,8 +64,11 @@ Pass condition per matched case (`id + mode + level + seed`):
 
 - `ml_avg >= rule_avg`
 - `ml_p95 >= rule_p95`
+- `ml_choice_match >= rule_choice_match`
+- `ml_choice_gap <= rule_choice_gap`
 
 If any case violates either constraint, the script exits with non-zero status.
+If any choice constraint also regresses, the script exits with non-zero status.
 
 ## Notes
 

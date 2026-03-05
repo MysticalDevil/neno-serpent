@@ -61,6 +61,10 @@ struct BenchmarkStats {
   double avgScore = 0.0;
   int medianScore = 0;
   int p95Score = 0;
+  int choiceTotal = 0;
+  int choiceMatchedOracle = 0;
+  double choiceMatchRate = 0.0;
+  double choiceAvgPriorityGap = 0.0;
 };
 
 enum class BenchmarkBackend {
@@ -165,6 +169,9 @@ auto runBenchmark(const int games,
 
   int gameOvers = 0;
   int timeouts = 0;
+  int choiceTotal = 0;
+  int choiceMatchedOracle = 0;
+  double choicePriorityGapSum = 0.0;
 
   for (int gameIndex = 0; gameIndex < games; ++gameIndex) {
     const uint32_t gameSeed = seedBase + static_cast<uint32_t>(gameIndex * 37);
@@ -223,7 +230,30 @@ auto runBenchmark(const int games,
       cooldown = decision.nextCooldownTicks;
 
       if (mode == nenoserpent::core::SessionMode::ChoiceSelection) {
+        const auto choiceModel = toChoiceModel(runner.choices());
+        int bestPriority = std::numeric_limits<int>::min();
+        int selectedPriority = std::numeric_limits<int>::min();
         if (decision.triggerStart && decision.setChoiceIndex.has_value()) {
+          for (int i = 0; i < choiceModel.size(); ++i) {
+            const QVariantMap item = choiceModel[i].toMap();
+            if (item.isEmpty() || !item.contains(QStringLiteral("type"))) {
+              continue;
+            }
+            const int type = item.value(QStringLiteral("type")).toInt();
+            const int priority = nenoserpent::adapter::bot::powerPriority(strategy, type);
+            bestPriority = std::max(bestPriority, priority);
+            if (i == *decision.setChoiceIndex) {
+              selectedPriority = priority;
+            }
+          }
+          if (bestPriority > std::numeric_limits<int>::min() &&
+              selectedPriority > std::numeric_limits<int>::min()) {
+            ++choiceTotal;
+            if (selectedPriority == bestPriority) {
+              ++choiceMatchedOracle;
+            }
+            choicePriorityGapSum += static_cast<double>(bestPriority - selectedPriority);
+          }
           runner.selectChoice(*decision.setChoiceIndex);
         }
         ++decisions;
@@ -279,6 +309,11 @@ auto runBenchmark(const int games,
   const int medianScore = scores.empty() ? 0 : scores[scores.size() / 2];
   const std::size_t p95Index = scores.empty() ? 0 : ((scores.size() - 1) * 95) / 100;
   const int p95Score = scores.empty() ? 0 : scores[p95Index];
+  const double choiceMatchRate =
+    choiceTotal > 0 ? static_cast<double>(choiceMatchedOracle) / static_cast<double>(choiceTotal)
+                    : 0.0;
+  const double choiceAvgPriorityGap =
+    choiceTotal > 0 ? choicePriorityGapSum / static_cast<double>(choiceTotal) : 0.0;
 
   return {
     .games = games,
@@ -288,6 +323,10 @@ auto runBenchmark(const int games,
     .avgScore = avgScore,
     .medianScore = medianScore,
     .p95Score = p95Score,
+    .choiceTotal = choiceTotal,
+    .choiceMatchedOracle = choiceMatchedOracle,
+    .choiceMatchRate = choiceMatchRate,
+    .choiceAvgPriorityGap = choiceAvgPriorityGap,
   };
 }
 
@@ -486,6 +525,10 @@ auto main(int argc, char* argv[]) -> int {
             << " score.median=" << stats.medianScore << " score.p95=" << stats.p95Score << '\n';
   std::cout << "[bot-benchmark] outcomes.gameOver=" << stats.gameOvers
             << " outcomes.timeout=" << stats.timeouts << '\n';
+  std::cout << "[bot-benchmark] choice.total=" << stats.choiceTotal
+            << " choice.match=" << stats.choiceMatchedOracle
+            << " choice.match_rate=" << stats.choiceMatchRate
+            << " choice.avg_gap=" << stats.choiceAvgPriorityGap << '\n';
   if (datasetWriterPtr != nullptr) {
     std::cout << "[bot-benchmark] dataset.path=" << dumpDatasetPath.toStdString()
               << " dataset.samples=" << datasetWriter.sampleCount << '\n';

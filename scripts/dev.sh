@@ -22,9 +22,13 @@ Commands:
   android-icons    Generate Android launcher icon assets.
   bot-benchmark    Run bot benchmark suite.
   bot-dataset      Build training dataset from simulations.
+  bot-choice-dataset Build choice decision dataset from simulations.
+  bot-power-dataset Build power-up chase decision dataset from simulations.
   bot-tune         Tune rule-bot parameters.
   bot-train        Train ML model from dataset.
   bot-eval         Evaluate model offline.
+  bot-choice-eval  Evaluate choice decision dataset offline.
+  bot-power-eval   Evaluate power-up chase dataset offline.
   bot-ml-gate      Run ML quality gate pipeline.
   bot-ml-smoke     Quick smoke gate for ML flow.
   bot-ml-online-gate Validate ml-online training/publish loop.
@@ -69,6 +73,18 @@ Usage: ./scripts/dev.sh bot-dataset [--output cache/<name>.csv]
 Purpose: generate bot training dataset from scripted sessions.
 EOF
       ;;
+    bot-choice-dataset)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-choice-dataset [--output cache/<name>.csv --backend rule|ml|search]
+Purpose: generate choice decision dataset from scripted sessions.
+EOF
+      ;;
+    bot-power-dataset)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-power-dataset [--output cache/<name>.csv --backend rule|ml|search]
+Purpose: generate power-up chase decision dataset from scripted sessions.
+EOF
+      ;;
     bot-tune)
       cat <<'EOF'
 Usage: ./scripts/dev.sh bot-tune [--mode balanced --iterations 60 --output cache/<name>.json]
@@ -85,6 +101,18 @@ EOF
       cat <<'EOF'
 Usage: ./scripts/dev.sh bot-eval [--dataset cache/<name>.csv --model cache/<name>.pt]
 Purpose: evaluate trained model on dataset.
+EOF
+      ;;
+    bot-choice-eval)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-choice-eval [--dataset cache/<name>.csv --report cache/<name>.json]
+Purpose: evaluate choice decision dataset metrics (accuracy/top-k/per buff type).
+EOF
+      ;;
+    bot-power-eval)
+      cat <<'EOF'
+Usage: ./scripts/dev.sh bot-power-eval [--dataset cache/<name>.csv --report cache/<name>.json]
+Purpose: evaluate power-up chase decision metrics (accuracy/top-k/per power type).
 EOF
       ;;
     bot-ml-gate)
@@ -205,6 +233,12 @@ case "${subcommand}" in
   bot-dataset)
     exec "${ROOT_DIR}/dev/bot_dataset.sh" "$@"
     ;;
+  bot-choice-dataset)
+    exec "${ROOT_DIR}/dev/bot_choice_dataset.sh" "$@"
+    ;;
+  bot-power-dataset)
+    exec "${ROOT_DIR}/dev/bot_power_dataset.sh" "$@"
+    ;;
   bot-tune)
     exec "${ROOT_DIR}/dev/bot_tune.sh" "$@"
     ;;
@@ -213,6 +247,12 @@ case "${subcommand}" in
     ;;
   bot-eval)
     exec "${ROOT_DIR}/dev/bot_eval.sh" "$@"
+    ;;
+  bot-choice-eval)
+    exec "${ROOT_DIR}/dev/bot_choice_eval.sh" "$@"
+    ;;
+  bot-power-eval)
+    exec "${ROOT_DIR}/dev/bot_power_eval.sh" "$@"
     ;;
   bot-ml-gate)
     exec "${ROOT_DIR}/dev/bot_ml_gate.sh" "$@"

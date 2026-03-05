@@ -83,6 +83,52 @@ EVAL_REPORT_PATH="${WORKSPACE}/eval.report.json"
 LEADERBOARD_ROWS_PATH="${WORKSPACE}/leaderboard.rows.tsv"
 LEADERBOARD_SUMMARY_PATH="${WORKSPACE}/leaderboard.summary.tsv"
 LEADERBOARD_COMPARE_PATH="${WORKSPACE}/leaderboard.compare.tsv"
+CHOICE_DATASET_RULE_PATH="${WORKSPACE}/choice.rule.csv"
+CHOICE_DATASET_ML_PATH="${WORKSPACE}/choice.ml.csv"
+CHOICE_REPORT_RULE_PATH="${WORKSPACE}/choice.rule.report.json"
+CHOICE_REPORT_ML_PATH="${WORKSPACE}/choice.ml.report.json"
+CHOICE_SUMMARY_RULE_PATH="${WORKSPACE}/choice.rule.summary.env"
+CHOICE_SUMMARY_ML_PATH="${WORKSPACE}/choice.ml.summary.env"
+POWER_DATASET_RULE_PATH="${WORKSPACE}/power.rule.csv"
+POWER_DATASET_ML_PATH="${WORKSPACE}/power.ml.csv"
+POWER_REPORT_RULE_PATH="${WORKSPACE}/power.rule.report.json"
+POWER_REPORT_ML_PATH="${WORKSPACE}/power.ml.report.json"
+POWER_SUMMARY_RULE_PATH="${WORKSPACE}/power.rule.summary.env"
+POWER_SUMMARY_ML_PATH="${WORKSPACE}/power.ml.summary.env"
+
+compare_metric_non_regression() {
+  local label="$1"
+  local metric_key="$2"
+  local direction="$3"
+  local rule_env="$4"
+  local ml_env="$5"
+  local rule_value ml_value
+  # shellcheck disable=SC1090
+  source "${rule_env}"
+  rule_value="${!metric_key}"
+  # shellcheck disable=SC1090
+  source "${ml_env}"
+  ml_value="${!metric_key}"
+  case "${direction}" in
+    ge)
+      if ! awk -v r="${rule_value}" -v m="${ml_value}" 'BEGIN { exit !(m >= r) }'; then
+        echo "[bot-ml-gate] ${label} regression: ml=${ml_value} < rule=${rule_value}" >&2
+        exit 1
+      fi
+      ;;
+    le)
+      if ! awk -v r="${rule_value}" -v m="${ml_value}" 'BEGIN { exit !(m <= r) }'; then
+        echo "[bot-ml-gate] ${label} regression: ml=${ml_value} > rule=${rule_value}" >&2
+        exit 1
+      fi
+      ;;
+    *)
+      echo "[bot-ml-gate] invalid compare direction: ${direction}" >&2
+      exit 1
+      ;;
+  esac
+  echo "[bot-ml-gate] ${label} ok rule=${rule_value} ml=${ml_value}"
+}
 
 echo "[bot-ml-gate] phase=dataset"
 BUILD_PRESET="${BUILD_PRESET}" \
@@ -117,9 +163,69 @@ BOT_LEADERBOARD_COMPARE_FILE="${LEADERBOARD_COMPARE_PATH}" \
 "${ROOT_DIR}/scripts/ci/bot_leaderboard_regression.sh" \
   "build/${BUILD_PRESET}"
 
+echo "[bot-ml-gate] phase=choice-dataset-eval"
+BOT_CHOICE_DATASET_PROFILE="${PROFILE}" \
+BOT_CHOICE_DATASET_OUTPUT="${CHOICE_DATASET_RULE_PATH}" \
+BOT_CHOICE_DATASET_BACKEND=rule \
+"${ROOT_DIR}/scripts/dev/bot_choice_dataset.sh"
+
+BOT_CHOICE_DATASET_PROFILE="${PROFILE}" \
+BOT_CHOICE_DATASET_OUTPUT="${CHOICE_DATASET_ML_PATH}" \
+BOT_CHOICE_DATASET_BACKEND=ml \
+BOT_ML_MODEL="${RUNTIME_JSON_PATH}" \
+"${ROOT_DIR}/scripts/dev/bot_choice_dataset.sh"
+
+"${ROOT_DIR}/scripts/dev/bot_choice_eval.sh" \
+  --dataset "${CHOICE_DATASET_RULE_PATH}" \
+  --report "${CHOICE_REPORT_RULE_PATH}" \
+  --summary-env "${CHOICE_SUMMARY_RULE_PATH}"
+"${ROOT_DIR}/scripts/dev/bot_choice_eval.sh" \
+  --dataset "${CHOICE_DATASET_ML_PATH}" \
+  --report "${CHOICE_REPORT_ML_PATH}" \
+  --summary-env "${CHOICE_SUMMARY_ML_PATH}"
+
+compare_metric_non_regression "choice.top1_acc" "top1_acc" "ge" \
+  "${CHOICE_SUMMARY_RULE_PATH}" "${CHOICE_SUMMARY_ML_PATH}"
+compare_metric_non_regression "choice.top2_acc" "top2_acc" "ge" \
+  "${CHOICE_SUMMARY_RULE_PATH}" "${CHOICE_SUMMARY_ML_PATH}"
+compare_metric_non_regression "choice.avg_rank" "avg_rank" "le" \
+  "${CHOICE_SUMMARY_RULE_PATH}" "${CHOICE_SUMMARY_ML_PATH}"
+
+echo "[bot-ml-gate] phase=power-dataset-eval"
+BOT_POWER_DATASET_PROFILE="${PROFILE}" \
+BOT_POWER_DATASET_OUTPUT="${POWER_DATASET_RULE_PATH}" \
+BOT_POWER_DATASET_BACKEND=rule \
+"${ROOT_DIR}/scripts/dev/bot_power_dataset.sh"
+
+BOT_POWER_DATASET_PROFILE="${PROFILE}" \
+BOT_POWER_DATASET_OUTPUT="${POWER_DATASET_ML_PATH}" \
+BOT_POWER_DATASET_BACKEND=ml \
+BOT_ML_MODEL="${RUNTIME_JSON_PATH}" \
+"${ROOT_DIR}/scripts/dev/bot_power_dataset.sh"
+
+"${ROOT_DIR}/scripts/dev/bot_power_eval.sh" \
+  --dataset "${POWER_DATASET_RULE_PATH}" \
+  --report "${POWER_REPORT_RULE_PATH}" \
+  --summary-env "${POWER_SUMMARY_RULE_PATH}"
+"${ROOT_DIR}/scripts/dev/bot_power_eval.sh" \
+  --dataset "${POWER_DATASET_ML_PATH}" \
+  --report "${POWER_REPORT_ML_PATH}" \
+  --summary-env "${POWER_SUMMARY_ML_PATH}"
+
+compare_metric_non_regression "power.top1_acc" "top1_acc" "ge" \
+  "${POWER_SUMMARY_RULE_PATH}" "${POWER_SUMMARY_ML_PATH}"
+compare_metric_non_regression "power.top2_acc" "top2_acc" "ge" \
+  "${POWER_SUMMARY_RULE_PATH}" "${POWER_SUMMARY_ML_PATH}"
+compare_metric_non_regression "power.avg_rank" "avg_rank" "le" \
+  "${POWER_SUMMARY_RULE_PATH}" "${POWER_SUMMARY_ML_PATH}"
+
 echo "[bot-ml-gate] done workspace=${WORKSPACE}"
 echo "[bot-ml-gate] dataset=${DATASET_PATH}"
 echo "[bot-ml-gate] model=${MODEL_PATH}"
 echo "[bot-ml-gate] runtime_json=${RUNTIME_JSON_PATH}"
 echo "[bot-ml-gate] eval_report=${EVAL_REPORT_PATH}"
 echo "[bot-ml-gate] compare=${LEADERBOARD_COMPARE_PATH}"
+echo "[bot-ml-gate] choice_report_rule=${CHOICE_REPORT_RULE_PATH}"
+echo "[bot-ml-gate] choice_report_ml=${CHOICE_REPORT_ML_PATH}"
+echo "[bot-ml-gate] power_report_rule=${POWER_REPORT_RULE_PATH}"
+echo "[bot-ml-gate] power_report_ml=${POWER_REPORT_ML_PATH}"

@@ -12,6 +12,7 @@ Run a full chain with fixed seed and fixed suite:
 3. export runtime JSON
 4. run leaderboard compare (`rule` vs `ml`)
 5. enforce **ml no-regression** gate
+6. enforce **choice / power-up decision no-regression** gate
 
 ## One-Command Flow
 
@@ -49,6 +50,10 @@ Outputs:
 - `cache/dev/nenoserpent_bot_ml_gate/policy.runtime.json`
 - `cache/dev/nenoserpent_bot_ml_gate/eval.report.json`
 - `cache/dev/nenoserpent_bot_ml_gate/leaderboard.compare.tsv`
+- `cache/dev/nenoserpent_bot_ml_gate/choice.rule.report.json`
+- `cache/dev/nenoserpent_bot_ml_gate/choice.ml.report.json`
+- `cache/dev/nenoserpent_bot_ml_gate/power.rule.report.json`
+- `cache/dev/nenoserpent_bot_ml_gate/power.ml.report.json`
 - `cache/dev/nenoserpent_bot_ml_online_gate/online.summary.env`
 - `cache/dev/nenoserpent_bot_ml_online_gate/publish_history.tsv`
 
@@ -69,6 +74,15 @@ Pass condition per matched case (`id + mode + level + seed`):
 
 If any case violates either constraint, the script exits with non-zero status.
 If any choice constraint also regresses, the script exits with non-zero status.
+
+Additional decision-quality constraints inside `bot-ml-gate`:
+
+- choice: `top1_acc` non-regression
+- choice: `top2_acc` non-regression
+- choice: `avg_rank` non-regression (lower/equal is better)
+- power-up chase: `top1_acc` non-regression
+- power-up chase: `top2_acc` non-regression
+- power-up chase: `avg_rank` non-regression (lower/equal is better)
 
 ## Notes
 

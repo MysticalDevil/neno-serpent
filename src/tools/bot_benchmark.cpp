@@ -1,8 +1,11 @@
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <numeric>
 #include <ranges>
+#include <tuple>
 #include <vector>
 
 #include <QCommandLineOption>
@@ -67,6 +70,13 @@ struct BenchmarkStats {
   double choiceAvgPriorityGap = 0.0;
 };
 
+struct DatasetContext {
+  QString caseId;
+  QString backend;
+  QString mode;
+  int seed = 0;
+};
+
 enum class BenchmarkBackend {
   Rule,
   Ml,
@@ -74,21 +84,14 @@ enum class BenchmarkBackend {
 };
 
 struct DatasetWriter final {
-  struct Context {
-    QString caseId;
-    QString backend;
-    QString mode;
-    int seed = 0;
-  };
-
-  explicit DatasetWriter(const QString& path, Context context)
+  explicit DatasetWriter(const QString& path, DatasetContext context)
       : file(path),
         context(std::move(context)) {
   }
 
   QFile file;
   QTextStream stream{&file};
-  Context context;
+  DatasetContext context;
   bool enabled = false;
   bool headerWritten = false;
   int sampleCount = 0;
@@ -155,6 +158,245 @@ private:
   }
 };
 
+struct ChoiceDatasetWriter final {
+  explicit ChoiceDatasetWriter(const QString& path, DatasetContext context)
+      : file(path),
+        context(std::move(context)) {
+  }
+
+  QFile file;
+  QTextStream stream{&file};
+  DatasetContext context;
+  bool enabled = false;
+  bool headerWritten = false;
+  int sampleCount = 0;
+  int maxSamples = 0;
+
+  auto open(const int maxRows) -> bool {
+    maxSamples = maxRows;
+    if (file.fileName().trimmed().isEmpty()) {
+      return false;
+    }
+    const bool appendMode = file.exists() && file.size() > 0;
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+      std::cerr << "[bot-benchmark] failed to open choice dataset file: "
+                << file.fileName().toStdString() << '\n';
+      return false;
+    }
+    enabled = true;
+    headerWritten = appendMode;
+    if (!headerWritten) {
+      writeHeader();
+    }
+    return true;
+  }
+
+  [[nodiscard]] auto shouldStop() const -> bool {
+    return enabled && maxSamples > 0 && sampleCount >= maxSamples;
+  }
+
+  auto writeChoice(const int level,
+                   const int score,
+                   const QVariantList& choices,
+                   const int selectedIndex,
+                   const int oracleIndex,
+                   const int selectedRank,
+                   const int selectedPriority,
+                   const int oraclePriority) -> void {
+    if (!enabled || shouldStop()) {
+      return;
+    }
+    std::array<int, 3> optionTypes = {-1, -1, -1};
+    const int limit = std::min(3, static_cast<int>(choices.size()));
+    for (int i = 0; i < limit; ++i) {
+      const QVariantMap item = choices[i].toMap();
+      optionTypes[static_cast<std::size_t>(i)] = item.value(QStringLiteral("type"), -1).toInt();
+    }
+    const int selectedType =
+      (selectedIndex >= 0 && selectedIndex < choices.size())
+        ? choices[selectedIndex].toMap().value(QStringLiteral("type"), -1).toInt()
+        : -1;
+    const int oracleType =
+      (oracleIndex >= 0 && oracleIndex < choices.size())
+        ? choices[oracleIndex].toMap().value(QStringLiteral("type"), -1).toInt()
+        : -1;
+
+    stream << level << ',' << score << ',' << optionTypes[0] << ',' << optionTypes[1] << ','
+           << optionTypes[2] << ',' << selectedIndex << ',' << selectedType << ',' << oracleIndex
+           << ',' << oracleType << ',' << selectedRank << ',' << selectedPriority << ','
+           << oraclePriority << ',' << context.caseId << ',' << context.backend << ','
+           << context.mode << ',' << context.seed << '\n';
+    sampleCount += 1;
+  }
+
+  auto close() -> void {
+    if (enabled) {
+      stream.flush();
+      file.close();
+    }
+  }
+
+private:
+  auto writeHeader() -> void {
+    stream << "level,score,choice_0_type,choice_1_type,choice_2_type,selected_index,selected_type,"
+           << "oracle_index,oracle_type,selected_rank,selected_priority,oracle_priority,"
+           << "case_id,backend,mode,seed\n";
+    headerWritten = true;
+  }
+};
+
+struct PowerDatasetWriter final {
+  explicit PowerDatasetWriter(const QString& path, DatasetContext context)
+      : file(path),
+        context(std::move(context)) {
+  }
+
+  QFile file;
+  QTextStream stream{&file};
+  DatasetContext context;
+  bool enabled = false;
+  bool headerWritten = false;
+  int sampleCount = 0;
+  int maxSamples = 0;
+
+  auto open(const int maxRows) -> bool {
+    maxSamples = maxRows;
+    if (file.fileName().trimmed().isEmpty()) {
+      return false;
+    }
+    const bool appendMode = file.exists() && file.size() > 0;
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+      std::cerr << "[bot-benchmark] failed to open power dataset file: "
+                << file.fileName().toStdString() << '\n';
+      return false;
+    }
+    enabled = true;
+    headerWritten = appendMode;
+    if (!headerWritten) {
+      writeHeader();
+    }
+    return true;
+  }
+
+  [[nodiscard]] auto shouldStop() const -> bool {
+    return enabled && maxSamples > 0 && sampleCount >= maxSamples;
+  }
+
+  auto writeDecision(const nenoserpent::adapter::bot::Snapshot& snapshot,
+                     const int chosenActionClass,
+                     const int chosenRank,
+                     const int oracleActionClass) -> void {
+    if (!enabled || shouldStop()) {
+      return;
+    }
+    const auto features = nenoserpent::adapter::bot::extractFeatures(snapshot);
+    for (int i = 0; i < nenoserpent::adapter::bot::Features::kSize; ++i) {
+      if (i > 0) {
+        stream << ',';
+      }
+      stream << features.values[static_cast<std::size_t>(i)];
+    }
+    stream << ',' << snapshot.powerUpType << ',' << chosenActionClass << ',' << chosenRank << ','
+           << oracleActionClass << ',' << context.caseId << ',' << context.backend << ','
+           << context.mode << ',' << context.seed << '\n';
+    sampleCount += 1;
+  }
+
+  auto close() -> void {
+    if (enabled) {
+      stream.flush();
+      file.close();
+    }
+  }
+
+private:
+  auto writeHeader() -> void {
+    stream << "level,score,body_len,head_x,head_y,dir_x,dir_y,food_dx,food_dy,power_dx,power_dy,"
+           << "power_type,power_active,ghost_active,shield_active,portal_active,laser_active,"
+           << "danger_up,danger_right,danger_down,danger_left,power_type_runtime,action,"
+           << "selected_rank,oracle_action,case_id,backend,mode,seed\n";
+    headerWritten = true;
+  }
+};
+
+constexpr std::array<QPoint, 4> kDirectionClasses = {
+  QPoint{0, -1},
+  QPoint{1, 0},
+  QPoint{0, 1},
+  QPoint{-1, 0},
+};
+
+auto toroidalDistance(const QPoint& from, const QPoint& to, const int width, const int height)
+  -> int {
+  const int dx = std::abs(from.x() - to.x());
+  const int dy = std::abs(from.y() - to.y());
+  return std::min(dx, width - dx) + std::min(dy, height - dy);
+}
+
+auto isDirectionAllowed(const nenoserpent::adapter::bot::Snapshot& snapshot,
+                        const QPoint& candidate) -> bool {
+  if (candidate.x() == -snapshot.direction.x() && candidate.y() == -snapshot.direction.y()) {
+    return false;
+  }
+  const QPoint wrapped = nenoserpent::core::wrapPoint(
+    snapshot.head + candidate, snapshot.boardWidth, snapshot.boardHeight);
+  if (!snapshot.portalActive && !snapshot.laserActive && snapshot.obstacles.contains(wrapped)) {
+    return false;
+  }
+  if (snapshot.ghostActive) {
+    return true;
+  }
+  const auto bodyIt = std::ranges::find(snapshot.body, wrapped);
+  if (bodyIt == snapshot.body.end()) {
+    return true;
+  }
+  if (snapshot.body.empty()) {
+    return false;
+  }
+  const QPoint tail = snapshot.body.back();
+  const bool tailWillMove = wrapped != snapshot.food;
+  return tailWillMove && wrapped == tail;
+}
+
+auto powerActionRank(const nenoserpent::adapter::bot::Snapshot& snapshot, const QPoint& chosen)
+  -> std::pair<int, int> {
+  const int chosenClass = nenoserpent::adapter::bot::directionClass(chosen);
+  if (chosenClass < 0 || snapshot.powerUpPos.x() < 0 || snapshot.powerUpPos.y() < 0) {
+    return {-1, -1};
+  }
+  std::vector<std::tuple<int, int, int>> scored;
+  scored.reserve(4);
+  for (int cls = 0; cls < 4; ++cls) {
+    const QPoint candidate = kDirectionClasses[static_cast<std::size_t>(cls)];
+    if (!isDirectionAllowed(snapshot, candidate)) {
+      continue;
+    }
+    const QPoint wrapped = nenoserpent::core::wrapPoint(
+      snapshot.head + candidate, snapshot.boardWidth, snapshot.boardHeight);
+    const int distance =
+      toroidalDistance(wrapped, snapshot.powerUpPos, snapshot.boardWidth, snapshot.boardHeight);
+    scored.emplace_back(distance, cls, cls == chosenClass ? 1 : 0);
+  }
+  if (scored.empty()) {
+    return {-1, -1};
+  }
+  std::ranges::sort(scored, [](const auto& a, const auto& b) {
+    if (std::get<0>(a) != std::get<0>(b)) {
+      return std::get<0>(a) < std::get<0>(b);
+    }
+    return std::get<1>(a) < std::get<1>(b);
+  });
+  int rank = -1;
+  int oracleClass = std::get<1>(scored.front());
+  for (std::size_t i = 0; i < scored.size(); ++i) {
+    if (std::get<2>(scored[i]) == 1) {
+      rank = static_cast<int>(i) + 1;
+      break;
+    }
+  }
+  return {rank, oracleClass};
+}
+
 auto runBenchmark(const int games,
                   const int maxTicks,
                   const uint32_t seedBase,
@@ -163,7 +405,9 @@ auto runBenchmark(const int games,
                   const int levelIndex,
                   const nenoserpent::adapter::bot::BotBackend* primaryBackend,
                   const nenoserpent::adapter::bot::BotBackend* fallbackBackend,
-                  DatasetWriter* datasetWriter) -> BenchmarkStats {
+                  DatasetWriter* datasetWriter,
+                  ChoiceDatasetWriter* choiceDatasetWriter,
+                  PowerDatasetWriter* powerDatasetWriter) -> BenchmarkStats {
   std::vector<int> scores;
   scores.reserve(static_cast<std::size_t>(games));
 
@@ -184,7 +428,9 @@ auto runBenchmark(const int games,
     const int maxDecisions = maxTicks * 4;
 
     while (decisions < maxDecisions) {
-      if (datasetWriter != nullptr && datasetWriter->shouldStop()) {
+      if ((datasetWriter != nullptr && datasetWriter->shouldStop()) ||
+          (choiceDatasetWriter != nullptr && choiceDatasetWriter->shouldStop()) ||
+          (powerDatasetWriter != nullptr && powerDatasetWriter->shouldStop())) {
         break;
       }
       const auto mode = runner.mode();
@@ -234,6 +480,10 @@ auto runBenchmark(const int games,
         int bestPriority = std::numeric_limits<int>::min();
         int selectedPriority = std::numeric_limits<int>::min();
         if (decision.triggerStart && decision.setChoiceIndex.has_value()) {
+          int oracleIndex = -1;
+          int oraclePriority = std::numeric_limits<int>::min();
+          std::vector<std::pair<int, int>> ranking;
+          ranking.reserve(static_cast<std::size_t>(choiceModel.size()));
           for (int i = 0; i < choiceModel.size(); ++i) {
             const QVariantMap item = choiceModel[i].toMap();
             if (item.isEmpty() || !item.contains(QStringLiteral("type"))) {
@@ -242,8 +492,27 @@ auto runBenchmark(const int games,
             const int type = item.value(QStringLiteral("type")).toInt();
             const int priority = nenoserpent::adapter::bot::powerPriority(strategy, type);
             bestPriority = std::max(bestPriority, priority);
+            ranking.emplace_back(i, priority);
+            if (oracleIndex < 0 || priority > oraclePriority ||
+                (priority == oraclePriority && i < oracleIndex)) {
+              oracleIndex = i;
+              oraclePriority = priority;
+            }
             if (i == *decision.setChoiceIndex) {
               selectedPriority = priority;
+            }
+          }
+          std::ranges::sort(ranking, [](const auto& a, const auto& b) {
+            if (a.second != b.second) {
+              return a.second > b.second;
+            }
+            return a.first < b.first;
+          });
+          int selectedRank = -1;
+          for (std::size_t r = 0; r < ranking.size(); ++r) {
+            if (ranking[r].first == *decision.setChoiceIndex) {
+              selectedRank = static_cast<int>(r) + 1;
+              break;
             }
           }
           if (bestPriority > std::numeric_limits<int>::min() &&
@@ -254,6 +523,16 @@ auto runBenchmark(const int games,
             }
             choicePriorityGapSum += static_cast<double>(bestPriority - selectedPriority);
           }
+          if (choiceDatasetWriter != nullptr) {
+            choiceDatasetWriter->writeChoice(levelIndex,
+                                             state.score,
+                                             choiceModel,
+                                             *decision.setChoiceIndex,
+                                             oracleIndex,
+                                             selectedRank,
+                                             selectedPriority,
+                                             bestPriority);
+          }
           runner.selectChoice(*decision.setChoiceIndex);
         }
         ++decisions;
@@ -261,27 +540,34 @@ auto runBenchmark(const int games,
       }
 
       if (decision.enqueueDirection.has_value()) {
+        const nenoserpent::adapter::bot::Snapshot snapshot{
+          .head = core.headPosition(),
+          .direction = core.direction(),
+          .food = state.food,
+          .powerUpPos = state.powerUpPos,
+          .powerUpType = state.powerUpType,
+          .score = state.score,
+          .levelIndex = levelIndex,
+          .ghostActive = state.activeBuff == static_cast<int>(nenoserpent::core::BuffId::Ghost),
+          .shieldActive = state.shieldActive,
+          .portalActive = state.activeBuff == static_cast<int>(nenoserpent::core::BuffId::Portal),
+          .laserActive = state.activeBuff == static_cast<int>(nenoserpent::core::BuffId::Laser),
+          .boardWidth = 20,
+          .boardHeight = 18,
+          .obstacles = state.obstacles,
+          .body = core.body(),
+        };
         if (datasetWriter != nullptr) {
-          datasetWriter->writeSample(
-            {
-              .head = core.headPosition(),
-              .direction = core.direction(),
-              .food = state.food,
-              .powerUpPos = state.powerUpPos,
-              .powerUpType = state.powerUpType,
-              .score = state.score,
-              .levelIndex = levelIndex,
-              .ghostActive = state.activeBuff == static_cast<int>(nenoserpent::core::BuffId::Ghost),
-              .shieldActive = state.shieldActive,
-              .portalActive =
-                state.activeBuff == static_cast<int>(nenoserpent::core::BuffId::Portal),
-              .laserActive = state.activeBuff == static_cast<int>(nenoserpent::core::BuffId::Laser),
-              .boardWidth = 20,
-              .boardHeight = 18,
-              .obstacles = state.obstacles,
-              .body = core.body(),
-            },
-            *decision.enqueueDirection);
+          datasetWriter->writeSample(snapshot, *decision.enqueueDirection);
+        }
+        if (powerDatasetWriter != nullptr && snapshot.powerUpPos.x() >= 0 &&
+            snapshot.powerUpPos.y() >= 0) {
+          const auto [rank, oracleClass] = powerActionRank(snapshot, *decision.enqueueDirection);
+          const int chosenClass =
+            nenoserpent::adapter::bot::directionClass(*decision.enqueueDirection);
+          if (rank > 0 && oracleClass >= 0 && chosenClass >= 0) {
+            powerDatasetWriter->writeDecision(snapshot, chosenClass, rank, oracleClass);
+          }
         }
         runner.enqueueDirection(*decision.enqueueDirection);
       }
@@ -382,6 +668,24 @@ auto main(int argc, char* argv[]) -> int {
     QStringLiteral("Maximum dataset rows to dump (0 = unlimited)."),
     QStringLiteral("count"),
     QStringLiteral("0"));
+  QCommandLineOption dumpChoiceDatasetOption(
+    QStringList{QStringLiteral("dump-choice-dataset")},
+    QStringLiteral("Optional output CSV path for choice decision dataset dump."),
+    QStringLiteral("path"));
+  QCommandLineOption maxChoiceSamplesOption(
+    QStringList{QStringLiteral("max-choice-samples")},
+    QStringLiteral("Maximum choice dataset rows to dump (0 = unlimited)."),
+    QStringLiteral("count"),
+    QStringLiteral("0"));
+  QCommandLineOption dumpPowerDatasetOption(
+    QStringList{QStringLiteral("dump-power-dataset")},
+    QStringLiteral("Optional output CSV path for power-up chase decision dataset dump."),
+    QStringLiteral("path"));
+  QCommandLineOption maxPowerSamplesOption(
+    QStringList{QStringLiteral("max-power-samples")},
+    QStringLiteral("Maximum power dataset rows to dump (0 = unlimited)."),
+    QStringLiteral("count"),
+    QStringLiteral("0"));
   QCommandLineOption datasetCaseIdOption(
     QStringList{QStringLiteral("dataset-case-id")},
     QStringLiteral("Optional case id metadata for dataset rows."),
@@ -411,6 +715,10 @@ auto main(int argc, char* argv[]) -> int {
   parser.addOption(strategyFileOption);
   parser.addOption(dumpDatasetOption);
   parser.addOption(maxSamplesOption);
+  parser.addOption(dumpChoiceDatasetOption);
+  parser.addOption(maxChoiceSamplesOption);
+  parser.addOption(dumpPowerDatasetOption);
+  parser.addOption(maxPowerSamplesOption);
   parser.addOption(datasetCaseIdOption);
   parser.addOption(datasetBackendOption);
   parser.addOption(datasetModeOption);
@@ -428,7 +736,11 @@ auto main(int argc, char* argv[]) -> int {
   const QString strategyFile = parser.value(strategyFileOption).trimmed();
   const QString dumpDatasetPath = parser.value(dumpDatasetOption).trimmed();
   const int maxSamples = std::max(0, parser.value(maxSamplesOption).toInt());
-  const DatasetWriter::Context datasetContext = {
+  const QString dumpChoiceDatasetPath = parser.value(dumpChoiceDatasetOption).trimmed();
+  const int maxChoiceSamples = std::max(0, parser.value(maxChoiceSamplesOption).toInt());
+  const QString dumpPowerDatasetPath = parser.value(dumpPowerDatasetOption).trimmed();
+  const int maxPowerSamples = std::max(0, parser.value(maxPowerSamplesOption).toInt());
+  const DatasetContext datasetContext = {
     .caseId = parser.value(datasetCaseIdOption).trimmed(),
     .backend = parser.value(datasetBackendOption).trimmed().toLower(),
     .mode = parser.value(datasetModeOption).trimmed().toLower(),
@@ -465,6 +777,16 @@ auto main(int argc, char* argv[]) -> int {
   DatasetWriter* datasetWriterPtr = nullptr;
   if (!dumpDatasetPath.isEmpty() && datasetWriter.open(maxSamples)) {
     datasetWriterPtr = &datasetWriter;
+  }
+  ChoiceDatasetWriter choiceDatasetWriter(dumpChoiceDatasetPath, datasetContext);
+  ChoiceDatasetWriter* choiceDatasetWriterPtr = nullptr;
+  if (!dumpChoiceDatasetPath.isEmpty() && choiceDatasetWriter.open(maxChoiceSamples)) {
+    choiceDatasetWriterPtr = &choiceDatasetWriter;
+  }
+  PowerDatasetWriter powerDatasetWriter(dumpPowerDatasetPath, datasetContext);
+  PowerDatasetWriter* powerDatasetWriterPtr = nullptr;
+  if (!dumpPowerDatasetPath.isEmpty() && powerDatasetWriter.open(maxPowerSamples)) {
+    powerDatasetWriterPtr = &powerDatasetWriter;
   }
 
   BenchmarkBackend backend = BenchmarkBackend::Rule;
@@ -516,8 +838,12 @@ auto main(int argc, char* argv[]) -> int {
                                   levelIndex,
                                   primaryBackend,
                                   fallbackBackend,
-                                  datasetWriterPtr);
+                                  datasetWriterPtr,
+                                  choiceDatasetWriterPtr,
+                                  powerDatasetWriterPtr);
   datasetWriter.close();
+  choiceDatasetWriter.close();
+  powerDatasetWriter.close();
   std::cout << "[bot-benchmark] games=" << stats.games << " level=" << levelIndex
             << " profile=" << profile.toStdString() << " mode=" << mode.toStdString()
             << " backend=" << backendValue.toStdString() << '\n';
@@ -532,6 +858,14 @@ auto main(int argc, char* argv[]) -> int {
   if (datasetWriterPtr != nullptr) {
     std::cout << "[bot-benchmark] dataset.path=" << dumpDatasetPath.toStdString()
               << " dataset.samples=" << datasetWriter.sampleCount << '\n';
+  }
+  if (choiceDatasetWriterPtr != nullptr) {
+    std::cout << "[bot-benchmark] choice_dataset.path=" << dumpChoiceDatasetPath.toStdString()
+              << " choice_dataset.samples=" << choiceDatasetWriter.sampleCount << '\n';
+  }
+  if (powerDatasetWriterPtr != nullptr) {
+    std::cout << "[bot-benchmark] power_dataset.path=" << dumpPowerDatasetPath.toStdString()
+              << " power_dataset.samples=" << powerDatasetWriter.sampleCount << '\n';
   }
 
   return 0;

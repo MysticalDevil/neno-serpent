@@ -50,6 +50,9 @@ cmake --workflow --preset debug-workflow
 
 Release notes live in `CHANGELOG.md`.
 
+Architecture overview and optimization backlog:
+- `docs/PROJECT_ARCHITECTURE.md`
+
 ### Build and Run (Desktop)
 ```bash
 cmake --preset debug

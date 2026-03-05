@@ -91,6 +91,24 @@ Runtime backend can load the exported JSON directly:
 NENOSERPENT_BOT_ML_MODEL=cache/dev/nenoserpent_bot_policy_runtime.json ./build/dev/NenoSerpent
 ```
 
+Choice-specific offline dataset + eval:
+
+```bash
+./scripts/dev.sh bot-choice-dataset --backend ml --output cache/dev/nenoserpent_bot_choice_dataset.csv
+./scripts/dev.sh bot-choice-eval \
+  --dataset cache/dev/nenoserpent_bot_choice_dataset.csv \
+  --report cache/dev/nenoserpent_bot_choice_eval_report.json
+```
+
+Power-up chase offline dataset + eval:
+
+```bash
+./scripts/dev.sh bot-power-dataset --backend ml --output cache/dev/nenoserpent_bot_power_dataset.csv
+./scripts/dev.sh bot-power-eval \
+  --dataset cache/dev/nenoserpent_bot_power_dataset.csv \
+  --report cache/dev/nenoserpent_bot_power_eval_report.json
+```
+
 For online evolution (`ml-online`), run a continuous training loop in parallel:
 
 ```bash

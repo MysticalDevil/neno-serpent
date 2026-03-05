@@ -129,6 +129,9 @@ NENOSERPENT_BOT_STRATEGY_FILE=cache/dev/nenoserpent_bot_tuned.json ./build/debug
 PyTorch imitation-learning baseline:
 
 - See `docs/BOT_TRAINING.md` for dataset generation, training, and eval workflow.
+- Dedicated offline decision evaluators are available for:
+  - choice selection (`bot-choice-dataset`, `bot-choice-eval`)
+  - power-up chase decisions (`bot-power-dataset`, `bot-power-eval`)
 
 ## Live Debug Tuning
 

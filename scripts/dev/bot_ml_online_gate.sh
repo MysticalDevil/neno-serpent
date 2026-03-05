@@ -147,6 +147,7 @@ published="${published:-0}"
 blocked="${blocked:-0}"
 last_reason="${last_reason:-unknown}"
 runtime_json="${runtime_json:-}"
+publish_history="${publish_history:-}"
 echo "[bot-ml-online-gate] rounds=${rounds} published=${published} blocked=${blocked} last_reason=${last_reason}"
 
 if [[ "${rounds}" -lt "${ROUNDS}" ]]; then
@@ -161,5 +162,14 @@ if [[ -z "${runtime_json}" || ! -f "${runtime_json}" ]]; then
   echo "[bot-ml-online-gate] runtime_json missing: ${runtime_json:-<empty>}" >&2
   exit 1
 fi
+if [[ -z "${publish_history}" || ! -f "${publish_history}" ]]; then
+  echo "[bot-ml-online-gate] publish_history missing: ${publish_history:-<empty>}" >&2
+  exit 1
+fi
+HISTORY_LINES="$(wc -l < "${publish_history}")"
+if [[ "${HISTORY_LINES}" -lt 2 ]]; then
+  echo "[bot-ml-online-gate] publish_history has no data rows: ${publish_history}" >&2
+  exit 1
+fi
 
-echo "[bot-ml-online-gate] passed runtime_json=${runtime_json}"
+echo "[bot-ml-online-gate] passed runtime_json=${runtime_json} publish_history=${publish_history}"

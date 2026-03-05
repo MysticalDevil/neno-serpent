@@ -24,6 +24,7 @@ CACHE_MAX_MB="${BOT_ONLINE_CACHE_MAX_MB:-1024}"
 CACHE_TARGET_MB="${BOT_ONLINE_CACHE_TARGET_MB:-768}"
 MAX_ROUNDS="${BOT_ONLINE_MAX_ROUNDS:-0}"
 SUMMARY_PATH="${BOT_ONLINE_SUMMARY_PATH:-}"
+PUBLISH_HISTORY_PATH="${BOT_ONLINE_PUBLISH_HISTORY_PATH:-}"
 MIN_DATASET_SAMPLES="${BOT_ONLINE_MIN_DATASET_SAMPLES:-40}"
 MIN_PUBLISH_ROUND="${BOT_ONLINE_MIN_PUBLISH_ROUND:-1}"
 PUBLISH_COOLDOWN_ROUNDS="${BOT_ONLINE_PUBLISH_COOLDOWN_ROUNDS:-1}"
@@ -95,6 +96,10 @@ while (($# > 0)); do
       SUMMARY_PATH="$2"
       shift 2
       ;;
+    --publish-history)
+      PUBLISH_HISTORY_PATH="$2"
+      shift 2
+      ;;
     --min-dataset-samples)
       MIN_DATASET_SAMPLES="$2"
       shift 2
@@ -134,6 +139,7 @@ Options:
   --cache-target-mb <N>         Prune target size in MB when high-water exceeded (default: 768)
   --max-rounds <N>              Run finite rounds then exit (default: 0=infinite)
   --summary <path>              Optional summary output file (key=value lines)
+  --publish-history <path>      Optional publish audit TSV output (default: <workspace>/publish_history.tsv)
   --min-dataset-samples <N>     Require at least N dataset rows per round (default: 40)
   --min-publish-round <N>       Do not publish before this round index (default: 1)
   --publish-cooldown-rounds <N> Min rounds between publishes (default: 1)
@@ -165,6 +171,9 @@ LAST_GATE_REASON="none"
 LAST_PUBLISH_ROUND=0
 BLOCKED_STREAK=0
 MAX_BLOCKED_STREAK_SEEN=0
+if [[ -z "${PUBLISH_HISTORY_PATH}" ]]; then
+  PUBLISH_HISTORY_PATH="${WORKSPACE}/publish_history.tsv"
+fi
 
 extract_score_pair() {
   local text="$1"
@@ -196,6 +205,41 @@ run_gate_benchmark() {
     --max-ticks "${GATE_MAX_TICKS}" \
     --level "${GATE_LEVEL}" \
     --seed "${seed}"
+}
+
+file_sha256_or_na() {
+  local file_path="$1"
+  if [[ ! -f "${file_path}" ]]; then
+    echo "na"
+    return
+  fi
+  sha256sum "${file_path}" | awk '{print $1}'
+}
+
+ensure_publish_history_header() {
+  if [[ -f "${PUBLISH_HISTORY_PATH}" ]]; then
+    return
+  fi
+  mkdir -p "$(dirname "${PUBLISH_HISTORY_PATH}")"
+  {
+    printf 'round\tpublished\treason\tdataset_samples\tbaseline_avg\tbaseline_p95\tcandidate_avg\tcandidate_p95\tcandidate_sha256\tpublished_sha256\n'
+  } > "${PUBLISH_HISTORY_PATH}"
+}
+
+append_publish_history_row() {
+  local round="$1"
+  local published="$2"
+  local reason="$3"
+  local dataset_samples="$4"
+  local baseline_avg="$5"
+  local baseline_p95="$6"
+  local candidate_avg="$7"
+  local candidate_p95="$8"
+  local candidate_sha="$9"
+  local published_sha="${10}"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "${round}" "${published}" "${reason}" "${dataset_samples}" "${baseline_avg}" "${baseline_p95}" \
+    "${candidate_avg}" "${candidate_p95}" "${candidate_sha}" "${published_sha}" >> "${PUBLISH_HISTORY_PATH}"
 }
 
 dataset_sample_count() {
@@ -239,11 +283,17 @@ echo "[bot-online-train] gate games=${GATE_GAMES} maxTicks=${GATE_MAX_TICKS} lev
 echo "[bot-online-train] cache maxMb=${CACHE_MAX_MB} targetMb=${CACHE_TARGET_MB}"
 echo "[bot-online-train] maxRounds=${MAX_ROUNDS} summary=${SUMMARY_PATH:-<none>}"
 echo "[bot-online-train] stability minSamples=${MIN_DATASET_SAMPLES} minPublishRound=${MIN_PUBLISH_ROUND} cooldownRounds=${PUBLISH_COOLDOWN_ROUNDS} maxBlockedStreak=${MAX_BLOCKED_STREAK}"
+echo "[bot-online-train] publishHistory=${PUBLISH_HISTORY_PATH}"
+ensure_publish_history_header
 
 while true; do
   ROUND=$((ROUND + 1))
   ROUND_SEED=$((SEED_BASE + ROUND))
   TMP_RUNTIME_JSON="${WORKSPACE}/.runtime.round-${ROUND}.json"
+  BASELINE_AVG="na"
+  BASELINE_P95="na"
+  CANDIDATE_AVG="na"
+  CANDIDATE_P95="na"
   echo "[bot-online-train] round=${ROUND} phase=dataset"
   "${ROOT_DIR}/scripts/dev.sh" bot-dataset \
     --profile "${PROFILE}" \
@@ -310,14 +360,24 @@ while true; do
     LAST_GATE_REASON="published"
     LAST_PUBLISH_ROUND="${ROUND}"
     BLOCKED_STREAK=0
+    CANDIDATE_SHA="$(file_sha256_or_na "${RUNTIME_JSON_PATH}")"
+    append_publish_history_row \
+      "${ROUND}" "1" "${LAST_GATE_REASON}" "${SAMPLE_COUNT}" \
+      "${BASELINE_AVG}" "${BASELINE_P95}" "${CANDIDATE_AVG}" "${CANDIDATE_P95}" \
+      "${CANDIDATE_SHA}" "${CANDIDATE_SHA}"
     echo "[bot-online-train] round=${ROUND} published=${RUNTIME_JSON_PATH}"
   else
+    CANDIDATE_SHA="$(file_sha256_or_na "${TMP_RUNTIME_JSON}")"
     rm -f "${TMP_RUNTIME_JSON}"
     BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
     BLOCKED_STREAK=$((BLOCKED_STREAK + 1))
     if [[ "${BLOCKED_STREAK}" -gt "${MAX_BLOCKED_STREAK_SEEN}" ]]; then
       MAX_BLOCKED_STREAK_SEEN="${BLOCKED_STREAK}"
     fi
+    append_publish_history_row \
+      "${ROUND}" "0" "${LAST_GATE_REASON}" "${SAMPLE_COUNT}" \
+      "${BASELINE_AVG}" "${BASELINE_P95}" "${CANDIDATE_AVG}" "${CANDIDATE_P95}" \
+      "${CANDIDATE_SHA}" "$(file_sha256_or_na "${RUNTIME_JSON_PATH}")"
     echo "[bot-online-train] round=${ROUND} kept-current=${RUNTIME_JSON_PATH}"
   fi
   prune_workspace_if_needed
@@ -342,6 +402,7 @@ if [[ -n "${SUMMARY_PATH}" ]]; then
     echo "last_reason=${LAST_GATE_REASON}"
     echo "last_publish_round=${LAST_PUBLISH_ROUND}"
     echo "max_blocked_streak=${MAX_BLOCKED_STREAK_SEEN}"
+    echo "publish_history=${PUBLISH_HISTORY_PATH}"
   } > "${SUMMARY_PATH}"
   echo "[bot-online-train] summary=${SUMMARY_PATH}"
 fi

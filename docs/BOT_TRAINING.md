@@ -108,6 +108,9 @@ Online publish gate (enabled by default in `bot-online-train`):
   - `--min-publish-round` warmup rounds before publish is allowed
   - `--publish-cooldown-rounds` minimum rounds between publishes
   - `--max-blocked-streak` stop loop when blocked rounds are continuously too many
+- Publish audit:
+  - default report file: `<workspace>/publish_history.tsv`
+  - each row records publish decision, reason, dataset size, gate avg/p95, and model hashes
 
 ## 4. Offline Tuning + Training Loop
 

@@ -158,6 +158,8 @@ CMAKE_BUILD_TYPE=Release ./scripts/deploy.sh android
 
 # One-command launcher (trainer loop + headful gameplay)
 ./scripts/dev.sh bot-online-run --workspace cache/dev/nenoserpent_bot_online --ui-mode screen
+# Online trainer writes publish audit to:
+# cache/dev/nenoserpent_bot_online/publish_history.tsv
 
 # Prune cache directory by age/size watermarks
 ./scripts/dev.sh cache-prune --max-mb 2048 --target-mb 1536 --max-age-days 14

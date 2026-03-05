@@ -47,6 +47,7 @@ Outputs:
 - `cache/dev/nenoserpent_bot_ml_gate/eval.report.json`
 - `cache/dev/nenoserpent_bot_ml_gate/leaderboard.compare.tsv`
 - `cache/dev/nenoserpent_bot_ml_online_gate/online.summary.env`
+- `cache/dev/nenoserpent_bot_ml_online_gate/publish_history.tsv`
 
 ## Gate Rule
 

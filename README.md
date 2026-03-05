@@ -147,6 +147,8 @@ CMAKE_BUILD_TYPE=Release ./scripts/deploy.sh android
 
 # Continuous online training loop for ml-online hot reload
 ./scripts/dev.sh bot-online-train --workspace cache/dev/nenoserpent_bot_online
+# Optional no-regression tolerance for publish gate
+./scripts/dev.sh bot-online-train --workspace cache/dev/nenoserpent_bot_online --gate-eps 0.05
 ```
 
 ### Build and Deploy (WebAssembly)

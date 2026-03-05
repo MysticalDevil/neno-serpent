@@ -89,6 +89,12 @@ For online evolution (`ml-online`), run a continuous training loop in parallel:
   --ml-model cache/dev/nenoserpent_bot_online/nenoserpent_bot_policy_runtime.json --headful
 ```
 
+Online publish gate (enabled by default in `bot-online-train`):
+
+- Each round benchmarks `current` vs `candidate` runtime JSON with identical seed/settings.
+- Candidate is published only when both `score.avg` and `score.p95` are not lower than current.
+- Optional tolerance: `--gate-eps <float>` (or `BOT_ONLINE_GATE_NO_REGRESSION_EPS`).
+
 ## 4. Offline Tuning + Training Loop
 
 Recommended loop:

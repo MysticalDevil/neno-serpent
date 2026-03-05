@@ -15,6 +15,11 @@ EPOCHS="${BOT_ONLINE_EPOCHS:-8}"
 BATCH_SIZE="${BOT_ONLINE_BATCH_SIZE:-192}"
 LR="${BOT_ONLINE_LR:-0.001}"
 SEED_BASE="${BOT_ONLINE_SEED_BASE:-20260306}"
+GATE_GAMES="${BOT_ONLINE_GATE_GAMES:-24}"
+GATE_MAX_TICKS="${BOT_ONLINE_GATE_MAX_TICKS:-1600}"
+GATE_LEVEL="${BOT_ONLINE_GATE_LEVEL:-0}"
+GATE_MODE="${BOT_ONLINE_GATE_MODE:-balanced}"
+GATE_NO_REGRESSION_EPS="${BOT_ONLINE_GATE_NO_REGRESSION_EPS:-0.0}"
 
 while (($# > 0)); do
   case "$1" in
@@ -46,6 +51,26 @@ while (($# > 0)); do
       LR="$2"
       shift 2
       ;;
+    --gate-games)
+      GATE_GAMES="$2"
+      shift 2
+      ;;
+    --gate-max-ticks)
+      GATE_MAX_TICKS="$2"
+      shift 2
+      ;;
+    --gate-level)
+      GATE_LEVEL="$2"
+      shift 2
+      ;;
+    --gate-mode)
+      GATE_MODE="$2"
+      shift 2
+      ;;
+    --gate-eps)
+      GATE_NO_REGRESSION_EPS="$2"
+      shift 2
+      ;;
     *)
       if [[ "$1" == "-h" || "$1" == "--help" ]]; then
         cat <<'EOF'
@@ -60,6 +85,11 @@ Options:
   --epochs <N>                  Train epochs per round (default: 8)
   --batch-size <N>              Train batch size per round (default: 192)
   --lr <float>                  Learning rate per round (default: 0.001)
+  --gate-games <N>              Benchmark games for publish gate (default: 24)
+  --gate-max-ticks <N>          Benchmark max ticks for publish gate (default: 1600)
+  --gate-level <N>              Benchmark level for publish gate (default: 0)
+  --gate-mode <name>            Benchmark mode for publish gate (default: balanced)
+  --gate-eps <float>            Allowed regression epsilon (default: 0.0)
 
 Notes:
   - Keep this running in terminal A.
@@ -82,8 +112,41 @@ METADATA_PATH="${WORKSPACE}/nenoserpent_bot_policy_meta.json"
 RUNTIME_JSON_PATH="${WORKSPACE}/nenoserpent_bot_policy_runtime.json"
 ROUND=0
 
+extract_score_pair() {
+  local text="$1"
+  local score_line
+  score_line="$(printf '%s\n' "${text}" | rg '^\[bot-benchmark\] score\.max=' || true)"
+  if [[ -z "${score_line}" ]]; then
+    echo "nan nan"
+    return 1
+  fi
+  local avg p95
+  avg="$(printf '%s\n' "${score_line}" | awk '{
+    for (i=1; i<=NF; ++i) if ($i ~ /^score\.avg=/) { sub(/^score\.avg=/, "", $i); print $i; exit }
+  }')"
+  p95="$(printf '%s\n' "${score_line}" | awk '{
+    for (i=1; i<=NF; ++i) if ($i ~ /^score\.p95=/) { sub(/^score\.p95=/, "", $i); print $i; exit }
+  }')"
+  echo "${avg} ${p95}"
+}
+
+run_gate_benchmark() {
+  local model_path="$1"
+  local seed="$2"
+  "${ROOT_DIR}/scripts/dev.sh" bot-benchmark \
+    --profile "${PROFILE}" \
+    --mode "${GATE_MODE}" \
+    --backend ml \
+    --ml-model "${model_path}" \
+    --games "${GATE_GAMES}" \
+    --max-ticks "${GATE_MAX_TICKS}" \
+    --level "${GATE_LEVEL}" \
+    --seed "${seed}"
+}
+
 echo "[bot-online-train] workspace=${WORKSPACE}"
 echo "[bot-online-train] profile=${PROFILE} intervalSec=${INTERVAL_SEC} epochs=${EPOCHS} batchSize=${BATCH_SIZE}"
+echo "[bot-online-train] gate games=${GATE_GAMES} maxTicks=${GATE_MAX_TICKS} level=${GATE_LEVEL} mode=${GATE_MODE} eps=${GATE_NO_REGRESSION_EPS}"
 
 while true; do
   ROUND=$((ROUND + 1))
@@ -106,7 +169,32 @@ while true; do
     --lr "${LR}" \
     --seed "${ROUND_SEED}"
 
-  mv "${TMP_RUNTIME_JSON}" "${RUNTIME_JSON_PATH}"
-  echo "[bot-online-train] round=${ROUND} published=${RUNTIME_JSON_PATH}"
+  SHOULD_PUBLISH=1
+  if [[ -f "${RUNTIME_JSON_PATH}" ]]; then
+    echo "[bot-online-train] round=${ROUND} phase=gate baseline=current candidate=new"
+    BASELINE_OUTPUT="$(run_gate_benchmark "${RUNTIME_JSON_PATH}" "${ROUND_SEED}" || true)"
+    CANDIDATE_OUTPUT="$(run_gate_benchmark "${TMP_RUNTIME_JSON}" "${ROUND_SEED}" || true)"
+    read -r BASELINE_AVG BASELINE_P95 < <(extract_score_pair "${BASELINE_OUTPUT}")
+    read -r CANDIDATE_AVG CANDIDATE_P95 < <(extract_score_pair "${CANDIDATE_OUTPUT}")
+    echo "[bot-online-train] round=${ROUND} gate baseline.avg=${BASELINE_AVG} baseline.p95=${BASELINE_P95} candidate.avg=${CANDIDATE_AVG} candidate.p95=${CANDIDATE_P95}"
+    if ! awk -v cand="${CANDIDATE_AVG}" -v base="${BASELINE_AVG}" -v eps="${GATE_NO_REGRESSION_EPS}" \
+      'BEGIN { exit ((cand + eps) >= base ? 0 : 1) }'; then
+      SHOULD_PUBLISH=0
+      echo "[bot-online-train] round=${ROUND} gate=blocked reason=avg-regression"
+    fi
+    if ! awk -v cand="${CANDIDATE_P95}" -v base="${BASELINE_P95}" -v eps="${GATE_NO_REGRESSION_EPS}" \
+      'BEGIN { exit ((cand + eps) >= base ? 0 : 1) }'; then
+      SHOULD_PUBLISH=0
+      echo "[bot-online-train] round=${ROUND} gate=blocked reason=p95-regression"
+    fi
+  fi
+
+  if [[ "${SHOULD_PUBLISH}" == "1" ]]; then
+    mv "${TMP_RUNTIME_JSON}" "${RUNTIME_JSON_PATH}"
+    echo "[bot-online-train] round=${ROUND} published=${RUNTIME_JSON_PATH}"
+  else
+    rm -f "${TMP_RUNTIME_JSON}"
+    echo "[bot-online-train] round=${ROUND} kept-current=${RUNTIME_JSON_PATH}"
+  fi
   sleep "${INTERVAL_SEC}"
 done

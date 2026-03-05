@@ -98,7 +98,9 @@ EOF
     bot-online-train)
       cat <<'EOF'
 Usage: ./scripts/dev.sh bot-online-train [--workspace cache/<dir> --interval-sec N]
+       [--gate-games N --gate-max-ticks N --gate-level N --gate-mode name --gate-eps F]
 Purpose: periodically regenerate dataset and retrain runtime JSON for ml-online mode.
+         New model is published only when gate metrics do not regress.
 EOF
       ;;
     bot-run)

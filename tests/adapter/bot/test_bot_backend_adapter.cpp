@@ -15,6 +15,7 @@ private slots:
   void searchBackendIgnoresOutOfBoundsObstacles();
   void searchBackendBreaksTiesWithoutFixedDirectionBias();
   void searchBackendPrefersApproachingFoodInOpenEarlyGame();
+  void ruleBackendAvoidsMovingAwayFromFoodInEarlyGame();
   void backendChoiceSelectionUsesCommonPriorityLogic();
 };
 
@@ -175,6 +176,28 @@ void BotBackendAdapterTest::searchBackendBreaksTiesWithoutFixedDirectionBias() {
 void BotBackendAdapterTest::searchBackendPrefersApproachingFoodInOpenEarlyGame() {
   auto& backend =
     const_cast<nenoserpent::adapter::bot::BotBackend&>(nenoserpent::adapter::bot::searchBackend());
+  backend.reset();
+
+  auto strategy = nenoserpent::adapter::bot::defaultStrategyConfig();
+  strategy.tieBreakSeed = 7;
+
+  nenoserpent::adapter::bot::Snapshot snapshot{};
+  snapshot.boardWidth = 20;
+  snapshot.boardHeight = 18;
+  snapshot.head = QPoint(8, 8);
+  snapshot.direction = QPoint(1, 0);
+  snapshot.food = QPoint(8, 9);
+  snapshot.score = 0;
+  snapshot.body = {QPoint(8, 8), QPoint(9, 8), QPoint(9, 7), QPoint(9, 6)};
+
+  const auto direction = backend.decideDirection(snapshot, strategy);
+  QVERIFY(direction.has_value());
+  QCOMPARE(*direction, QPoint(0, 1));
+}
+
+void BotBackendAdapterTest::ruleBackendAvoidsMovingAwayFromFoodInEarlyGame() {
+  auto& backend =
+    const_cast<nenoserpent::adapter::bot::BotBackend&>(nenoserpent::adapter::bot::ruleBackend());
   backend.reset();
 
   auto strategy = nenoserpent::adapter::bot::defaultStrategyConfig();

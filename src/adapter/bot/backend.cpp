@@ -757,6 +757,27 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
   const int riskBudget = riskBudgetFor(snapshot, repeats);
   const int depth = std::clamp(tunedConfig.lookaheadDepth + 1, 2, 6);
   const QPoint primaryTarget = resolvePrimaryTarget(initial.head, snapshot, tunedConfig);
+  const bool earlyFoodChaseGuard = (primaryTarget == snapshot.food) && snapshot.score < 40 &&
+                                   static_cast<int>(snapshot.body.size()) < 12 && !escapeMode;
+  const int currentFoodDistance =
+    earlyFoodChaseGuard
+      ? toroidalDistance(initial.head, snapshot.food, snapshot.boardWidth, snapshot.boardHeight)
+      : 0;
+  bool hasNonWorseningFoodMove = false;
+  if (earlyFoodChaseGuard) {
+    for (const QPoint& candidate : kDirections) {
+      const auto preview = previewMove(snapshot, initial, candidate);
+      if (!preview.valid) {
+        continue;
+      }
+      const int nextFoodDistance = toroidalDistance(
+        preview.next.head, snapshot.food, snapshot.boardWidth, snapshot.boardHeight);
+      if (nextFoodDistance <= currentFoodDistance) {
+        hasNonWorseningFoodMove = true;
+        break;
+      }
+    }
+  }
   const auto tieRotateSeed = static_cast<std::uint64_t>(stateHash(snapshot, initial)) ^
                              static_cast<std::uint64_t>(tunedConfig.tieBreakSeed) ^
                              memory.observeTick();
@@ -829,6 +850,13 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
     const int riskCost = candidateRiskCost(openSpace, safeNeighbors, revisitCount, snapshot);
     if (riskCost > riskBudget) {
       score -= (riskCost - riskBudget) * 6;
+    }
+    if (earlyFoodChaseGuard && hasNonWorseningFoodMove) {
+      const int nextFoodDistance = toroidalDistance(
+        preview.next.head, snapshot.food, snapshot.boardWidth, snapshot.boardHeight);
+      if (nextFoodDistance > currentFoodDistance) {
+        score -= 720;
+      }
     }
 
     const int rawIndex = directionIndex(candidate);

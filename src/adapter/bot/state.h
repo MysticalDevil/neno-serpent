@@ -63,6 +63,7 @@ public:
 private:
   void configureMlOnline(const QString& modelPath);
   void pollMlOnlineModelHotReload();
+  void resetBackendRuntimeCaches();
   void applyModeDefaults();
 
   BotMode m_strategyMode = BotMode::Balanced;

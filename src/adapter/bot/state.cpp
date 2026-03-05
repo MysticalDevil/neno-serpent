@@ -82,18 +82,21 @@ auto State::strategyModeName() const -> QString {
 }
 
 void State::cycleBackendMode() {
+  resetBackendRuntimeCaches();
   m_backendMode = nextBackendMode(m_backendMode);
   resetActionCooldownTicks();
   clearLastBackendRoute();
 }
 
 void State::cycleStrategyMode() {
+  resetBackendRuntimeCaches();
   m_strategyMode = nextMode(m_strategyMode);
   resetActionCooldownTicks();
   applyModeDefaults();
 }
 
 void State::resetStrategyModeDefaults() {
+  resetBackendRuntimeCaches();
   resetActionCooldownTicks();
   applyModeDefaults();
 }
@@ -238,6 +241,12 @@ void State::pollMlOnlineModelHotReload() {
   qCWarning(nenoserpentInputLog).noquote()
     << "bot ml-online hot-reload failed source=" << m_mlModelPath
     << "reason=" << m_mlBackend.errorString();
+}
+
+void State::resetBackendRuntimeCaches() {
+  m_mlBackend.reset();
+  const_cast<BotBackend&>(ruleBackend()).reset();
+  const_cast<BotBackend&>(searchBackend()).reset();
 }
 
 void State::applyModeDefaults() {

@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <limits>
 #include <optional>
+#include <unordered_map>
 #include <vector>
 
 #include "core/game/rules.h"
@@ -58,6 +60,76 @@ struct MovePreview {
   MoveState next;
   bool ateFood = false;
   bool atePower = false;
+};
+
+auto mixHash(std::uint64_t seed, const std::uint64_t value) -> std::uint64_t {
+  constexpr std::uint64_t kPrime = 1099511628211ULL;
+  seed ^= value + 0x9e3779b97f4a7c15ULL + (seed << 6U) + (seed >> 2U);
+  seed *= kPrime;
+  return seed;
+}
+
+auto stateHash(const Snapshot& snapshot, const MoveState& state) -> std::uint64_t {
+  std::uint64_t hash = 1469598103934665603ULL;
+  hash = mixHash(hash, static_cast<std::uint64_t>(snapshot.boardWidth));
+  hash = mixHash(hash, static_cast<std::uint64_t>(snapshot.boardHeight));
+  hash = mixHash(hash, static_cast<std::uint64_t>(state.head.x() + 1024));
+  hash = mixHash(hash, static_cast<std::uint64_t>(state.head.y() + 1024));
+  hash = mixHash(hash, static_cast<std::uint64_t>(state.direction.x() + 16));
+  hash = mixHash(hash, static_cast<std::uint64_t>(state.direction.y() + 16));
+  hash = mixHash(hash, static_cast<std::uint64_t>(snapshot.food.x() + 1024));
+  hash = mixHash(hash, static_cast<std::uint64_t>(snapshot.food.y() + 1024));
+  hash = mixHash(hash, static_cast<std::uint64_t>(snapshot.powerUpPos.x() + 1024));
+  hash = mixHash(hash, static_cast<std::uint64_t>(snapshot.powerUpPos.y() + 1024));
+  hash = mixHash(hash, static_cast<std::uint64_t>(snapshot.powerUpType + 32));
+  hash = mixHash(hash, static_cast<std::uint64_t>(state.body.size()));
+  for (const QPoint& segment : state.body) {
+    hash = mixHash(hash, static_cast<std::uint64_t>(segment.x() + 1024));
+    hash = mixHash(hash, static_cast<std::uint64_t>(segment.y() + 1024));
+  }
+  return hash;
+}
+
+class LoopMemory {
+public:
+  auto clear() -> void {
+    m_recent.clear();
+    m_counts.clear();
+  }
+
+  auto observe(const Snapshot& snapshot, const MoveState& state) -> int {
+    const std::uint64_t hash = stateHash(snapshot, state);
+    const int repeats = ++m_counts[hash];
+    m_recent.push_back(hash);
+    trim();
+    return repeats;
+  }
+
+  [[nodiscard]] auto repeatsFor(const Snapshot& snapshot, const MoveState& state) const -> int {
+    const std::uint64_t hash = stateHash(snapshot, state);
+    const auto it = m_counts.find(hash);
+    return it == m_counts.end() ? 0 : it->second;
+  }
+
+private:
+  static constexpr int kWindow = 96;
+  std::deque<std::uint64_t> m_recent;
+  std::unordered_map<std::uint64_t, int> m_counts;
+
+  auto trim() -> void {
+    while (static_cast<int>(m_recent.size()) > kWindow) {
+      const std::uint64_t dropped = m_recent.front();
+      m_recent.pop_front();
+      auto it = m_counts.find(dropped);
+      if (it == m_counts.end()) {
+        continue;
+      }
+      --it->second;
+      if (it->second <= 0) {
+        m_counts.erase(it);
+      }
+    }
+  }
 };
 
 auto buildBlockedMap(const Snapshot& snapshot, const std::deque<QPoint>& body)
@@ -240,6 +312,112 @@ auto searchValue(const Snapshot& snapshot,
   return best;
 }
 
+auto evaluateEscapeCandidate(const Snapshot& snapshot,
+                             const MovePreview& preview,
+                             const StrategyConfig& config,
+                             const int revisitCount) -> int {
+  auto blocked = buildBlockedMap(snapshot, preview.next.body);
+  if (const auto headIndex =
+        tryBoardIndex(preview.next.head, snapshot.boardWidth, snapshot.boardHeight);
+      headIndex.has_value()) {
+    blocked[*headIndex] = false;
+  }
+  const int openSpace = floodReachable(preview.next.head, snapshot, blocked);
+  const int safeNeighbors = countSafeNeighbors(preview.next.head, snapshot, blocked);
+  const QPoint tail = preview.next.body.empty() ? preview.next.head : preview.next.body.back();
+  const int tailDistance =
+    toroidalDistance(preview.next.head, tail, snapshot.boardWidth, snapshot.boardHeight);
+
+  int score = (openSpace * config.openSpaceWeight * 2) +
+              (safeNeighbors * config.safeNeighborWeight * 3) + (tailDistance * 14) -
+              (revisitCount * 220);
+  if (preview.ateFood) {
+    score += config.foodConsumeBonus * 6;
+  }
+  if (preview.atePower) {
+    score += powerPriority(config, snapshot.powerUpType) * 4;
+  }
+  return score;
+}
+
+auto selectLoopAwareDirection(const Snapshot& snapshot,
+                              const StrategyConfig& config,
+                              LoopMemory& memory,
+                              const bool useSearchScoring) -> std::optional<QPoint> {
+  if (snapshot.body.empty() || snapshot.boardWidth <= 0 || snapshot.boardHeight <= 0) {
+    return std::nullopt;
+  }
+  const MoveState initial{
+    .head = snapshot.head,
+    .direction = snapshot.direction,
+    .body = snapshot.body,
+    .score = snapshot.score,
+  };
+
+  constexpr int kLoopRepeatThreshold = 4;
+  const int repeats = memory.observe(snapshot, initial);
+  const bool escapeMode = repeats >= kLoopRepeatThreshold;
+  const int depth = std::clamp(config.lookaheadDepth + 1, 2, 6);
+
+  int bestScore = std::numeric_limits<int>::min();
+  std::optional<QPoint> bestDirection;
+  for (const QPoint& candidate : kDirections) {
+    const auto preview = previewMove(snapshot, initial, candidate);
+    if (!preview.valid) {
+      continue;
+    }
+
+    const int revisitCount = memory.repeatsFor(snapshot, preview.next);
+    int score = 0;
+    if (escapeMode) {
+      score = evaluateEscapeCandidate(snapshot, preview, config, revisitCount);
+    } else if (useSearchScoring) {
+      int immediate = (candidate == snapshot.direction ? config.straightBonus : 0);
+      if (preview.ateFood) {
+        immediate += config.foodConsumeBonus;
+      }
+      if (preview.atePower) {
+        immediate += powerPriority(config, snapshot.powerUpType);
+      }
+      score =
+        immediate + searchValue(snapshot, preview.next, config, depth - 1) - (revisitCount * 48);
+    } else {
+      auto blocked = buildBlockedMap(snapshot, preview.next.body);
+      if (const auto headIndex =
+            tryBoardIndex(preview.next.head, snapshot.boardWidth, snapshot.boardHeight);
+          headIndex.has_value()) {
+        blocked[*headIndex] = false;
+      }
+      const int openSpace = floodReachable(preview.next.head, snapshot, blocked);
+      const int safeNeighbors = countSafeNeighbors(preview.next.head, snapshot, blocked);
+      const QPoint target =
+        (snapshot.powerUpPos.x() >= 0 && snapshot.powerUpPos.y() >= 0 &&
+         powerPriority(config, snapshot.powerUpType) >= config.powerTargetPriorityThreshold)
+          ? snapshot.powerUpPos
+          : snapshot.food;
+      const int targetDistance =
+        toroidalDistance(preview.next.head, target, snapshot.boardWidth, snapshot.boardHeight);
+      int immediate = (candidate == snapshot.direction ? config.straightBonus : 0);
+      if (preview.ateFood) {
+        immediate += config.foodConsumeBonus;
+      }
+      if (preview.atePower) {
+        immediate += powerPriority(config, snapshot.powerUpType);
+      }
+      const int trapPenalty = safeNeighbors <= 1 ? config.trapPenalty : 0;
+      score = (openSpace * config.openSpaceWeight) + (safeNeighbors * config.safeNeighborWeight) -
+              (targetDistance * config.targetDistanceWeight) + immediate - trapPenalty -
+              (revisitCount * 56);
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestDirection = candidate;
+    }
+  }
+  return bestDirection;
+}
+
 class RuleBackend final : public BotBackend {
 public:
   [[nodiscard]] auto name() const -> QString override {
@@ -248,13 +426,20 @@ public:
 
   [[nodiscard]] auto decideDirection(const Snapshot& snapshot, const StrategyConfig& config) const
     -> std::optional<QPoint> override {
-    return pickDirection(snapshot, config);
+    return selectLoopAwareDirection(snapshot, config, m_loopMemory, false);
   }
 
   [[nodiscard]] auto decideChoice(const QVariantList& choices, const StrategyConfig& config) const
     -> int override {
     return pickChoiceIndex(choices, config);
   }
+
+  void reset() override {
+    m_loopMemory.clear();
+  }
+
+private:
+  mutable LoopMemory m_loopMemory;
 };
 
 class SearchBackend final : public BotBackend {
@@ -265,47 +450,20 @@ public:
 
   [[nodiscard]] auto decideDirection(const Snapshot& snapshot, const StrategyConfig& config) const
     -> std::optional<QPoint> override {
-    if (snapshot.body.empty() || snapshot.boardWidth <= 0 || snapshot.boardHeight <= 0) {
-      return std::nullopt;
-    }
-
-    const MoveState initial{
-      .head = snapshot.head,
-      .direction = snapshot.direction,
-      .body = snapshot.body,
-      .score = snapshot.score,
-    };
-    const int depth = std::clamp(config.lookaheadDepth + 1, 2, 6);
-
-    int bestScore = std::numeric_limits<int>::min();
-    std::optional<QPoint> bestDirection;
-    for (const QPoint& candidate : kDirections) {
-      const auto preview = previewMove(snapshot, initial, candidate);
-      if (!preview.valid) {
-        continue;
-      }
-
-      int immediate = (candidate == snapshot.direction ? config.straightBonus : 0);
-      if (preview.ateFood) {
-        immediate += config.foodConsumeBonus;
-      }
-      if (preview.atePower) {
-        immediate += powerPriority(config, snapshot.powerUpType);
-      }
-      const int score = immediate + searchValue(snapshot, preview.next, config, depth - 1);
-      if (score > bestScore) {
-        bestScore = score;
-        bestDirection = candidate;
-      }
-    }
-
-    return bestDirection;
+    return selectLoopAwareDirection(snapshot, config, m_loopMemory, true);
   }
 
   [[nodiscard]] auto decideChoice(const QVariantList& choices, const StrategyConfig& config) const
     -> int override {
     return pickChoiceIndex(choices, config);
   }
+
+  void reset() override {
+    m_loopMemory.clear();
+  }
+
+private:
+  mutable LoopMemory m_loopMemory;
 };
 
 } // namespace

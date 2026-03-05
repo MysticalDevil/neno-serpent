@@ -23,6 +23,7 @@ constexpr int SpawnTopKMax = 8;
 
 enum class SpawnProfile {
   NoObstacle,
+  CorridorObstacle,
   StaticObstacle,
   DynamicObstacle,
 };
@@ -42,6 +43,7 @@ struct SpawnTuning {
   int dynamicRiskWeight = 0;
   int dynamicRiskHardLimit = 0;
   int dynamicRiskHorizon = 0;
+  int recentSpawnPenaltyWeight = 0;
 };
 
 auto spawnTuningForProfile(SpawnProfile profile) -> SpawnTuning;
@@ -217,6 +219,7 @@ auto pickSpawnPointWithSafety(const int boardWidth,
                               const std::optional<QPoint>& tail,
                               const QList<QPoint>& obstacles,
                               const QList<QPoint>& previousObstacles,
+                              const std::deque<QPoint>& recentSpawnPoints,
                               const SpawnProfile profile,
                               const std::function<bool(const QPoint&)>& isBlocked,
                               const std::function<int(int)>& randomBounded,
@@ -332,6 +335,18 @@ auto pickSpawnPointWithSafety(const int boardWidth,
         score -= tuning.edgePenaltyWeight * 10;
       }
       score -= dynamicRisk * tuning.dynamicRiskWeight;
+      int recentPenalty = 0;
+      for (const QPoint& recent : recentSpawnPoints) {
+        const int d = toroidalDistance(point, recent, boardWidth, boardHeight);
+        if (d == 0) {
+          recentPenalty += 16;
+        } else if (d <= 1) {
+          recentPenalty += 10;
+        } else if (d <= 2) {
+          recentPenalty += 4;
+        }
+      }
+      score -= recentPenalty * tuning.recentSpawnPenaltyWeight;
       candidates.push_back({.point = point, .score = score});
     }
     std::sort(candidates.begin(), candidates.end(), [](const SpawnCandidate& a,
@@ -377,6 +392,14 @@ auto pickSpawnPointWithSafety(const int boardWidth,
   return true;
 }
 
+void rememberRecentSpawnPoint(std::deque<QPoint>& recentSpawnPoints, const QPoint point) {
+  constexpr std::size_t kRecentSpawnWindow = 18;
+  recentSpawnPoints.push_back(point);
+  while (recentSpawnPoints.size() > kRecentSpawnWindow) {
+    recentSpawnPoints.pop_front();
+  }
+}
+
 auto mixHash(std::uint64_t seed, const std::uint64_t value) -> std::uint64_t {
   constexpr std::uint64_t kPrime = 1099511628211ULL;
   seed ^= value + 0x9e3779b97f4a7c15ULL + (seed << 6U) + (seed >> 2U);
@@ -402,6 +425,25 @@ auto spawnTuningForProfile(const SpawnProfile profile) -> SpawnTuning {
       .dynamicRiskWeight = 0,
       .dynamicRiskHardLimit = 0,
       .dynamicRiskHorizon = 0,
+      .recentSpawnPenaltyWeight = 10,
+    };
+  case SpawnProfile::CorridorObstacle:
+    return SpawnTuning{
+      .minHeadDistance = 2,
+      .minObstacleDistance = 1,
+      .topKMin = 5,
+      .topKMax = 10,
+      .freeNeighborWeight = 33,
+      .reachableAreaWeight = 13,
+      .tailReachableBonus = 180,
+      .obstacleDistanceWeight = 8,
+      .headDistanceWeight = 4,
+      .centerBiasWeight = 9,
+      .edgePenaltyWeight = 10,
+      .dynamicRiskWeight = 1,
+      .dynamicRiskHardLimit = 60,
+      .dynamicRiskHorizon = 2,
+      .recentSpawnPenaltyWeight = 20,
     };
   case SpawnProfile::StaticObstacle:
     return SpawnTuning{
@@ -419,6 +461,7 @@ auto spawnTuningForProfile(const SpawnProfile profile) -> SpawnTuning {
       .dynamicRiskWeight = 1,
       .dynamicRiskHardLimit = 80,
       .dynamicRiskHorizon = 3,
+      .recentSpawnPenaltyWeight = 14,
     };
   case SpawnProfile::DynamicObstacle:
     return SpawnTuning{
@@ -436,6 +479,7 @@ auto spawnTuningForProfile(const SpawnProfile profile) -> SpawnTuning {
       .dynamicRiskWeight = 6,
       .dynamicRiskHardLimit = 42,
       .dynamicRiskHorizon = 8,
+      .recentSpawnPenaltyWeight = 12,
     };
   }
   return SpawnTuning{};
@@ -488,6 +532,26 @@ auto classifySpawnProfile(const QList<QPoint>& obstacles,
 
   if (dynamicConfidenceTicks >= 4) {
     return SpawnProfile::DynamicObstacle;
+  }
+  if (obstacles.size() >= 12) {
+    std::vector<bool> usedX(static_cast<std::size_t>(boardWidth), false);
+    std::vector<bool> usedY(static_cast<std::size_t>(boardHeight), false);
+    int uniqueX = 0;
+    int uniqueY = 0;
+    for (const QPoint& obstacle : obstacles) {
+      const QPoint wrapped = wrapPoint(obstacle, boardWidth, boardHeight);
+      if (!usedX[static_cast<std::size_t>(wrapped.x())]) {
+        usedX[static_cast<std::size_t>(wrapped.x())] = true;
+        ++uniqueX;
+      }
+      if (!usedY[static_cast<std::size_t>(wrapped.y())]) {
+        usedY[static_cast<std::size_t>(wrapped.y())] = true;
+        ++uniqueY;
+      }
+    }
+    if (uniqueX <= 3 || uniqueY <= 3) {
+      return SpawnProfile::CorridorObstacle;
+    }
   }
   return SpawnProfile::StaticObstacle;
 }
@@ -866,6 +930,7 @@ auto SessionCore::spawnFood(const int boardWidth,
                                               tail,
                                               m_state.obstacles,
                                               m_prevObstacleSnapshot,
+                                              m_recentSpawnPoints,
                                               profile,
                                               [this](const QPoint& point) -> bool {
                                                 return isOccupied(point) || point == m_state.powerUpPos;
@@ -874,6 +939,7 @@ auto SessionCore::spawnFood(const int boardWidth,
                                               pickedPoint);
   if (found) {
     m_state.food = pickedPoint;
+    rememberRecentSpawnPoint(m_recentSpawnPoints, pickedPoint);
   }
   return found;
 }
@@ -895,6 +961,7 @@ auto SessionCore::spawnPowerUp(const int boardWidth,
                                               tail,
                                               m_state.obstacles,
                                               m_prevObstacleSnapshot,
+                                              m_recentSpawnPoints,
                                               profile,
                                               [this](const QPoint& point) -> bool {
                                                 return isOccupied(point) || point == m_state.food;
@@ -905,6 +972,7 @@ auto SessionCore::spawnPowerUp(const int boardWidth,
     m_state.powerUpPos = pickedPoint;
     m_state.powerUpType = static_cast<int>(weightedRandomBuffId(randomBounded));
     m_state.powerUpTicksRemaining = PowerUpLifetimeTicks;
+    rememberRecentSpawnPoint(m_recentSpawnPoints, pickedPoint);
   }
   return found;
 }
@@ -1108,6 +1176,7 @@ void SessionCore::bootstrapForLevel(QList<QPoint> obstacles,
   m_prevObstacleSnapshot.clear();
   m_currObstacleSnapshot.clear();
   m_hasObstacleSnapshots = false;
+  m_recentSpawnPoints.clear();
   resetStallGuard();
 }
 
@@ -1154,6 +1223,7 @@ void SessionCore::seedPreviewState(const PreviewSeed& seed) {
   m_prevObstacleSnapshot.clear();
   m_currObstacleSnapshot.clear();
   m_hasObstacleSnapshots = false;
+  m_recentSpawnPoints.clear();
   resetStallGuard();
 }
 
@@ -1173,6 +1243,7 @@ void SessionCore::resetTransientRuntimeState() {
   m_prevObstacleSnapshot.clear();
   m_currObstacleSnapshot.clear();
   m_hasObstacleSnapshots = false;
+  m_recentSpawnPoints.clear();
   resetStallGuard();
 }
 
@@ -1198,6 +1269,7 @@ void SessionCore::restoreSnapshot(const StateSnapshot& snapshot) {
   m_prevObstacleSnapshot.clear();
   m_currObstacleSnapshot.clear();
   m_hasObstacleSnapshots = false;
+  m_recentSpawnPoints.clear();
   resetStallGuard();
 }
 

@@ -6,6 +6,7 @@
 #include <optional>
 #include <unordered_map>
 
+#include <QList>
 #include <QPoint>
 
 #include "core/game/rules.h"
@@ -179,6 +180,7 @@ private:
   QList<QPoint> m_prevObstacleSnapshot;
   QList<QPoint> m_currObstacleSnapshot;
   bool m_hasObstacleSnapshots = false;
+  std::deque<QPoint> m_recentSpawnPoints;
 };
 
 } // namespace nenoserpent::core

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "core/game/rules.h"
 #include "power_up_id.h"
 
 namespace nenoserpent::adapter::bot {
@@ -67,6 +68,15 @@ auto contextualChoiceStrategy(const StrategyConfig& base, const Snapshot& snapsh
   return contextual;
 }
 
+auto dynamicChoiceCooldownTicks(const StrategyConfig& strategy, const Snapshot& snapshot) -> int {
+  const int intervalMs = std::clamp(nenoserpent::core::tickIntervalForScore(snapshot.score), 60, 200);
+  const int fastness = 200 - intervalMs; // 0..140
+  const int extraTicks = fastness / 28;  // 0..5
+  return std::clamp(strategy.choiceCooldownTicks + extraTicks,
+                    strategy.choiceCooldownTicks,
+                    strategy.choiceCooldownTicks + 6);
+}
+
 } // namespace
 
 auto step(const RuntimeInput& input) -> RuntimeOutput {
@@ -124,7 +134,7 @@ auto step(const RuntimeInput& input) -> RuntimeOutput {
     output.setChoiceIndex = bestIndex;
     output.triggerStart = true;
     output.consumeTick = true;
-    output.nextCooldownTicks = strategy.choiceCooldownTicks;
+    output.nextCooldownTicks = dynamicChoiceCooldownTicks(strategy, input.snapshot);
     return output;
   }
 

@@ -10,6 +10,7 @@ private slots:
   void startMenuTriggersStartWhenEnabled();
   void choiceSelectionPicksChoiceAndConfirms();
   void choiceSelectionContextBoostsLaserOnDenseObstacles();
+  void choiceSelectionUsesDynamicCooldownAtHighSpeed();
   void cooldownDelaysNonPlayingActions();
   void usesCustomCooldownFromStrategy();
   void usesInjectedBackendForDirectionAndChoice();
@@ -78,6 +79,29 @@ void BotRuntimeAdapterTest::choiceSelectionContextBoostsLaserOnDenseObstacles() 
   QVERIFY(result.consumeTick);
   QVERIFY(result.setChoiceIndex.has_value());
   QCOMPARE(*result.setChoiceIndex, 1);
+}
+
+void BotRuntimeAdapterTest::choiceSelectionUsesDynamicCooldownAtHighSpeed() {
+  nenoserpent::adapter::bot::RuntimeInput input{};
+  input.enabled = true;
+  input.cooldownTicks = 0;
+  input.state = AppState::ChoiceSelection;
+  input.choices = {
+    QVariantMap{{"type", 4}},
+    QVariantMap{{"type", 8}},
+    QVariantMap{{"type", 9}},
+  };
+  input.currentChoiceIndex = 0;
+  input.snapshot.score = 200;
+
+  const auto strategy = nenoserpent::adapter::bot::defaultStrategyConfig();
+  input.strategy = &strategy;
+
+  const auto result = nenoserpent::adapter::bot::step(input);
+  QVERIFY(result.setChoiceIndex.has_value());
+  QVERIFY(result.triggerStart);
+  QVERIFY(result.consumeTick);
+  QVERIFY(result.nextCooldownTicks > strategy.choiceCooldownTicks);
 }
 
 void BotRuntimeAdapterTest::cooldownDelaysNonPlayingActions() {

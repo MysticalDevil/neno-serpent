@@ -6,6 +6,8 @@
 #include "fsm/game_state.h"
 #include "power_up_id.h"
 
+#include <algorithm>
+
 using namespace Qt::StringLiterals;
 
 namespace {
@@ -79,6 +81,16 @@ auto buildDebugChoiceSpecs(const QVariantList& types) -> QList<nenoserpent::core
 
   return result;
 }
+
+auto choiceRecoveryWindowMs(const int preChoiceTickIntervalMs, const bool slowMode) -> int {
+  const int clampedInterval = std::clamp(preChoiceTickIntervalMs, 60, 200);
+  const int fastness = 200 - clampedInterval; // 0 (slow) .. 140 (fast)
+  int windowMs = 450 + ((fastness * 550) / 140); // 450..1000
+  if (slowMode) {
+    windowMs = std::max(360, windowMs - 180);
+  }
+  return std::clamp(windowMs, 360, 1000);
+}
 } // namespace
 
 void EngineAdapter::generateChoices() {
@@ -130,6 +142,7 @@ void EngineAdapter::selectChoice(const int index) {
   if (!type.has_value()) {
     return;
   }
+  const int preChoiceTickIntervalMs = gameplayTickIntervalMs();
   const auto result = m_sessionCore.selectChoice(type.value(), BuffDurationTicks * 2, false);
   if (m_state != AppState::Replaying &&
       nenoserpent::adapter::discoverFruit(m_profileManager.get(), type.value())) {
@@ -150,9 +163,10 @@ void EngineAdapter::selectChoice(const int index) {
     return;
   }
 
-  m_timer->setInterval(500);
+  const int recoveryWindowMs = choiceRecoveryWindowMs(preChoiceTickIntervalMs, result.slowMode);
+  m_timer->setInterval(recoveryWindowMs);
 
-  QTimer::singleShot(500, this, [this]() -> void {
+  QTimer::singleShot(recoveryWindowMs, this, [this]() -> void {
     if (m_state == AppState::Playing) {
       m_timer->setInterval(gameplayTickIntervalMs());
     }

@@ -26,6 +26,7 @@ cache/*
 zig-out/
 *.user
 *.swp
+*.gcov
 __pycache__/
 *.pyc
 TODO.md

@@ -5,7 +5,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 
-#include "adapter/bot/snapshot_builder.h"
+#include "adapter/bot/snapshot.h"
 #include "app_state.h"
 
 namespace nenoserpent::adapter::bot {

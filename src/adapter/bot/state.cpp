@@ -6,7 +6,7 @@
 #include <QFileInfo>
 #include <QVariantMap>
 
-#include "adapter/bot/config_loader.h"
+#include "adapter/bot/loader.h"
 #include "logging/categories.h"
 
 using namespace Qt::StringLiterals;

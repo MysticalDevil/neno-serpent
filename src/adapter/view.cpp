@@ -1,6 +1,6 @@
 #include <algorithm>
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 #include "adapter/models/library.h"
 #include "adapter/profile/bridge.h"
 
@@ -19,7 +19,8 @@ auto EngineAdapter::palette() const -> QVariantList {
     {u"#08272d"_s, u"#184c53"_s, u"#67c1c8"_s, u"#dcfbff"_s}  // Neon Ice
   };
   const qsizetype idx =
-    static_cast<qsizetype>(nenoserpent::adapter::paletteIndex(m_profileManager.get())) % sets.size();
+    static_cast<qsizetype>(nenoserpent::adapter::paletteIndex(m_profileManager.get())) %
+    sets.size();
   return sets[idx];
 }
 
@@ -27,7 +28,8 @@ auto EngineAdapter::paletteName() const -> QString {
   static const QStringList names = {
     u"Original DMG"_s, u"Pocket B&W"_s, u"Sunset Glow"_s, u"Pixel Heat"_s, u"Neon Ice"_s};
   const qsizetype idx =
-    static_cast<qsizetype>(nenoserpent::adapter::paletteIndex(m_profileManager.get())) % names.size();
+    static_cast<qsizetype>(nenoserpent::adapter::paletteIndex(m_profileManager.get())) %
+    names.size();
   return names[idx];
 }
 
@@ -48,7 +50,8 @@ auto EngineAdapter::shellColor() const -> QColor {
                                        QColor(u"#f59e0b"_s),
                                        QColor(u"#4b5563"_s)};
   const qsizetype idx =
-    static_cast<qsizetype>(nenoserpent::adapter::shellIndex(m_profileManager.get())) % colors.size();
+    static_cast<qsizetype>(nenoserpent::adapter::shellIndex(m_profileManager.get())) %
+    colors.size();
   return colors[idx];
 }
 
@@ -105,7 +108,7 @@ auto EngineAdapter::volume() const -> float {
 
 void EngineAdapter::setVolume(float value) {
   nenoserpent::adapter::setVolume(m_profileManager.get(), value);
-  m_audioBus.applyVolume(value);
+  emit audioSetVolume(value);
   emit volumeChanged();
 }
 

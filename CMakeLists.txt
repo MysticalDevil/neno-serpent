@@ -497,7 +497,7 @@ add_test(NAME AdapterBotOrchestratorTest COMMAND adapter-bot-orchestrator-tests)
 set_tests_properties(AdapterBotOrchestratorTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-bot-snapshot-tests
-    tests/adapter/bot/test_bot_snapshot_builder_adapter.cpp
+    tests/adapter/bot/test_bot_snapshot_adapter.cpp
 )
 target_include_directories(adapter-bot-snapshot-tests PRIVATE src)
 target_link_libraries(adapter-bot-snapshot-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -505,7 +505,7 @@ add_test(NAME AdapterBotSnapshotTest COMMAND adapter-bot-snapshot-tests)
 set_tests_properties(AdapterBotSnapshotTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-bot-decision-applier-tests
-    tests/adapter/bot/test_bot_decision_applier_adapter.cpp
+    tests/adapter/bot/test_bot_applier_adapter.cpp
 )
 target_include_directories(adapter-bot-decision-applier-tests PRIVATE src)
 target_link_libraries(adapter-bot-decision-applier-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -513,7 +513,7 @@ add_test(NAME AdapterBotDecisionApplierTest COMMAND adapter-bot-decision-applier
 set_tests_properties(AdapterBotDecisionApplierTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-bot-route-telemetry-tests
-    tests/adapter/bot/test_bot_route_telemetry_adapter.cpp
+    tests/adapter/bot/test_bot_telemetry_adapter.cpp
 )
 target_include_directories(adapter-bot-route-telemetry-tests PRIVATE src)
 target_link_libraries(adapter-bot-route-telemetry-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -521,7 +521,7 @@ add_test(NAME AdapterBotRouteTelemetryTest COMMAND adapter-bot-route-telemetry-t
 set_tests_properties(AdapterBotRouteTelemetryTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-bot-runtime-facade-tests
-    tests/adapter/bot/test_bot_runtime_facade_adapter.cpp
+    tests/adapter/bot/test_bot_facade_adapter.cpp
 )
 target_include_directories(adapter-bot-runtime-facade-tests PRIVATE src)
 target_link_libraries(adapter-bot-runtime-facade-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)
@@ -529,7 +529,7 @@ add_test(NAME AdapterBotRuntimeFacadeTest COMMAND adapter-bot-runtime-facade-tes
 set_tests_properties(AdapterBotRuntimeFacadeTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(adapter-bot-config-loader-tests
-    tests/adapter/bot/test_bot_config_loader_adapter.cpp
+    tests/adapter/bot/test_bot_loader_adapter.cpp
 )
 target_include_directories(adapter-bot-config-loader-tests PRIVATE src)
 target_link_libraries(adapter-bot-config-loader-tests PRIVATE Qt6::Test Qt6::Core nenoserpent_adapter)

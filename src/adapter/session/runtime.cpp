@@ -1,6 +1,6 @@
 #include <QList>
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 #include "adapter/profile/bridge.h"
 #include "core/game/rules.h"
 

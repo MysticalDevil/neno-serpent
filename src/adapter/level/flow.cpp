@@ -1,7 +1,7 @@
 #include <QJSValue>
 
 #include "adapter/achievement/runtime.h"
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 #include "adapter/level/applier.h"
 #include "adapter/level/script_runtime.h"
 #include "adapter/profile/bridge.h"

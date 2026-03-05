@@ -1,4 +1,4 @@
-#include "adapter/bot/config_loader.h"
+#include "adapter/bot/loader.h"
 
 #include <optional>
 #include <utility>

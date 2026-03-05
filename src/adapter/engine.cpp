@@ -1,9 +1,9 @@
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 
 #include <QDateTime>
 #include <QDebug>
 
-#include "adapter/bot/runtime_facade.h"
+#include "adapter/bot/facade.h"
 #include "fsm/game_state.h"
 #include "fsm/state_factory.h"
 #include "logging/categories.h"
@@ -64,26 +64,32 @@ EngineAdapter::EngineAdapter(QObject* parent)
   }
   initHumanTeachCapture();
 
-  m_audioBus.setCallbacks({
-    .startMusic = [this](const nenoserpent::audio::ScoreTrackId trackId) -> void {
-      emit audioStartMusic(static_cast<int>(trackId));
-    },
-    .stopMusic = [this]() -> void { emit audioStopMusic(); },
-    .setPaused = [this](const bool paused) -> void { emit audioSetPaused(paused); },
-    .setMusicEnabled = [this](const bool enabled) -> void { emit audioSetMusicEnabled(enabled); },
-    .duckMusic = [this](const float scale, const int durationMs) -> void {
-      emit audioDuckMusic(scale, durationMs);
-    },
-    .setVolume = [this](const float volume) -> void { emit audioSetVolume(volume); },
-    .setScore = [this](const int score) -> void { emit audioSetScore(score); },
-    .playBeep = [this](const int frequencyHz, const int durationMs, const float pan) -> void {
-      emit audioPlayBeep(frequencyHz, durationMs, pan);
-    },
-    .playScoreCue = [this](const nenoserpent::audio::ScoreCueId cueId, const float pan) -> void {
-      emit audioPlayScoreCue(static_cast<int>(cueId), pan);
-    },
-    .playCrash = [this](const int durationMs) -> void { emit audioPlayCrash(durationMs); },
-  });
+  nenoserpent::services::AudioCallbacks audioCallbacks;
+  audioCallbacks.startMusic = [this](const nenoserpent::audio::ScoreTrackId trackId) -> void {
+    emit audioStartMusic(static_cast<int>(trackId));
+  };
+  audioCallbacks.stopMusic = [this]() -> void { emit audioStopMusic(); };
+  audioCallbacks.setPaused = [this](const bool paused) -> void { emit audioSetPaused(paused); };
+  audioCallbacks.setMusicEnabled = [this](const bool enabled) -> void {
+    emit audioSetMusicEnabled(enabled);
+  };
+  audioCallbacks.duckMusic = [this](const float scale, const int durationMs) -> void {
+    emit audioDuckMusic(scale, durationMs);
+  };
+  audioCallbacks.setVolume = [this](const float volume) -> void { emit audioSetVolume(volume); };
+  audioCallbacks.setScore = [this](const int score) -> void { emit audioSetScore(score); };
+  audioCallbacks.playBeep =
+    [this](const int frequencyHz, const int durationMs, const float pan) -> void {
+    emit audioPlayBeep(frequencyHz, durationMs, pan);
+  };
+  audioCallbacks.playScoreCue = [this](const nenoserpent::audio::ScoreCueId cueId,
+                                       const float pan) -> void {
+    emit audioPlayScoreCue(static_cast<int>(cueId), pan);
+  };
+  audioCallbacks.playCrash = [this](const int durationMs) -> void {
+    emit audioPlayCrash(durationMs);
+  };
+  m_audioBus.setCallbacks(std::move(audioCallbacks));
 
   connect(m_timer.get(), &QTimer::timeout, this, &EngineAdapter::update);
   setupAudioSignals();

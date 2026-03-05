@@ -1,4 +1,4 @@
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 #include "adapter/profile/bridge.h"
 #include "fsm/game_state.h"
 #include "logging/categories.h"
@@ -48,7 +48,7 @@ void EngineAdapter::enterGameOverState() {
 
 void EngineAdapter::lazyInit() {
   m_levelIndex = nenoserpent::adapter::levelIndex(m_profileManager.get());
-  m_audioBus.applyVolume(nenoserpent::adapter::volume(m_profileManager.get()));
+  emit audioSetVolume(nenoserpent::adapter::volume(m_profileManager.get()));
 
   nenoserpent::adapter::GhostSnapshot snapshot;
   if (saveRepository().loadGhostSnapshot(snapshot)) {

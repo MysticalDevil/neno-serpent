@@ -1,6 +1,6 @@
 #include <QtTest/QtTest>
 
-#include "adapter/bot/runtime_facade.h"
+#include "adapter/bot/facade.h"
 
 class BotRuntimeFacadeAdapterTest final : public QObject {
   Q_OBJECT
@@ -35,4 +35,4 @@ void BotRuntimeFacadeAdapterTest::runTickInvokesCallbacksForStartMenu() {
 }
 
 QTEST_MAIN(BotRuntimeFacadeAdapterTest)
-#include "test_bot_runtime_facade_adapter.moc"
+#include "test_bot_facade_adapter.moc"

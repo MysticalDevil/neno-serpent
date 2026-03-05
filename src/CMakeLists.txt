@@ -30,8 +30,8 @@ add_library(nenoserpent_adapter
     audio/event.h
     audio/score.h
     audio/score.cpp
-    adapter/engine_adapter.h
-    adapter/engine_adapter.cpp
+    adapter/engine.h
+    adapter/engine.cpp
     adapter/haptics/controller.h
     adapter/haptics/controller.cpp
     adapter/view_models/audio.h
@@ -46,42 +46,42 @@ add_library(nenoserpent_adapter
     adapter/view_models/selection.cpp
     adapter/bot/controller.h
     adapter/bot/controller.cpp
-    adapter/bot/decision_applier.h
-    adapter/bot/decision_applier.cpp
-    adapter/bot/snapshot_builder.h
-    adapter/bot/snapshot_builder.cpp
+    adapter/bot/applier.h
+    adapter/bot/applier.cpp
+    adapter/bot/snapshot.h
+    adapter/bot/snapshot.cpp
     adapter/bot/backend.h
     adapter/bot/backend.cpp
     adapter/bot/features.h
     adapter/bot/features.cpp
     adapter/bot/orchestrator.h
     adapter/bot/orchestrator.cpp
-    adapter/bot/route_telemetry.h
-    adapter/bot/route_telemetry.cpp
+    adapter/bot/telemetry.h
+    adapter/bot/telemetry.cpp
     adapter/bot/ml_backend.h
     adapter/bot/ml_backend.cpp
     adapter/bot/config.h
     adapter/bot/config.cpp
-    adapter/bot/config_loader.h
-    adapter/bot/config_loader.cpp
+    adapter/bot/loader.h
+    adapter/bot/loader.cpp
     adapter/bot/port.h
-    adapter/bot/runtime_facade.h
-    adapter/bot/runtime_facade.cpp
+    adapter/bot/facade.h
+    adapter/bot/facade.cpp
     adapter/bot/state.h
     adapter/bot/state.cpp
     adapter/bot/runtime.h
     adapter/bot/runtime.cpp
     adapter/input/router.cpp
-    adapter/tick_driver.cpp
+    adapter/tick.cpp
     adapter/simulation.cpp
-    adapter/board_state.cpp
+    adapter/board.cpp
     adapter/session/runtime.cpp
     adapter/session/state.cpp
     adapter/level/flow.cpp
     adapter/persistence.cpp
     adapter/choices.cpp
     adapter/lifecycle.cpp
-    adapter/view_model.cpp
+    adapter/view.cpp
     adapter/ui/action.cpp
     adapter/ui/controller.cpp
     adapter/input/semantics.cpp

@@ -1,6 +1,6 @@
 #include <QtTest/QtTest>
 
-#include "adapter/bot/decision_applier.h"
+#include "adapter/bot/applier.h"
 
 class BotDecisionApplierAdapterTest final : public QObject {
   Q_OBJECT
@@ -65,4 +65,4 @@ void BotDecisionApplierAdapterTest::doesNotEmitChoiceChangeWhenIndexUnchanged() 
 }
 
 QTEST_MAIN(BotDecisionApplierAdapterTest)
-#include "test_bot_decision_applier_adapter.moc"
+#include "test_bot_applier_adapter.moc"

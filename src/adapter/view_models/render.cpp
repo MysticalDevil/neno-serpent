@@ -1,6 +1,6 @@
 #include "adapter/view_models/render.h"
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 
 SessionRenderViewModel::SessionRenderViewModel(EngineAdapter* engineAdapter, QObject* parent)
     : QObject(parent),

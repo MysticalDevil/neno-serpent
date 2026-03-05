@@ -1,6 +1,6 @@
 #include "adapter/view_models/status.h"
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 
 SessionStatusViewModel::SessionStatusViewModel(EngineAdapter* engineAdapter, QObject* parent)
     : QObject(parent),

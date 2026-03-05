@@ -1,7 +1,7 @@
 #include <QSignalSpy>
 #include <QtTest/QtTest>
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 #include "adapter/view_models/audio.h"
 
 class TestAudioSettingsViewModel : public QObject {

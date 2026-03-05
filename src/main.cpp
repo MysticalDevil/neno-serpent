@@ -12,7 +12,7 @@
 #include <QTranslator>
 #include <qqml.h>
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 #include "adapter/ui/controller.h"
 #include "adapter/view_models/audio.h"
 #include "adapter/view_models/render.h"

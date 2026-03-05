@@ -1,6 +1,6 @@
 #include <QtTest/QtTest>
 
-#include "adapter/bot/snapshot_builder.h"
+#include "adapter/bot/snapshot.h"
 #include "core/buff/runtime.h"
 
 class BotSnapshotBuilderAdapterTest final : public QObject {
@@ -72,4 +72,4 @@ void BotSnapshotBuilderAdapterTest::mapsBuffFlagsFromActiveBuff() {
 }
 
 QTEST_MAIN(BotSnapshotBuilderAdapterTest)
-#include "test_bot_snapshot_builder_adapter.moc"
+#include "test_bot_snapshot_adapter.moc"

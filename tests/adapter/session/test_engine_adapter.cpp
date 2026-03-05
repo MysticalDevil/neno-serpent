@@ -8,7 +8,7 @@
 #include <QStandardPaths>
 #include <QtTest>
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 #include "adapter/ghost/store.h"
 #include "app_state.h"
 #include "power_up_id.h"

@@ -1,7 +1,7 @@
 #include <QSignalSpy>
 #include <QtTest/QtTest>
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 #include "adapter/view_models/theme.h"
 
 class TestThemeViewModel : public QObject {

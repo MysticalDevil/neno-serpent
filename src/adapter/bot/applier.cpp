@@ -1,4 +1,4 @@
-#include "adapter/bot/decision_applier.h"
+#include "adapter/bot/applier.h"
 
 namespace nenoserpent::adapter::bot {
 

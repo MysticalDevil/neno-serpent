@@ -1,6 +1,6 @@
 #include <QtTest/QtTest>
 
-#include "adapter/bot/route_telemetry.h"
+#include "adapter/bot/telemetry.h"
 
 class BotRouteTelemetryAdapterTest final : public QObject {
   Q_OBJECT
@@ -40,4 +40,4 @@ void BotRouteTelemetryAdapterTest::suppressesWhenRouteUnchanged() {
 }
 
 QTEST_MAIN(BotRouteTelemetryAdapterTest)
-#include "test_bot_route_telemetry_adapter.moc"
+#include "test_bot_telemetry_adapter.moc"

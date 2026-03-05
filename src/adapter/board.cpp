@@ -1,6 +1,6 @@
 #include <algorithm>
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 #include "core/buff/runtime.h"
 #include "core/game/rules.h"
 

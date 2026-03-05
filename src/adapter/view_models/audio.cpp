@@ -1,6 +1,6 @@
 #include "adapter/view_models/audio.h"
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 
 AudioSettingsViewModel::AudioSettingsViewModel(EngineAdapter* engineAdapter, QObject* parent)
     : QObject(parent),

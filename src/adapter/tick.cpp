@@ -2,7 +2,7 @@
 
 #include <QDateTime>
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 #include "fsm/game_state.h"
 
 void EngineAdapter::updateReflectionFallback() {

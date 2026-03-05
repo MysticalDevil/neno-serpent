@@ -1,6 +1,6 @@
 #include <QtTest/QtTest>
 
-#include "adapter/bot/config_loader.h"
+#include "adapter/bot/loader.h"
 
 namespace {
 
@@ -59,4 +59,4 @@ void BotConfigLoaderAdapterTest::parsesBackendAndMlGateFromEnvironment() {
 }
 
 QTEST_MAIN(BotConfigLoaderAdapterTest)
-#include "test_bot_config_loader_adapter.moc"
+#include "test_bot_loader_adapter.moc"

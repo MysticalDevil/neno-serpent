@@ -1,6 +1,6 @@
 #include "adapter/view_models/theme.h"
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 
 ThemeViewModel::ThemeViewModel(EngineAdapter* engineAdapter, QObject* parent)
     : QObject(parent),

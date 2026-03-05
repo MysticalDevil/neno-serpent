@@ -1,7 +1,7 @@
 #include <QSignalSpy>
 #include <QtTest/QtTest>
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 #include "adapter/ui/controller.h"
 #include "app_state.h"
 #include "audio/score.h"

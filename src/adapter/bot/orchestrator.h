@@ -2,7 +2,7 @@
 
 #include <QVariantList>
 
-#include "adapter/bot/route_telemetry.h"
+#include "adapter/bot/telemetry.h"
 #include "adapter/bot/runtime.h"
 #include "adapter/bot/state.h"
 #include "app_state.h"

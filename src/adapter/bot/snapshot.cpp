@@ -1,4 +1,4 @@
-#include "adapter/bot/snapshot_builder.h"
+#include "adapter/bot/snapshot.h"
 
 #include "core/buff/runtime.h"
 

@@ -4,8 +4,8 @@
 #include <QTextStream>
 
 #include "adapter/bot/features.h"
-#include "adapter/bot/snapshot_builder.h"
-#include "adapter/engine_adapter.h"
+#include "adapter/bot/snapshot.h"
+#include "adapter/engine.h"
 #include "adapter/input/semantics.h"
 #include "adapter/profile/bridge.h"
 #include "adapter/ui/action.h"

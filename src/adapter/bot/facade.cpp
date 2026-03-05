@@ -1,6 +1,6 @@
-#include "adapter/bot/runtime_facade.h"
+#include "adapter/bot/facade.h"
 
-#include "adapter/bot/decision_applier.h"
+#include "adapter/bot/applier.h"
 #include "adapter/bot/orchestrator.h"
 #include "logging/categories.h"
 

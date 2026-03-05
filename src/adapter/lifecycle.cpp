@@ -1,6 +1,6 @@
 #include <QDateTime>
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 #include "fsm/game_state.h"
 #include "fsm/state_factory.h"
 #include "power_up_id.h"

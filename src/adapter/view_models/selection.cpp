@@ -1,6 +1,6 @@
 #include "adapter/view_models/selection.h"
 
-#include "adapter/engine_adapter.h"
+#include "adapter/engine.h"
 
 SelectionViewModel::SelectionViewModel(EngineAdapter* engineAdapter, QObject* parent)
     : QObject(parent),

@@ -14,6 +14,7 @@ UI_MODE="full"
 BOT_BACKEND="${BOT_BACKEND:-off}"
 ML_MODEL_PATH="${BOT_ML_MODEL:-}"
 HUMAN_DATASET_PATH="${NENOSERPENT_BOT_HUMAN_DATASET:-}"
+LEVEL_INDEX="${BOT_LEVEL_INDEX:-0}"
 
 while (($# > 0)); do
   case "$1" in
@@ -45,19 +46,24 @@ while (($# > 0)); do
       HUMAN_DATASET_PATH="$2"
       shift 2
       ;;
+    --level)
+      LEVEL_INDEX="$2"
+      shift 2
+      ;;
     *)
       if [[ "$1" == "-h" || "$1" == "--help" ]]; then
         cat <<'EOF'
 Usage:
   ./scripts/dev.sh bot-run [--build-preset <preset>] [--backend off|human|rule|ml|ml-online|search]
                            [--headful|--headless] [--ui-mode full|screen]
-                           [--ml-model <runtime-json>] [--human-dataset <dataset-csv>]
+                           [--ml-model <runtime-json>] [--human-dataset <dataset-csv>] [--level <index>]
 
 Notes:
   - shell ui-mode is debug-only and is intentionally disabled for bot-run.
   - backend=ml and backend=ml-online require --ml-model.
   - backend=human records manual direction samples to --human-dataset
     (default: cache/dev/nenoserpent_human_dataset.csv).
+  - --level sets initial menu level index by injecting SELECT N times before START.
 EOF
         exit 0
       fi
@@ -74,6 +80,10 @@ fi
 if [[ "${BOT_BACKEND}" != "off" && "${BOT_BACKEND}" != "human" && "${BOT_BACKEND}" != "rule" && "${BOT_BACKEND}" != "ml" &&
   "${BOT_BACKEND}" != "ml-online" && "${BOT_BACKEND}" != "search" ]]; then
   echo "invalid --backend: ${BOT_BACKEND} (expected off|human|rule|ml|ml-online|search)" >&2
+  exit 1
+fi
+if ! [[ "${LEVEL_INDEX}" =~ ^[0-9]+$ ]]; then
+  echo "invalid --level: ${LEVEL_INDEX} (expected non-negative integer)" >&2
   exit 1
 fi
 if [[ ("${BOT_BACKEND}" == "ml" || "${BOT_BACKEND}" == "ml-online") && -z "${ML_MODEL_PATH}" ]]; then
@@ -101,24 +111,49 @@ if [[ -n "${HUMAN_DATASET_PATH}" ]]; then
   export NENOSERPENT_BOT_HUMAN_DATASET="${HUMAN_DATASET_PATH}"
 fi
 
-if [[ "${HEADFUL}" == "1" ]]; then
-  exec "${APP_PATH}" "--ui-mode=${UI_MODE}"
-fi
-
 INPUT_ENDPOINT="${NENOSERPENT_INPUT_FILE:-${NENOSERPENT_TMP_DIR:-${ROOT_DIR}/cache/dev}/nenoserpent-input.pipe}"
+export NENOSERPENT_INPUT_FILE="${INPUT_ENDPOINT}"
+
+inject_level_tokens() {
+  local endpoint="$1"
+  local level="$2"
+  if (( level <= 0 )); then
+    return
+  fi
+  for _ in $(seq 1 "${level}"); do
+    sleep 0.25
+    "${ROOT_DIR}/scripts/input.sh" inject -p "${endpoint}" SELECT || true
+  done
+}
+
+wait_for_input_endpoint() {
+  local endpoint="$1"
+  for _ in $(seq 1 80); do
+    if [[ -p "${endpoint}" || -f "${endpoint}" ]]; then
+      return 0
+    fi
+    sleep 0.05
+  done
+  return 1
+}
+
+if [[ "${HEADFUL}" == "1" ]]; then
+  "${APP_PATH}" "--ui-mode=${UI_MODE}" &
+  APP_PID=$!
+  if wait_for_input_endpoint "${INPUT_ENDPOINT}"; then
+    inject_level_tokens "${INPUT_ENDPOINT}" "${LEVEL_INDEX}"
+  fi
+  wait "${APP_PID}"
+  exit $?
+fi
 
 env QT_QPA_PLATFORM=offscreen NENOSERPENT_INPUT_FILE="${INPUT_ENDPOINT}" \
   "${APP_PATH}" "--ui-mode=${UI_MODE}" &
 APP_PID=$!
 
 # In headless mode, kick one START to move bot out of menu state.
-for _ in $(seq 1 80); do
-  if [[ -p "${INPUT_ENDPOINT}" || -f "${INPUT_ENDPOINT}" ]]; then
-    break
-  fi
-  sleep 0.05
-done
-if [[ -p "${INPUT_ENDPOINT}" || -f "${INPUT_ENDPOINT}" ]]; then
+if wait_for_input_endpoint "${INPUT_ENDPOINT}"; then
+  inject_level_tokens "${INPUT_ENDPOINT}" "${LEVEL_INDEX}"
   # Splash may still be active; pulse START a few times so menu->playing transition is guaranteed.
   (
     for _ in $(seq 1 6); do

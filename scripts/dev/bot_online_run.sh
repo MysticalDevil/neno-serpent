@@ -13,6 +13,7 @@ BUILD_PRESET="${BUILD_PRESET:-dev}"
 UI_MODE="${BOT_ONLINE_UI_MODE:-screen}"
 PROFILE="${BOT_ONLINE_PROFILE:-dev}"
 QUALITY="${BOT_ONLINE_QUALITY:-medium}"
+LEVEL_INDEX="${BOT_ONLINE_LEVEL:-0}"
 DATASET_SUITE="${BOT_ONLINE_DATASET_SUITE:-${ROOT_DIR}/scripts/ci/bot_leaderboard_rule_suite.tsv}"
 INTERVAL_SEC="${BOT_ONLINE_INTERVAL_SEC:-20}"
 EPOCHS="${BOT_ONLINE_EPOCHS:-8}"
@@ -54,6 +55,10 @@ while (($# > 0)); do
       ;;
     --profile)
       PROFILE="$2"
+      shift 2
+      ;;
+    --level)
+      LEVEL_INDEX="$2"
       shift 2
       ;;
     --quality)
@@ -142,6 +147,7 @@ Options:
   --build-preset <name>         Build preset for game binary (default: dev)
   --ui-mode <full|screen>       UI mode for headful game run (default: screen)
   --profile <debug|dev|release> Trainer dataset profile (default: dev)
+  --level <index>               Initial gameplay level index (default: 0)
   --quality <low|medium|high|extreme>
                                 Quality preset for training/gate intensity (default: medium)
   --suite <path>                Trainer dataset suite (default: scripts/ci/bot_leaderboard_rule_suite.tsv)
@@ -176,6 +182,10 @@ done
 
 if [[ "${UI_MODE}" != "full" && "${UI_MODE}" != "screen" ]]; then
   echo "invalid --ui-mode: ${UI_MODE} (expected full|screen)" >&2
+  exit 1
+fi
+if ! [[ "${LEVEL_INDEX}" =~ ^[0-9]+$ ]]; then
+  echo "invalid --level: ${LEVEL_INDEX} (expected non-negative integer)" >&2
   exit 1
 fi
 
@@ -266,5 +276,6 @@ echo "[bot-online-run] start game backend=ml-online model=${RUNTIME_JSON_PATH}"
   --build-preset "${BUILD_PRESET}" \
   --backend ml-online \
   --ml-model "${RUNTIME_JSON_PATH}" \
+  --level "${LEVEL_INDEX}" \
   --headful \
   --ui-mode "${UI_MODE}"

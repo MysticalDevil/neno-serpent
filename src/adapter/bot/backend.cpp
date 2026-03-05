@@ -472,6 +472,51 @@ auto searchValue(const Snapshot& snapshot,
   return best;
 }
 
+auto rolloutHorizon(const StrategyConfig& config) -> int {
+  return clampInt(8 + (config.lookaheadDepth * 2), 8, 20);
+}
+
+auto rolloutScore(const Snapshot& snapshot,
+                  const MoveState& startState,
+                  const StrategyConfig& config) -> int {
+  MoveState current = startState;
+  int total = 0;
+  const int horizon = rolloutHorizon(config);
+
+  for (int step = 0; step < horizon; ++step) {
+    int best = std::numeric_limits<int>::min();
+    std::optional<MovePreview> bestPreview;
+    for (const QPoint& candidate : kDirections) {
+      const auto preview = previewMove(snapshot, current, candidate);
+      if (!preview.valid) {
+        continue;
+      }
+      int score = evaluateLeaf(snapshot, preview.next, config);
+      if (preview.ateFood) {
+        score += config.foodConsumeBonus * 2;
+      }
+      if (preview.atePower) {
+        score += powerPriority(config, snapshot.powerUpType);
+      }
+      if (score > best) {
+        best = score;
+        bestPreview = preview;
+      }
+    }
+
+    if (!bestPreview.has_value()) {
+      total -= 400;
+      break;
+    }
+
+    current = bestPreview->next;
+    total += best;
+  }
+
+  total += current.score * 32;
+  return total;
+}
+
 auto evaluateEscapeCandidate(const Snapshot& snapshot,
                              const MovePreview& preview,
                              const StrategyConfig& config,
@@ -599,6 +644,7 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
       score =
         immediate + searchValue(snapshot, preview.next, tunedConfig, depth - 1) -
         (revisitCount * 48);
+      score += rolloutScore(snapshot, preview.next, tunedConfig) / 6;
     } else {
       const QPoint tailFallback =
         preview.next.body.empty() ? preview.next.head : preview.next.body.back();

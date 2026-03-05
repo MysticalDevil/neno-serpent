@@ -408,6 +408,20 @@ private slots:
     game.forceUpdate();
     QCOMPARE(game.snakeModelPtr()->body().front(), QPoint(11, 10));
   }
+
+  void testCycleBotStrategyModeUpdatesStatusWithoutChangingBackend() {
+    EngineAdapter game;
+    const auto before = game.botStatus();
+    const QString beforeBackend = before.value("backend").toString();
+    const QString beforeMode = before.value("mode").toString();
+
+    game.cycleBotStrategyMode();
+    const auto after = game.botStatus();
+
+    QCOMPARE(after.value("backend").toString(), beforeBackend);
+    QVERIFY(after.value("mode").toString() != beforeMode);
+    QVERIFY(after.contains("mlAvailable"));
+  }
 };
 
 QTEST_MAIN(TestEngineAdapter)

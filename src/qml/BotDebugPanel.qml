@@ -10,8 +10,8 @@ Item {
     property string gameFont: "Monospace"
     property var statusMap: ({})
 
-    width: 110
-    height: 136
+    width: 116
+    height: 150
 
     function refreshStatus() {
         if (!panel.commandController || !panel.commandController.botStatus) {
@@ -55,7 +55,7 @@ Item {
         }
 
         Text {
-            text: `MODE ${panel.statusMap.mode || "off"}`
+            text: `BACKEND ${panel.statusMap.backend || "off"}`
             color: panel.textColor
             font.pixelSize: 7
             font.family: panel.gameFont
@@ -170,6 +170,30 @@ Item {
         }
 
         Text {
+            text: `STRAT ${panel.statusMap.mode || "balanced"}`
+            color: panel.textColor
+            font.pixelSize: 7
+            font.family: panel.gameFont
+        }
+
+        Text {
+            text: "STRAT+"
+            color: panel.textColor
+            font.pixelSize: 7
+            font.family: panel.gameFont
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    if (panel.commandController
+                            && panel.commandController.cycleBotStrategyMode) {
+                        panel.commandController.cycleBotStrategyMode()
+                        panel.refreshStatus()
+                    }
+                }
+            }
+        }
+
+        Text {
             text: "MODE+ (F8)"
             color: panel.textColor
             font.pixelSize: 7
@@ -183,6 +207,13 @@ Item {
                     }
                 }
             }
+        }
+
+        Text {
+            text: panel.statusMap.mlAvailable ? "ML READY" : "ML FALLBACK"
+            color: panel.statusMap.mlAvailable ? panel.textColor : "#c8d47a"
+            font.pixelSize: 7
+            font.family: panel.gameFont
         }
 
         Text {

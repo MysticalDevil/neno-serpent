@@ -18,6 +18,11 @@ Backend behavior (`F8`):
 - `rule`: rule backend enabled
 - `ml`: ML backend enabled; automatic fallback to `rule` on model unavailable/inference miss
 
+Strategy behavior (`F10`):
+
+- `safe -> balanced -> aggressive -> safe` cycle
+- this only changes rule-policy weights; it does not change backend (`off|rule|ml`)
+
 Startup backend override:
 
 - `NENOSERPENT_BOT_BACKEND=off|rule|ml`
@@ -108,7 +113,8 @@ PyTorch imitation-learning baseline:
 Debug tokens accepted by runtime injection:
 
 - `DBG_BOT_PANEL` (toggle panel visibility)
-- `DBG_BOT_MODE` (cycle mode)
+- `DBG_BOT_MODE` (cycle backend: `off -> rule -> ml`)
+- `DBG_BOT_STRATEGY` (cycle strategy profile)
 - `DBG_BOT_RESET` (reapply current mode defaults)
 - `DBG_BOT_PARAM:KEY=VALUE[,KEY=VALUE...]`
 
@@ -117,6 +123,7 @@ Examples:
 ```text
 DBG_BOT_PANEL
 DBG_BOT_MODE
+DBG_BOT_STRATEGY
 DBG_BOT_RESET
 DBG_BOT_PARAM:LOOKAHEADWEIGHT=14,LOOKAHEADDEPTH=3,SAFENEIGHBORWEIGHT=16
 ```

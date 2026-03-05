@@ -39,6 +39,7 @@ void EngineAdapter::dispatchUiAction(const nenoserpent::adapter::UiAction& actio
       .onToggleShellColor = [this]() -> void { nextShellColor(); },
       .onToggleMusic = [this]() -> void { toggleMusic(); },
       .onToggleBot = [this]() -> void { cycleBotMode(); },
+      .onToggleBotStrategy = [this]() -> void { cycleBotStrategyMode(); },
       .onQuitToMenu = [this]() -> void { quitToMenu(); },
       .onQuit = [this]() -> void { quit(); },
       .onNextPalette = [this]() -> void { nextPalette(); },
@@ -122,6 +123,17 @@ void EngineAdapter::cycleBotMode() {
   qCInfo(nenoserpentInputLog).noquote() << "bot backend ->" << botModeName();
 }
 
+void EngineAdapter::cycleBotStrategyMode() {
+  m_botStrategyMode = nenoserpent::adapter::bot::nextMode(m_botStrategyMode);
+  m_botActionCooldownTicks = 0;
+  applyBotModeDefaults();
+  emit botStrategyChanged();
+  emit eventPrompt(u"BOT STRATEGY: "_s +
+                   nenoserpent::adapter::bot::modeName(m_botStrategyMode).toUpper());
+  qCInfo(nenoserpentInputLog).noquote()
+    << "bot strategy mode ->" << nenoserpent::adapter::bot::modeName(m_botStrategyMode);
+}
+
 void EngineAdapter::resetBotModeDefaults() {
   m_botActionCooldownTicks = 0;
   applyBotModeDefaults();
@@ -198,8 +210,9 @@ void EngineAdapter::applyBotModeDefaults() {
 auto EngineAdapter::botStatus() const -> QVariantMap {
   return {
     {u"enabled"_s, botAutoplayEnabled()},
-    {u"mode"_s, botModeName()},
+    {u"mode"_s, nenoserpent::adapter::bot::modeName(m_botStrategyMode)},
     {u"backend"_s, botModeName()},
+    {u"mlAvailable"_s, m_botMlBackend.isAvailable()},
     {u"strategyMode"_s, nenoserpent::adapter::bot::modeName(m_botStrategyMode)},
     {u"openSpaceWeight"_s, m_botStrategyConfig.openSpaceWeight},
     {u"safeNeighborWeight"_s, m_botStrategyConfig.safeNeighborWeight},

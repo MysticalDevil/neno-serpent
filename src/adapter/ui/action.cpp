@@ -35,6 +35,7 @@ const auto kStaticMappings = std::to_array<StaticActionMapping>({
   {u"toggle_music"_s, UiAction{ToggleMusicAction{}}},
   {u"toggle_bot"_s, UiAction{ToggleBotAction{}}},
   {u"cycle_bot_mode"_s, UiAction{ToggleBotAction{}}},
+  {u"cycle_bot_strategy"_s, UiAction{ToggleBotStrategyAction{}}},
   {u"quit_to_menu"_s, UiAction{QuitToMenuAction{}}},
   {u"quit"_s, UiAction{QuitAction{}}},
   {u"next_palette"_s, UiAction{NextPaletteAction{}}},
@@ -125,6 +126,10 @@ auto dispatchUiAction(const UiAction& action, const UiActionDispatchCallbacks& c
                [&](const ToggleBotAction&) -> void {
                  if (callbacks.onToggleBot)
                    callbacks.onToggleBot();
+               },
+               [&](const ToggleBotStrategyAction&) -> void {
+                 if (callbacks.onToggleBotStrategy)
+                   callbacks.onToggleBotStrategy();
                },
                [&](const QuitToMenuAction&) -> void {
                  if (callbacks.onQuitToMenu)

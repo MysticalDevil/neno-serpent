@@ -40,6 +40,7 @@ QtObject {
         [Qt.Key_Y]: { type: "dispatch", action: "ToggleShellColor" },
         [Qt.Key_M]: { type: "dispatch", action: "ToggleMusic" },
         [Qt.Key_F8]: { type: "dispatch", action: "ToggleBot" },
+        [Qt.Key_F10]: { type: "dispatch", action: "ToggleBotStrategy" },
         [Qt.Key_F9]: { type: "dispatch", action: "ToggleBotPanel" },
         [Qt.Key_Back]: { type: "dispatch", action: "Back" },
         [Qt.Key_Escape]: { type: "dispatch", action: "Escape" },

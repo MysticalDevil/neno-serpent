@@ -44,6 +44,12 @@ void UiCommandController::cycleBotMode() const {
   }
 }
 
+void UiCommandController::cycleBotStrategyMode() const {
+  if (m_engineAdapter != nullptr) {
+    m_engineAdapter->cycleBotStrategyMode();
+  }
+}
+
 void UiCommandController::resetBotModeDefaults() const {
   if (m_engineAdapter != nullptr) {
     m_engineAdapter->resetBotModeDefaults();

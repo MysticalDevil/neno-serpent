@@ -65,6 +65,7 @@ QtObject {
         SHELL: "ToggleShellColor",
         MUSIC: "ToggleMusic",
         BOTMODE: "ToggleBot",
+        BOTSTRAT: "ToggleBotStrategy",
         BOTPANEL: "ToggleBotPanel"
     })
     readonly property var staticSceneOptionHandlers: ({
@@ -483,6 +484,10 @@ QtObject {
         }
         if (token === "DBG_BOT_MODE") {
             controller.commandController.cycleBotMode()
+            return true
+        }
+        if (token === "DBG_BOT_STRATEGY") {
+            controller.commandController.cycleBotStrategyMode()
             return true
         }
         if (token === "DBG_BOT_RESET") {

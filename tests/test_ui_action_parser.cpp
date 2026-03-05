@@ -17,6 +17,7 @@ void TestUiActionParser::testKnownActionsMapToExpectedKinds() {
   using nenoserpent::adapter::PrimaryAction;
   using nenoserpent::adapter::StartAction;
   using nenoserpent::adapter::ToggleBotAction;
+  using nenoserpent::adapter::ToggleBotStrategyAction;
   using nenoserpent::adapter::ToggleMusicAction;
 
   QCOMPARE(std::get<NavAction>(nenoserpent::adapter::parseUiAction("nav_up")).dy, -1);
@@ -26,6 +27,8 @@ void TestUiActionParser::testKnownActionsMapToExpectedKinds() {
     std::holds_alternative<ToggleMusicAction>(nenoserpent::adapter::parseUiAction("toggle_music")));
   QVERIFY(
     std::holds_alternative<ToggleBotAction>(nenoserpent::adapter::parseUiAction("toggle_bot")));
+  QVERIFY(std::holds_alternative<ToggleBotStrategyAction>(
+    nenoserpent::adapter::parseUiAction("cycle_bot_strategy")));
   QVERIFY(
     std::holds_alternative<FeedbackUiAction>(nenoserpent::adapter::parseUiAction("feedback_ui")));
 }

@@ -214,6 +214,7 @@ public:
   Q_INVOKABLE void deleteSave();
   Q_INVOKABLE void toggleBotAutoplay();
   Q_INVOKABLE void cycleBotMode();
+  Q_INVOKABLE void cycleBotStrategyMode();
   Q_INVOKABLE void resetBotModeDefaults();
   Q_INVOKABLE bool setBotParam(const QString& key, int value);
   [[nodiscard]] auto botStatus() const -> QVariantMap;

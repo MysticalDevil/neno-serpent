@@ -17,6 +17,7 @@ public:
   Q_INVOKABLE void requestStateChange(int state) const;
   Q_INVOKABLE void cycleBgm() const;
   Q_INVOKABLE void cycleBotMode() const;
+  Q_INVOKABLE void cycleBotStrategyMode() const;
   Q_INVOKABLE void resetBotModeDefaults() const;
   Q_INVOKABLE bool setBotParam(const QString& key, int value) const;
   Q_INVOKABLE QVariantMap botStatus() const;

@@ -49,7 +49,8 @@ Window {
         ToggleBotPanel: "toggle_bot_panel",
         ToggleShellColor: "toggle_shell_color",
         ToggleMusic: "toggle_music",
-        ToggleBot: "cycle_bot_mode"
+        ToggleBot: "cycle_bot_mode",
+        ToggleBotStrategy: "cycle_bot_strategy"
     })
     Timer {
         interval: window.elapsedTickMs

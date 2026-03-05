@@ -105,6 +105,7 @@ The following tokens are routed by `src/qml/UiDebugController.qml`.
 - `DBG_ICONS`
 - `DBG_BOT_PANEL`
 - `DBG_BOT_MODE`
+- `DBG_BOT_STRATEGY`
 - `DBG_BOT_RESET`
 - `DBG_BOT_PARAM:KEY=VALUE[,KEY=VALUE...]`
 - `DBG_STATIC_BOOT`

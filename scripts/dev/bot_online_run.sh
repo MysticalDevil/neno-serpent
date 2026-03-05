@@ -6,6 +6,7 @@ set -euo pipefail
 #   ./scripts/dev.sh bot-online-run --workspace cache/dev/nenoserpent_bot_online
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+DEV_SH="${NENOSERPENT_DEV_SCRIPT:-${ROOT_DIR}/scripts/dev.sh}"
 TMP_ROOT="${NENOSERPENT_TMP_DIR:-${NENOSERPENT_CACHE_DIR:-${ROOT_DIR}/cache/dev}}"
 WORKSPACE="${BOT_ONLINE_WORKSPACE:-${TMP_ROOT}/nenoserpent_bot_online}"
 BUILD_PRESET="${BUILD_PRESET:-dev}"
@@ -163,7 +164,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 echo "[bot-online-run] start trainer workspace=${WORKSPACE}"
-"${ROOT_DIR}/scripts/dev.sh" bot-online-train \
+"${DEV_SH}" bot-online-train \
   --workspace "${WORKSPACE}" \
   --profile "${PROFILE}" \
   --interval-sec "${INTERVAL_SEC}" \
@@ -184,7 +185,7 @@ echo "[bot-online-run] start trainer workspace=${WORKSPACE}"
 TRAINER_PID=$!
 
 echo "[bot-online-run] start game backend=ml-online model=${RUNTIME_JSON_PATH}"
-"${ROOT_DIR}/scripts/dev.sh" bot-run \
+"${DEV_SH}" bot-run \
   --build-preset "${BUILD_PRESET}" \
   --backend ml-online \
   --ml-model "${RUNTIME_JSON_PATH}" \

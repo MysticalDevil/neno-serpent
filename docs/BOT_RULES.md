@@ -76,6 +76,14 @@ Run full reproducible `rule` vs `ml` gate:
 ./scripts/dev.sh bot-ml-gate --workspace cache/dev/nenoserpent_bot_ml_gate
 ```
 
+Online evolution loop (`ml-online` backend + external trainer):
+
+```bash
+./scripts/dev.sh bot-online-train --workspace cache/dev/nenoserpent_bot_online
+./scripts/dev.sh bot-run --backend ml-online \
+  --ml-model cache/dev/nenoserpent_bot_online/nenoserpent_bot_policy_runtime.json --headful
+```
+
 CI regression gate:
 
 ```bash

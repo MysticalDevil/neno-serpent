@@ -144,6 +144,9 @@ CMAKE_BUILD_TYPE=Release ./scripts/deploy.sh android
 ./scripts/dev.sh bot-run --backend ml --ml-model /tmp/nenoserpent_bot_policy_runtime.json --headful
 ./scripts/dev.sh bot-run --backend ml-online --ml-model /tmp/nenoserpent_bot_policy_runtime.json --headful
 ./scripts/dev.sh bot-run --backend search --headful
+
+# Continuous online training loop for ml-online hot reload
+./scripts/dev.sh bot-online-train --workspace cache/dev/nenoserpent_bot_online
 ```
 
 ### Build and Deploy (WebAssembly)

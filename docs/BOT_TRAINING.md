@@ -81,6 +81,14 @@ Runtime backend can load the exported JSON directly:
 NENOSERPENT_BOT_ML_MODEL=cache/dev/nenoserpent_bot_policy_runtime.json ./build/dev/NenoSerpent
 ```
 
+For online evolution (`ml-online`), run a continuous training loop in parallel:
+
+```bash
+./scripts/dev.sh bot-online-train --workspace cache/dev/nenoserpent_bot_online
+./scripts/dev.sh bot-run --backend ml-online \
+  --ml-model cache/dev/nenoserpent_bot_online/nenoserpent_bot_policy_runtime.json --headful
+```
+
 ## 4. Offline Tuning + Training Loop
 
 Recommended loop:

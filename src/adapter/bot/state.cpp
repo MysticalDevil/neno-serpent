@@ -54,6 +54,26 @@ void State::initializeFromEnvironment() {
     qCInfo(nenoserpentInputLog).noquote() << "bot ml model not configured";
   }
 
+  bool warnThresholdOk = false;
+  const int warnThresholdRaw = qEnvironmentVariableIntValue(
+    "NENOSERPENT_BOT_DIRECTION_EMPTY_RULE_WARN_THRESHOLD", &warnThresholdOk);
+  m_directionEmptyRuleWarnThreshold =
+    warnThresholdOk ? std::max(1, warnThresholdRaw) : m_directionEmptyRuleWarnThreshold;
+
+  bool warnIntervalOk = false;
+  const int warnIntervalRaw =
+    qEnvironmentVariableIntValue("NENOSERPENT_BOT_DIRECTION_EMPTY_RULE_WARN_INTERVAL",
+                                 &warnIntervalOk);
+  m_directionEmptyRuleWarnInterval =
+    warnIntervalOk ? std::max(1, warnIntervalRaw) : m_directionEmptyRuleWarnInterval;
+
+  bool windowTicksOk = false;
+  const int windowTicksRaw = qEnvironmentVariableIntValue(
+    "NENOSERPENT_BOT_DIRECTION_EMPTY_RULE_WINDOW_TICKS", &windowTicksOk);
+  m_directionEmptyRuleWindowTicks =
+    windowTicksOk ? std::max(60, windowTicksRaw) : m_directionEmptyRuleWindowTicks;
+  resetDirectionEmptyRuleStats();
+
   if (!envConfig.backendOverrideProvided) {
     return;
   }
@@ -86,6 +106,7 @@ void State::cycleBackendMode() {
   m_backendMode = nextBackendMode(m_backendMode);
   resetActionCooldownTicks();
   clearLastBackendRoute();
+  resetDirectionEmptyRuleStats();
 }
 
 void State::cycleStrategyMode() {
@@ -93,12 +114,14 @@ void State::cycleStrategyMode() {
   m_strategyMode = nextMode(m_strategyMode);
   resetActionCooldownTicks();
   applyModeDefaults();
+  resetDirectionEmptyRuleStats();
 }
 
 void State::resetStrategyModeDefaults() {
   resetBackendRuntimeCaches();
   resetActionCooldownTicks();
   applyModeDefaults();
+  resetDirectionEmptyRuleStats();
 }
 
 auto State::setParam(const QString& key, const int value) -> bool {
@@ -182,6 +205,11 @@ auto State::status() const -> QVariantMap {
     {u"loopEscapePenalty"_s, m_strategyConfig.loopEscapePenalty},
     {u"choiceCooldownTicks"_s, m_strategyConfig.choiceCooldownTicks},
     {u"stateActionCooldownTicks"_s, m_strategyConfig.stateActionCooldownTicks},
+    {u"directionEmptyRuleTotal"_s, m_directionEmptyRuleTotal},
+    {u"directionEmptyRuleWindow"_s, m_directionEmptyRuleWindow},
+    {u"directionEmptyRuleWarnThreshold"_s, m_directionEmptyRuleWarnThreshold},
+    {u"directionEmptyRuleWarnInterval"_s, m_directionEmptyRuleWarnInterval},
+    {u"directionEmptyRuleWindowTicks"_s, m_directionEmptyRuleWindowTicks},
   };
 }
 
@@ -202,7 +230,35 @@ auto State::currentBackend() const -> const BotBackend* {
 }
 
 void State::onTick() {
+  ++m_runtimeTicks;
+  if (m_directionEmptyRuleWindowTicks > 0 && (m_runtimeTicks % m_directionEmptyRuleWindowTicks) == 0) {
+    m_directionEmptyRuleWindow = 0;
+  }
   pollMlOnlineModelHotReload();
+}
+
+auto State::observeDirectionEmptyRuleFallback(const bool usedFallback, const QString& reason)
+  -> bool {
+  if (!usedFallback || reason != QStringLiteral("direction-empty-rule")) {
+    return false;
+  }
+  ++m_directionEmptyRuleTotal;
+  ++m_directionEmptyRuleWindow;
+  if (m_directionEmptyRuleWarnThreshold <= 0 ||
+      m_directionEmptyRuleWindow < m_directionEmptyRuleWarnThreshold) {
+    return false;
+  }
+  if (m_directionEmptyRuleWindow == m_directionEmptyRuleWarnThreshold) {
+    return true;
+  }
+  return ((m_directionEmptyRuleWindow - m_directionEmptyRuleWarnThreshold) %
+          std::max(1, m_directionEmptyRuleWarnInterval)) == 0;
+}
+
+void State::resetDirectionEmptyRuleStats() {
+  m_runtimeTicks = 0;
+  m_directionEmptyRuleTotal = 0;
+  m_directionEmptyRuleWindow = 0;
 }
 
 void State::configureMlOnline(const QString& modelPath) {

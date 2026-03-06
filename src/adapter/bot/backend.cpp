@@ -68,6 +68,49 @@ auto clampInt(const int value, const int minValue, const int maxValue) -> int {
   return std::max(minValue, std::min(value, maxValue));
 }
 
+auto boardCenter(const Snapshot& snapshot) -> QPoint {
+  return QPoint(snapshot.boardWidth / 2, snapshot.boardHeight / 2);
+}
+
+auto centerBandMargin(const int size) -> int {
+  return std::max(2, size / 4);
+}
+
+auto isPointInCenterBand(const QPoint& point, const Snapshot& snapshot) -> bool {
+  if (snapshot.boardWidth <= 0 || snapshot.boardHeight <= 0) {
+    return false;
+  }
+  const int marginX = centerBandMargin(snapshot.boardWidth);
+  const int marginY = centerBandMargin(snapshot.boardHeight);
+  const int minX = marginX;
+  const int maxX = std::max(minX, snapshot.boardWidth - 1 - marginX);
+  const int minY = marginY;
+  const int maxY = std::max(minY, snapshot.boardHeight - 1 - marginY);
+  return point.x() >= minX && point.x() <= maxX && point.y() >= minY && point.y() <= maxY;
+}
+
+auto cornerDistance(const QPoint& point, const Snapshot& snapshot) -> int {
+  if (snapshot.boardWidth <= 0 || snapshot.boardHeight <= 0) {
+    return 0;
+  }
+  const std::array<QPoint, 4> corners = {
+    QPoint(0, 0),
+    QPoint(snapshot.boardWidth - 1, 0),
+    QPoint(snapshot.boardWidth - 1, snapshot.boardHeight - 1),
+    QPoint(0, snapshot.boardHeight - 1),
+  };
+  int best = std::numeric_limits<int>::max();
+  for (const QPoint& corner : corners) {
+    best = std::min(best,
+                    toroidalDistance(point, corner, snapshot.boardWidth, snapshot.boardHeight));
+  }
+  return best;
+}
+
+auto isNearCorner(const QPoint& point, const Snapshot& snapshot) -> bool {
+  return cornerDistance(point, snapshot) <= 3;
+}
+
 auto deriveStageSignals(const Snapshot& snapshot) -> StageSignals {
   const int boardCells = std::max(1, snapshot.boardWidth * snapshot.boardHeight);
   const int bodyCells = static_cast<int>(snapshot.body.size());
@@ -274,6 +317,7 @@ public:
     m_noScoreTicks = 0;
     m_hasScore = false;
     m_escapeHistory.clear();
+    m_recentDirections.clear();
   }
 
   auto observeScore(const int score) -> void {
@@ -365,14 +409,81 @@ public:
     return penalty;
   }
 
-  auto observeEscapeDecision(const std::optional<QPoint>& direction, const bool escapeMode)
+  [[nodiscard]] auto repeatedDirectionPenalty(const QPoint& candidate,
+                                              const bool escapeMode,
+                                              const int noScoreTicks) const -> int {
+    if (m_recentDirections.empty()) {
+      return 0;
+    }
+    int streak = 0;
+    for (auto it = m_recentDirections.rbegin(); it != m_recentDirections.rend(); ++it) {
+      if (*it != candidate) {
+        break;
+      }
+      ++streak;
+    }
+    if (escapeMode) {
+      if (streak < 2) {
+        return 0;
+      }
+      return (streak - 1) * (18 + std::max(0, (noScoreTicks - 24) / 8));
+    }
+    if (streak < 3) {
+      return 0;
+    }
+    return (streak - 2) * (10 + std::max(0, (noScoreTicks - 12) / 10));
+  }
+
+  [[nodiscard]] auto explicitCyclePenalty(const QPoint& candidate,
+                                          const bool escapeMode,
+                                          const int noScoreTicks) const -> int {
+    if (m_recentDirections.size() < 7) {
+      return 0;
+    }
+    const auto periodicRepeat = [&](const int period) -> bool {
+      const int n = static_cast<int>(m_recentDirections.size());
+      if (n < (period * 2) - 1) {
+        return false;
+      }
+      for (int i = 0; i < period; ++i) {
+        const QPoint lhs = (i == period - 1)
+                             ? candidate
+                             : m_recentDirections[static_cast<std::size_t>(n - period + i)];
+        const QPoint rhs = m_recentDirections[static_cast<std::size_t>(n - (period * 2) + i + 1)];
+        if (lhs != rhs) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    int penalty = 0;
+    if (periodicRepeat(4)) {
+      penalty += 120 + std::max(0, noScoreTicks - 16) / 3;
+    }
+    if (periodicRepeat(8)) {
+      penalty += 170 + std::max(0, noScoreTicks - 24) / 2;
+    }
+    if (!escapeMode) {
+      penalty = (penalty * 2) / 3;
+    }
+    return penalty;
+  }
+
+  auto observeDecision(const std::optional<QPoint>& direction, const bool escapeMode)
     -> void {
-    if (!escapeMode || !direction.has_value()) {
+    if (!direction.has_value()) {
       return;
     }
-    m_escapeHistory.push_back(*direction);
-    while (m_escapeHistory.size() > 12) {
-      m_escapeHistory.pop_front();
+    m_recentDirections.push_back(*direction);
+    while (m_recentDirections.size() > 20) {
+      m_recentDirections.pop_front();
+    }
+    if (escapeMode) {
+      m_escapeHistory.push_back(*direction);
+      while (m_escapeHistory.size() > 12) {
+        m_escapeHistory.pop_front();
+      }
     }
   }
 
@@ -381,6 +492,7 @@ private:
   int m_noScoreTicks = 0;
   bool m_hasScore = false;
   std::deque<QPoint> m_escapeHistory;
+  std::deque<QPoint> m_recentDirections;
 };
 
 enum class TargetMode {
@@ -397,6 +509,7 @@ public:
     m_lastObserveTick = 0;
     m_forceTailChaseTicks = 0;
     m_powerChaseCooldownTicks = 0;
+    m_escapeWindow.clear();
   }
 
   auto mode() const -> TargetMode {
@@ -436,26 +549,34 @@ public:
       snapshot.powerUpPos.x() >= 0 && snapshot.powerUpPos.y() >= 0 &&
       powerPriority(config, snapshot.powerUpType) >= config.powerTargetPriorityThreshold;
     const bool hasPower = hasPowerCandidate && !suppressPowerChase();
-    const bool wantEscape = repeats >= 4 || noScoreTicks >= 28 || m_forceTailChaseTicks > 0;
+    const bool hardEscape = noScoreTicks >= 96 || repeats >= 6;
+    bool wantEscape = repeats >= 4 || noScoreTicks >= 28 || m_forceTailChaseTicks > 0;
+    if (wantEscape && !hardEscape && escapeRatio() >= 0.70F && noScoreTicks < 72) {
+      wantEscape = false;
+    }
     const TargetMode desired =
       wantEscape ? TargetMode::Escape : (hasPower ? TargetMode::PowerChase : TargetMode::FoodChase);
 
     if (desired == m_mode) {
+      recordEscapeMode();
       return;
     }
     if (desired == TargetMode::Escape) {
       switchMode(desired);
+      recordEscapeMode();
       return;
     }
     if (m_mode == TargetMode::Escape) {
       if (m_modeTicks >= 6) {
         switchMode(desired);
       }
+      recordEscapeMode();
       return;
     }
     if (m_modeTicks >= 10) {
       switchMode(desired);
     }
+    recordEscapeMode();
   }
 
   auto targetPoint(const Snapshot& snapshot, const StrategyConfig& config) const -> QPoint {
@@ -474,6 +595,26 @@ public:
   }
 
 private:
+  auto recordEscapeMode() -> void {
+    m_escapeWindow.push_back(m_mode == TargetMode::Escape);
+    while (m_escapeWindow.size() > 96) {
+      m_escapeWindow.pop_front();
+    }
+  }
+
+  [[nodiscard]] auto escapeRatio() const -> float {
+    if (m_escapeWindow.empty()) {
+      return 0.0F;
+    }
+    int escapeTicks = 0;
+    for (const bool active : m_escapeWindow) {
+      if (active) {
+        ++escapeTicks;
+      }
+    }
+    return static_cast<float>(escapeTicks) / static_cast<float>(m_escapeWindow.size());
+  }
+
   auto switchMode(const TargetMode mode) -> void {
     m_mode = mode;
     m_modeTicks = 0;
@@ -484,6 +625,7 @@ private:
   int m_forceTailChaseTicks = 0;
   int m_powerChaseCooldownTicks = 0;
   std::uint64_t m_lastObserveTick = 0;
+  std::deque<bool> m_escapeWindow;
 };
 
 auto targetModeName(const TargetMode mode) -> QString {
@@ -1061,6 +1203,18 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
   }
   const int currentPrimaryDistance =
     toroidalDistance(initial.head, primaryTarget, snapshot.boardWidth, snapshot.boardHeight);
+  const int currentFoodDistance =
+    toroidalDistance(initial.head, snapshot.food, snapshot.boardWidth, snapshot.boardHeight);
+  auto initialBlocked = buildBlockedMap(snapshot, initial.body);
+  if (const auto headIndex = tryBoardIndex(initial.head, snapshot.boardWidth, snapshot.boardHeight);
+      headIndex.has_value()) {
+    initialBlocked[*headIndex] = false;
+  }
+  const bool foodReachable = shortestReachableDistance(
+                               initial.head, snapshot.food, snapshot, initialBlocked)
+                               .has_value();
+  const bool centerFoodPush = foodReachable && isPointInCenterBand(snapshot.food, snapshot);
+  const QPoint boardMid = boardCenter(snapshot);
   const bool earlyFoodChaseGuard = (targetFsm.mode() == TargetMode::FoodChase) &&
                                    (primaryTarget == snapshot.food) && snapshot.score < 40 &&
                                    static_cast<int>(snapshot.body.size()) < 12 && !escapeMode;
@@ -1146,10 +1300,6 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
     }
   }
 
-  const int currentFoodDistance =
-    earlyFoodChaseGuard
-      ? toroidalDistance(initial.head, snapshot.food, snapshot.boardWidth, snapshot.boardHeight)
-      : 0;
   bool hasNonWorseningFoodMove = false;
   if (earlyFoodChaseGuard) {
     for (const CandidateStats* candidate : viable) {
@@ -1307,6 +1457,33 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
         loopController.loopCost(revisitCount, pocketPenalty, tunedConfig, false, false);
     }
 
+    const int repeatPenalty =
+      loopController.repeatedDirectionPenalty(candidate, escapeMode, noScoreTicks);
+    const int explicitCyclePenalty =
+      loopController.explicitCyclePenalty(candidate, escapeMode, noScoreTicks);
+    breakdown.loopCost = clampScoreBlock(
+      breakdown.loopCost + repeatPenalty + explicitCyclePenalty,
+      0,
+      escapeMode ? 580 : 420);
+
+    if (centerFoodPush) {
+      const int centerDelta =
+        toroidalDistance(initial.head, boardMid, snapshot.boardWidth, snapshot.boardHeight) -
+        toroidalDistance(preview.next.head, boardMid, snapshot.boardWidth, snapshot.boardHeight);
+      const bool leaveCorner = isNearCorner(initial.head, snapshot) &&
+                               !isNearCorner(preview.next.head, snapshot);
+      const bool stuckCorner = !isNearCorner(initial.head, snapshot) &&
+                               isNearCorner(preview.next.head, snapshot);
+      breakdown.progress += centerDelta * 26;
+      if (leaveCorner) {
+        breakdown.progress += 96;
+      }
+      if (stuckCorner) {
+        breakdown.progress -= 108;
+      }
+      breakdown.progress = clampScoreBlock(breakdown.progress, -260, 260);
+    }
+
     const int riskCost = candidateRiskCost(openSpace, safeNeighbors, revisitCount, snapshot);
     const int trapPenalty = safeNeighbors <= 1 ? tunedConfig.trapPenalty : 0;
     breakdown.risk = clampScoreBlock(trapPenalty + std::max(0, riskCost - riskBudget) * 6, 0, 320);
@@ -1354,6 +1531,20 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
       } else if (distanceDelta < 0) {
         const int stallBonus = std::min(96, (-distanceDelta) * (6 + (noScoreTicks / 8)));
         breakdown.drift = stallBonus;
+      }
+      score = breakdown.total();
+    }
+    if (noScoreTicks >= 16) {
+      const int nextFoodDistance =
+        toroidalDistance(preview.next.head, snapshot.food, snapshot.boardWidth, snapshot.boardHeight);
+      const int foodDelta = nextFoodDistance - currentFoodDistance;
+      if (foodDelta >= 0) {
+        const int noProgressPenalty =
+          std::min(420, (foodDelta + 1) * (16 + (noScoreTicks / 2)));
+        breakdown.drift -= noProgressPenalty;
+      } else {
+        const int progressBonus = std::min(150, (-foodDelta) * (10 + (noScoreTicks / 10)));
+        breakdown.drift += progressBonus;
       }
       score = breakdown.total();
     }
@@ -1416,7 +1607,7 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
         .arg(bestScore)
         .arg(topItems.join(QStringLiteral(" ")));
   }
-  loopController.observeEscapeDecision(bestDirection, escapeMode);
+  loopController.observeDecision(bestDirection, escapeMode);
   return bestDirection;
 }
 

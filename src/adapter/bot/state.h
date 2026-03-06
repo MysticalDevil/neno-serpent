@@ -59,6 +59,8 @@ public:
   void clearLastBackendRoute() {
     m_lastBackendRoute.clear();
   }
+  auto observeDirectionEmptyRuleFallback(bool usedFallback, const QString& reason) -> bool;
+  void resetDirectionEmptyRuleStats();
 
 private:
   void configureMlOnline(const QString& modelPath);
@@ -78,6 +80,12 @@ private:
   int m_mlOnlinePollIntervalTicks = 24;
   int m_mlOnlinePollCountdown = 24;
   std::int64_t m_mlModelLastModifiedMs = -1;
+  int m_runtimeTicks = 0;
+  int m_directionEmptyRuleTotal = 0;
+  int m_directionEmptyRuleWindow = 0;
+  int m_directionEmptyRuleWarnThreshold = 24;
+  int m_directionEmptyRuleWarnInterval = 12;
+  int m_directionEmptyRuleWindowTicks = 480;
 };
 
 } // namespace nenoserpent::adapter::bot

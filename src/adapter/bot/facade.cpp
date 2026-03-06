@@ -63,6 +63,14 @@ auto RuntimeFacade::runTick(const RuntimeTickInput& input, const RuntimeTickCall
   if (!decision.decisionSummary.isEmpty()) {
     qCDebug(nenoserpentInputLog).noquote() << decision.decisionSummary;
   }
+  if (m_state.observeDirectionEmptyRuleFallback(decision.usedFallback, decision.fallbackReason)) {
+    const QVariantMap stats = m_state.status();
+    qCWarning(nenoserpentInputLog).noquote()
+      << "bot fallback alert: direction-empty-rule threshold reached"
+      << "window=" << stats.value(QStringLiteral("directionEmptyRuleWindow")).toInt()
+      << "total=" << stats.value(QStringLiteral("directionEmptyRuleTotal")).toInt()
+      << "threshold=" << stats.value(QStringLiteral("directionEmptyRuleWarnThreshold")).toInt();
+  }
 
   const auto applyResult = applyDecision({
     .decision = decision,

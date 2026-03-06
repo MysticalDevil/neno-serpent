@@ -1,6 +1,7 @@
 #include "adapter/bot/runtime.h"
 
 #include <algorithm>
+#include <vector>
 
 #include "core/game/rules.h"
 #include "power_up_id.h"
@@ -103,6 +104,45 @@ auto isMlLikeBackendName(const QString& backendName) -> bool {
   return backendName == QStringLiteral("ml") || backendName == QStringLiteral("ml-online");
 }
 
+struct DirectionBackendCandidate {
+  const BotBackend* backend = nullptr;
+  QString reason;
+};
+
+auto appendDirectionCandidate(std::vector<DirectionBackendCandidate>& out,
+                              const BotBackend* backend,
+                              QString reason) -> void {
+  if (backend == nullptr || !backend->isAvailable()) {
+    return;
+  }
+  for (const auto& item : out) {
+    if (item.backend == backend) {
+      return;
+    }
+  }
+  out.push_back({.backend = backend, .reason = std::move(reason)});
+}
+
+auto directionCandidates(const RuntimeInput& input, const ResolvedBackend& resolved)
+  -> std::vector<DirectionBackendCandidate> {
+  std::vector<DirectionBackendCandidate> out;
+  out.reserve(3);
+  appendDirectionCandidate(out, resolved.primary, resolved.reason);
+
+  const bool primaryIsMlLike =
+    resolved.primary != nullptr && isMlLikeBackendName(resolved.primary->name());
+  if (primaryIsMlLike) {
+    appendDirectionCandidate(out, &searchBackend(), QStringLiteral("direction-empty-search"));
+    appendDirectionCandidate(
+      out, input.fallbackBackend, QStringLiteral("direction-empty-rule"));
+  } else {
+    appendDirectionCandidate(
+      out, input.fallbackBackend, QStringLiteral("direction-empty-rule"));
+    appendDirectionCandidate(out, &searchBackend(), QStringLiteral("direction-empty-search"));
+  }
+  return out;
+}
+
 } // namespace
 
 auto step(const RuntimeInput& input) -> RuntimeOutput {
@@ -125,29 +165,22 @@ auto step(const RuntimeInput& input) -> RuntimeOutput {
   }
 
   if (input.state == AppState::Playing) {
-    output.enqueueDirection = backend.decideDirection(input.snapshot, strategy);
-    output.decisionSummary = backend.lastDecisionSummary();
-    if (!output.enqueueDirection.has_value() && isMlLikeBackendName(output.backend)) {
-      const BotBackend& search = searchBackend();
-      if (&search != &backend && search.isAvailable()) {
-        output.enqueueDirection = search.decideDirection(input.snapshot, strategy);
-        output.decisionSummary = search.lastDecisionSummary();
-        if (output.enqueueDirection.has_value()) {
-          output.backend = search.name();
-          output.usedFallback = true;
-          output.fallbackReason = QStringLiteral("direction-empty-search");
-        }
+    const auto candidates = directionCandidates(input, resolved);
+    for (const auto& candidate : candidates) {
+      output.enqueueDirection = candidate.backend->decideDirection(input.snapshot, strategy);
+      output.decisionSummary = candidate.backend->lastDecisionSummary();
+      if (!output.enqueueDirection.has_value()) {
+        continue;
       }
-    }
-    if (!output.enqueueDirection.has_value() && input.fallbackBackend != nullptr &&
-        input.fallbackBackend != &backend && input.fallbackBackend->isAvailable()) {
-      output.enqueueDirection = input.fallbackBackend->decideDirection(input.snapshot, strategy);
-      output.decisionSummary = input.fallbackBackend->lastDecisionSummary();
-      if (output.enqueueDirection.has_value()) {
-        output.backend = input.fallbackBackend->name();
+      output.backend = candidate.backend->name();
+      if (candidate.backend == &backend) {
+        output.usedFallback = resolved.usedFallback;
+        output.fallbackReason = resolved.reason;
+      } else {
         output.usedFallback = true;
-        output.fallbackReason = QStringLiteral("direction-empty-rule");
+        output.fallbackReason = candidate.reason;
       }
+      break;
     }
     return output;
   }

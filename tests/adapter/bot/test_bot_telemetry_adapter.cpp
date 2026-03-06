@@ -8,6 +8,7 @@ class BotRouteTelemetryAdapterTest final : public QObject {
 private slots:
   void emitsWhenRouteChanges();
   void suppressesWhenRouteUnchanged();
+  void tracksDirectionEmptyRuleStatsAndWarnThreshold();
 };
 
 void BotRouteTelemetryAdapterTest::emitsWhenRouteChanges() {
@@ -39,6 +40,21 @@ void BotRouteTelemetryAdapterTest::suppressesWhenRouteUnchanged() {
 
   const auto telemetry = nenoserpent::adapter::bot::updateRouteTelemetry(state, decision);
   QVERIFY(!telemetry.changed);
+}
+
+void BotRouteTelemetryAdapterTest::tracksDirectionEmptyRuleStatsAndWarnThreshold() {
+  nenoserpent::adapter::bot::State state;
+  bool warned = false;
+  for (int i = 0; i < 23; ++i) {
+    warned = state.observeDirectionEmptyRuleFallback(true, QStringLiteral("direction-empty-rule"));
+    QVERIFY(!warned);
+  }
+  warned = state.observeDirectionEmptyRuleFallback(true, QStringLiteral("direction-empty-rule"));
+  QVERIFY(warned);
+
+  const QVariantMap stats = state.status();
+  QCOMPARE(stats.value(QStringLiteral("directionEmptyRuleTotal")).toInt(), 24);
+  QCOMPARE(stats.value(QStringLiteral("directionEmptyRuleWindow")).toInt(), 24);
 }
 
 QTEST_MAIN(BotRouteTelemetryAdapterTest)

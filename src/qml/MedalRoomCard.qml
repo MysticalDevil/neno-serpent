@@ -23,6 +23,14 @@ Components.ListCardFrame {
     normalFill: medalCard.cardNormal
     selectedFill: medalCard.cardSelected
     borderColor: medalCard.cardBorder
+    readonly property int badgeSize: Math.max(26, Math.min(36, height - 12))
+    readonly property int pillWidth: medalCard.unlocked ? 34 : 32
+    readonly property int pillHeight: 10
+    readonly property int titlePixelSize: Math.max(9, Math.min(11, height - 34))
+    readonly property int hintPixelSize: Math.max(7, Math.min(8, height - 40))
+    readonly property int textColumnWidth: parent
+        ? Math.max(40, parent.width - medalCard.badgeSize - medalCard.pillWidth - 30)
+        : 40
 
     readonly property color titleInk: selected ? badgeText : titleColor
     readonly property color hintInk: selected
@@ -35,8 +43,8 @@ Components.ListCardFrame {
         spacing: 12
 
         Icons.AchievementBadgeIcon {
-            width: 36
-            height: 36
+            width: medalCard.badgeSize
+            height: medalCard.badgeSize
             anchors.verticalCenter: parent.verticalCenter
             achievementId: medalCard.medalData ? String(medalCard.medalData.id) : ""
             borderColor: medalCard.cardBorder
@@ -50,7 +58,7 @@ Components.ListCardFrame {
         }
 
         Column {
-            width: parent.width - 58
+            width: medalCard.textColumnWidth
             anchors.verticalCenter: parent.verticalCenter
             spacing: 1
 
@@ -60,8 +68,10 @@ Components.ListCardFrame {
                     : "?????????"
                 color: medalCard.titleInk
                 font.family: medalCard.gameFont
-                font.pixelSize: 12
+                font.pixelSize: medalCard.titlePixelSize
                 font.bold: true
+                width: parent.width
+                elide: Text.ElideRight
             }
 
             Text {
@@ -70,7 +80,7 @@ Components.ListCardFrame {
                     : (medalCard.medalData ? medalCard.medalData.hint : "")
                 color: medalCard.hintInk
                 font.family: medalCard.gameFont
-                font.pixelSize: 8
+                font.pixelSize: medalCard.hintPixelSize
                 font.bold: true
                 opacity: 1.0
                 width: parent.width
@@ -86,8 +96,8 @@ Components.ListCardFrame {
         anchors.top: parent.top
         anchors.rightMargin: 4
         anchors.topMargin: 4
-        width: medalCard.unlocked ? 38 : 36
-        height: 12
+        width: medalCard.pillWidth
+        height: medalCard.pillHeight
         color: Qt.rgba(medalCard.selected ? medalCard.badgeText.r : medalCard.badgeFill.r,
                         medalCard.selected ? medalCard.badgeText.g : medalCard.badgeFill.g,
                         medalCard.selected ? medalCard.badgeText.b : medalCard.badgeFill.b,

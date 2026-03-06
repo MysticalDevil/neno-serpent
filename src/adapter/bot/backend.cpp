@@ -207,9 +207,6 @@ public:
     m_recent.clear();
     m_counts.clear();
     m_observeTick = 0;
-    m_lastScore = 0;
-    m_noScoreTicks = 0;
-    m_hasScore = false;
   }
 
   auto observe(const Snapshot& snapshot, const MoveState& state) -> int {
@@ -218,13 +215,6 @@ public:
     m_recent.push_back(hash);
     trim();
     ++m_observeTick;
-    if (!m_hasScore || state.score > m_lastScore) {
-      m_noScoreTicks = 0;
-    } else {
-      ++m_noScoreTicks;
-    }
-    m_lastScore = state.score;
-    m_hasScore = true;
     return repeats;
   }
 
@@ -238,18 +228,11 @@ public:
     return m_observeTick;
   }
 
-  [[nodiscard]] auto noScoreTicks() const -> int {
-    return m_noScoreTicks;
-  }
-
 private:
   static constexpr int kWindow = 96;
   std::deque<std::uint64_t> m_recent;
   std::unordered_map<std::uint64_t, int> m_counts;
   std::uint64_t m_observeTick = 0;
-  int m_lastScore = 0;
-  int m_noScoreTicks = 0;
-  bool m_hasScore = false;
 
   auto trim() -> void {
     while (static_cast<int>(m_recent.size()) > kWindow) {
@@ -265,6 +248,56 @@ private:
       }
     }
   }
+};
+
+class LoopController {
+public:
+  auto clear() -> void {
+    m_lastScore = 0;
+    m_noScoreTicks = 0;
+    m_hasScore = false;
+  }
+
+  auto observeScore(const int score) -> void {
+    if (!m_hasScore || score > m_lastScore) {
+      m_noScoreTicks = 0;
+    } else {
+      ++m_noScoreTicks;
+    }
+    m_lastScore = score;
+    m_hasScore = true;
+  }
+
+  [[nodiscard]] auto noScoreTicks() const -> int {
+    return m_noScoreTicks;
+  }
+
+  [[nodiscard]] auto escapeMode(const int repeats) const -> bool {
+    constexpr int kLoopRepeatThreshold = 4;
+    constexpr int kNoScoreEscapeTicks = 28;
+    return repeats >= kLoopRepeatThreshold ||
+           (m_noScoreTicks >= kNoScoreEscapeTicks && repeats >= 2);
+  }
+
+  [[nodiscard]] auto loopCost(const int revisitCount,
+                              const int pocketPenalty,
+                              const StrategyConfig& config,
+                              const bool useSearchScoring,
+                              const bool escapeMode) const -> int {
+    if (escapeMode) {
+      return clampInt(revisitCount * config.loopEscapePenalty, 0, 420);
+    }
+    const int revisitPenalty =
+      revisitCount *
+      (useSearchScoring ? std::max(1, config.loopRepeatPenalty - 8) : config.loopRepeatPenalty);
+    const int pocketScale = useSearchScoring ? 2 : 1;
+    return clampInt(revisitPenalty + (pocketPenalty * pocketScale), 0, 360);
+  }
+
+private:
+  int m_lastScore = 0;
+  int m_noScoreTicks = 0;
+  bool m_hasScore = false;
 };
 
 enum class TargetMode {
@@ -866,6 +899,7 @@ auto passesHardFilter(const CandidateStats& stats, const HardFilterConfig& conf)
 auto selectLoopAwareDirection(const Snapshot& snapshot,
                               const StrategyConfig& config,
                               LoopMemory& memory,
+                              LoopController& loopController,
                               TargetFsm& targetFsm,
                               const bool useSearchScoring) -> std::optional<QPoint> {
   if (snapshot.body.empty() || snapshot.boardWidth <= 0 || snapshot.boardHeight <= 0) {
@@ -880,8 +914,10 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
   };
 
   const int repeats = memory.observe(snapshot, initial);
-  targetFsm.update(snapshot, tunedConfig, repeats, memory.noScoreTicks(), memory.observeTick());
-  const bool escapeMode = targetFsm.mode() == TargetMode::Escape;
+  loopController.observeScore(initial.score);
+  const int noScoreTicks = loopController.noScoreTicks();
+  targetFsm.update(snapshot, tunedConfig, repeats, noScoreTicks, memory.observeTick());
+  const bool escapeMode = loopController.escapeMode(repeats);
   const int riskBudget = riskBudgetFor(snapshot, repeats);
   const int depth = std::clamp(tunedConfig.lookaheadDepth + 1, 2, 6);
   const QPoint primaryTarget = targetFsm.targetPoint(snapshot, tunedConfig);
@@ -990,7 +1026,8 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
         breakdown.reward += powerPriority(tunedConfig, snapshot.powerUpType) * 2;
       }
       breakdown.reward = clampScoreBlock(breakdown.reward, 0, 240);
-      breakdown.loopCost = clampScoreBlock(revisitCount * tunedConfig.loopEscapePenalty, 0, 420);
+      breakdown.loopCost =
+        loopController.loopCost(revisitCount, pocketPenalty, tunedConfig, useSearchScoring, true);
     } else if (useSearchScoring) {
       int immediate = (candidate == snapshot.direction ? tunedConfig.straightBonus : 0);
       if (preview.ateFood) {
@@ -1019,10 +1056,8 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
                                            -240,
                                            340);
       breakdown.reward = clampScoreBlock(immediate, 0, 220);
-      breakdown.loopCost = clampScoreBlock(
-        (revisitCount * std::max(1, tunedConfig.loopRepeatPenalty - 8)) + (pocketPenalty * 2),
-        0,
-        360);
+      breakdown.loopCost =
+        loopController.loopCost(revisitCount, pocketPenalty, tunedConfig, true, false);
     } else {
       const QPoint tailFallback =
         preview.next.body.empty() ? preview.next.head : preview.next.body.back();
@@ -1049,7 +1084,7 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
                                            300);
       breakdown.reward = clampScoreBlock(immediate, 0, 220);
       breakdown.loopCost =
-        clampScoreBlock((revisitCount * tunedConfig.loopRepeatPenalty) + pocketPenalty, 0, 320);
+        loopController.loopCost(revisitCount, pocketPenalty, tunedConfig, false, false);
     }
 
     const int riskCost = candidateRiskCost(openSpace, safeNeighbors, revisitCount, snapshot);
@@ -1092,7 +1127,8 @@ public:
 
   [[nodiscard]] auto decideDirection(const Snapshot& snapshot, const StrategyConfig& config) const
     -> std::optional<QPoint> override {
-    return selectLoopAwareDirection(snapshot, config, m_loopMemory, m_targetFsm, false);
+    return selectLoopAwareDirection(
+      snapshot, config, m_loopMemory, m_loopController, m_targetFsm, false);
   }
 
   [[nodiscard]] auto decideChoice(const QVariantList& choices, const StrategyConfig& config) const
@@ -1102,11 +1138,13 @@ public:
 
   void reset() override {
     m_loopMemory.clear();
+    m_loopController.clear();
     m_targetFsm.clear();
   }
 
 private:
   mutable LoopMemory m_loopMemory;
+  mutable LoopController m_loopController;
   mutable TargetFsm m_targetFsm;
 };
 
@@ -1118,7 +1156,8 @@ public:
 
   [[nodiscard]] auto decideDirection(const Snapshot& snapshot, const StrategyConfig& config) const
     -> std::optional<QPoint> override {
-    return selectLoopAwareDirection(snapshot, config, m_loopMemory, m_targetFsm, true);
+    return selectLoopAwareDirection(
+      snapshot, config, m_loopMemory, m_loopController, m_targetFsm, true);
   }
 
   [[nodiscard]] auto decideChoice(const QVariantList& choices, const StrategyConfig& config) const
@@ -1128,11 +1167,13 @@ public:
 
   void reset() override {
     m_loopMemory.clear();
+    m_loopController.clear();
     m_targetFsm.clear();
   }
 
 private:
   mutable LoopMemory m_loopMemory;
+  mutable LoopController m_loopController;
   mutable TargetFsm m_targetFsm;
 };
 

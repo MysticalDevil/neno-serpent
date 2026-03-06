@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import "components" as Components
 
 Rectangle {
@@ -38,6 +37,7 @@ Rectangle {
     readonly property color unknownText: pageTheme && pageTheme.unknownText ? pageTheme.unknownText : secondaryText
     readonly property color scrollbarHandle: pageTheme && pageTheme.scrollbarHandle ? pageTheme.scrollbarHandle : dividerColor
     readonly property color scrollbarTrack: pageTheme && pageTheme.scrollbarTrack ? pageTheme.scrollbarTrack : panelBgSoft
+    readonly property int cardSpacing: 4
     readonly property var effectiveUnlockedAchievementIds: {
         if (debugUnlockAll) {
             return medalLibraryModel.map((entry) => entry.id)
@@ -62,6 +62,7 @@ Rectangle {
     }
 
     Column {
+        id: medalColumn
         anchors.fill: parent
         anchors.margins: 8
         spacing: 6
@@ -79,99 +80,54 @@ Rectangle {
             subtitleColor: Qt.rgba(medalRoot.secondaryText.r, medalRoot.secondaryText.g, medalRoot.secondaryText.b, 0.92)
         }
 
-        ListView {
+        Components.RetroWindowList {
             id: medalList
             width: parent.width
             height: Math.max(
                         0,
-                        parent.height - headerPanel.height - footerPanel.height - (parent.spacing * 2))
+                        medalColumn.height - headerPanel.height - footerPanel.height - (medalColumn.spacing * 2))
             model: medalLibraryModel
-            property bool syncingFromState: false
-            currentIndex: -1
-            clip: true
-            spacing: 6
-            interactive: true
-            boundsBehavior: Flickable.StopAtBounds
+            selectedIndex: medalRoot.medalIndex
+            visibleCount: 3
+            itemHeight: Math.floor((height - (medalRoot.cardSpacing * (visibleCount - 1))) / visibleCount)
+            spacing: medalRoot.cardSpacing
+            scrollbarHandle: medalRoot.scrollbarHandle
+            scrollbarTrack: medalRoot.scrollbarTrack
+            flashColor: Qt.rgba(medalRoot.badgeText.r, medalRoot.badgeText.g, medalRoot.badgeText.b, 0.18)
 
-            Component.onCompleted: {
-                syncingFromState = true
-                currentIndex = medalRoot.medalIndex
-                syncingFromState = false
-            }
-
-            onCurrentIndexChanged: {
-                if (syncingFromState) {
-                    return
-                }
-                medalList.positionViewAtIndex(currentIndex, ListView.Contain)
-                if (currentIndex !== medalRoot.medalIndex && medalRoot.setMedalIndex) {
-                    medalRoot.setMedalIndex(currentIndex)
+            onRequestIndexChange: (nextIndex) => {
+                if (nextIndex !== medalRoot.medalIndex && medalRoot.setMedalIndex) {
+                    medalRoot.setMedalIndex(nextIndex)
                 }
             }
 
-            onModelChanged: {
-                if (medalList.currentIndex < 0 && medalRoot.medalIndex >= 0) {
-                    medalList.syncingFromState = true
-                    medalList.currentIndex = medalRoot.medalIndex
-                    medalList.syncingFromState = false
+            Repeater {
+                model: medalList.visibleCount
+
+                delegate: MedalRoomCard {
+                    readonly property int modelIndex: medalList.modelIndexAt(index)
+                    readonly property var entryData: medalList.entryAt(index)
+
+                    x: 0
+                    y: index * (height + medalList.spacing)
+                    width: medalList.width - 12
+                    height: medalList.itemHeight
+                    visible: entryData !== null
+                    medalData: entryData
+                    unlocked: !!entryData && (medalRoot.debugUnlockAll
+                        || medalRoot.effectiveUnlockedAchievementIds.indexOf(entryData.id) !== -1)
+                    selected: modelIndex === medalRoot.medalIndex
+                    cardNormal: medalRoot.cardNormal
+                    cardSelected: medalRoot.cardSelected
+                    cardBorder: medalRoot.cardBorder
+                    badgeFill: medalRoot.badgeFill
+                    badgeText: medalRoot.badgeText
+                    titleColor: medalRoot.titleColor
+                    secondaryText: medalRoot.secondaryText
+                    iconFill: medalRoot.iconFill
+                    unknownText: medalRoot.unknownText
+                    gameFont: medalRoot.gameFont
                 }
-            }
-
-            Connections {
-                target: medalRoot
-
-                function onMedalIndexChanged() {
-                    if (medalList.currentIndex !== medalRoot.medalIndex) {
-                        medalList.syncingFromState = true
-                        medalList.currentIndex = medalRoot.medalIndex
-                        medalList.syncingFromState = false
-                        medalList.positionViewAtIndex(medalList.currentIndex, ListView.Contain)
-                    }
-                }
-            }
-
-            WheelHandler {
-                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                onWheel: (event) => {
-                    medalList.contentY = Math.max(0, Math.min(
-                        medalList.contentHeight - medalList.height,
-                        medalList.contentY - event.angleDelta.y
-                    ))
-                }
-            }
-
-            ScrollBar.vertical: ScrollBar {
-                policy: ScrollBar.AsNeeded
-                width: 6
-
-                contentItem: Rectangle {
-                    implicitWidth: 6
-                    radius: 3
-                    color: medalRoot.scrollbarHandle
-                }
-
-                background: Rectangle {
-                    radius: 3
-                    color: medalRoot.scrollbarTrack
-                    opacity: 0.35
-                }
-            }
-
-            delegate: MedalRoomCard {
-                medalData: modelData
-                unlocked: !!modelData && (medalRoot.debugUnlockAll
-                    || medalRoot.effectiveUnlockedAchievementIds.indexOf(modelData.id) !== -1)
-                selected: medalList.currentIndex === index
-                cardNormal: medalRoot.cardNormal
-                cardSelected: medalRoot.cardSelected
-                cardBorder: medalRoot.cardBorder
-                badgeFill: medalRoot.badgeFill
-                badgeText: medalRoot.badgeText
-                titleColor: medalRoot.titleColor
-                secondaryText: medalRoot.secondaryText
-                iconFill: medalRoot.iconFill
-                unknownText: medalRoot.unknownText
-                gameFont: medalRoot.gameFont
             }
         }
 

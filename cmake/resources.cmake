@@ -48,6 +48,7 @@ set(NENOSERPENT_QML_RESOURCE_FILES
     "src/qml/debug/DebugTokenParser.js"
     "src/qml/debug/DebugStateFactory.js"
     "src/qml/components/ListCardFrame.qml"
+    "src/qml/components/RetroWindowList.qml"
     "src/qml/components/StatusPill.qml"
     "src/qml/components/SectionHeader.qml"
     "src/qml/icons/qmldir"

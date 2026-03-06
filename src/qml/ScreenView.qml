@@ -25,6 +25,7 @@ Item {
     property bool botDebugPanelVisible: false
     property string staticDebugScene: ""
     property var staticDebugOptions: ({})
+    property int iconLabPage: 0
     property int iconLabSelection: 0
     readonly property bool lowPerfFxMode: Qt.platform.os === "android"
 
@@ -43,13 +44,42 @@ Item {
     readonly property var achievementDebugProps: DebugBindings.achievementProps(root.staticDebugOptions)
 
     function iconLabMove(dx, dy) {
-        const cols = 3
+        const xStep = dx > 0 ? 1 : (dx < 0 ? -1 : 0)
+        const yStep = dy > 0 ? 1 : (dy < 0 ? -1 : 0)
+
+        if (iconLabPage === 0) {
+            const cols = 3
+            const maxRow = 3
+            const idx = iconLabSelection
+            const col = idx % cols
+            const row = Math.floor(idx / cols)
+            const nextCol = Math.max(0, Math.min(cols - 1, col + xStep))
+            let nextRow = row + yStep
+            if (nextRow > maxRow) {
+                iconLabPage = 1
+                iconLabSelection = Math.min(3, nextCol)
+                return
+            }
+            nextRow = Math.max(0, Math.min(maxRow, nextRow))
+            iconLabSelection = nextRow * cols + nextCol
+            return
+        }
+
+        const cols = 4
+        const itemCount = 7
         const idx = iconLabSelection
         const col = idx % cols
         const row = Math.floor(idx / cols)
-        const nextCol = Math.max(0, Math.min(cols - 1, col + (dx > 0 ? 1 : (dx < 0 ? -1 : 0))))
-        const nextRow = Math.max(0, Math.min(3, row + (dy > 0 ? 1 : (dy < 0 ? -1 : 0))))
-        iconLabSelection = nextRow * cols + nextCol
+        const maxRow = 1
+        const nextCol = Math.max(0, Math.min(cols - 1, col + xStep))
+        let nextRow = row + yStep
+        if (nextRow < 0) {
+            iconLabPage = 0
+            iconLabSelection = Math.min(11, 9 + Math.min(2, nextCol))
+            return
+        }
+        nextRow = Math.max(0, Math.min(maxRow, nextRow))
+        iconLabSelection = Math.max(0, Math.min(itemCount - 1, (nextRow * cols) + nextCol))
     }
 
     readonly property color gameBg: menuColor("cardPrimary")
@@ -271,9 +301,13 @@ Item {
                     gameFont: root.gameFont
                     menuColor: root.menuColor
                     elapsed: root.elapsed
+                    iconLabPage: root.iconLabPage
                     iconLabSelection: root.iconLabSelection
                     powerColor: root.powerColor
-                    onResetSelectionRequested: root.iconLabSelection = 0
+                    onResetSelectionRequested: {
+                        root.iconLabPage = 0
+                        root.iconLabSelection = 0
+                    }
                 }
 
                 HudLayer {

@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import "meta/CatalogMeta.js" as CatalogMeta
 import "icons" as Icons
 import "components" as Components
@@ -33,6 +32,7 @@ Rectangle {
     readonly property color iconFill: pageTheme && pageTheme.iconFill ? pageTheme.iconFill : panelBgStrong
     readonly property color unknownText: pageTheme && pageTheme.unknownText ? pageTheme.unknownText : textMuted
     readonly property int cardRadius: 4
+    readonly property int cardSpacing: 4
     readonly property int discoveredCount: CatalogMeta.discoveredCount(
         fruitLibraryModel,
         debugDiscoveredTypes,
@@ -52,6 +52,7 @@ Rectangle {
     }
 
     Column {
+        id: libraryColumn
         anchors.fill: parent
         anchors.margins: 8
         spacing: 6
@@ -69,168 +70,125 @@ Rectangle {
             subtitleColor: Qt.rgba(libraryLayer.textMuted.r, libraryLayer.textMuted.g, libraryLayer.textMuted.b, 0.92)
         }
 
-        ListView {
+        Components.RetroWindowList {
             id: libraryList
             width: parent.width
             height: Math.max(
                         0,
-                        parent.height - headerPanel.height - footerPanel.height - (parent.spacing * 2))
+                        libraryColumn.height - headerPanel.height - footerPanel.height - (libraryColumn.spacing * 2))
             model: fruitLibraryModel
-            property bool syncingFromState: false
-            currentIndex: -1
-            spacing: 6
-            clip: true
-            interactive: true
-            boundsBehavior: Flickable.StopAtBounds
+            selectedIndex: libraryLayer.libraryIndex
+            visibleCount: 3
+            itemHeight: Math.floor((height - (libraryLayer.cardSpacing * (visibleCount - 1))) / visibleCount)
+            spacing: libraryLayer.cardSpacing
+            scrollbarHandle: libraryLayer.scrollbarHandle
+            scrollbarTrack: libraryLayer.scrollbarTrack
+            flashColor: Qt.rgba(libraryLayer.textOnAccent.r, libraryLayer.textOnAccent.g, libraryLayer.textOnAccent.b, 0.22)
 
-            Component.onCompleted: {
-                syncingFromState = true
-                currentIndex = libraryLayer.libraryIndex
-                syncingFromState = false
-            }
-
-            onCurrentIndexChanged: {
-                if (syncingFromState) {
-                    return
-                }
-                positionViewAtIndex(currentIndex, ListView.Contain)
-                if (currentIndex !== libraryLayer.libraryIndex && libraryLayer.setLibraryIndex) {
-                    libraryLayer.setLibraryIndex(currentIndex)
+            onRequestIndexChange: (nextIndex) => {
+                if (nextIndex !== libraryLayer.libraryIndex && libraryLayer.setLibraryIndex) {
+                    libraryLayer.setLibraryIndex(nextIndex)
                 }
             }
 
-            onModelChanged: {
-                if (libraryList.currentIndex < 0 && libraryLayer.libraryIndex >= 0) {
-                    libraryList.syncingFromState = true
-                    libraryList.currentIndex = libraryLayer.libraryIndex
-                    libraryList.syncingFromState = false
-                }
-            }
+            Repeater {
+                model: libraryList.visibleCount
 
-            Connections {
-                target: libraryLayer
+                delegate: Components.ListCardFrame {
+                    id: libraryCard
+                    readonly property int modelIndex: libraryList.modelIndexAt(index)
+                    readonly property var entryData: libraryList.entryAt(index)
+                    readonly property bool cardSelected: modelIndex === libraryLayer.libraryIndex
+                    readonly property var resolvedEntry: entryData ? CatalogMeta.resolveEntry(
+                        entryData,
+                        libraryLayer.debugDiscoveredTypes,
+                        libraryLayer.debugDiscoverAll) : ({ "discovered": false, "name": "", "description": "" })
+                    readonly property color labelColor: cardSelected ? libraryLayer.textOnAccent : libraryLayer.textStrong
+                    readonly property color descColor: cardSelected
+                                                       ? Qt.rgba(libraryLayer.textOnAccent.r, libraryLayer.textOnAccent.g, libraryLayer.textOnAccent.b, 0.92)
+                                                       : Qt.rgba(libraryLayer.textMuted.r, libraryLayer.textMuted.g, libraryLayer.textMuted.b, 0.96)
 
-                function onLibraryIndexChanged() {
-                    if (libraryList.currentIndex !== libraryLayer.libraryIndex) {
-                        libraryList.syncingFromState = true
-                        libraryList.currentIndex = libraryLayer.libraryIndex
-                        libraryList.syncingFromState = false
-                        libraryList.positionViewAtIndex(libraryList.currentIndex, ListView.Contain)
-                    }
-                }
-            }
+                    x: 0
+                    y: index * (height + libraryList.spacing)
+                    width: libraryList.width - 12
+                    height: libraryList.itemHeight
+                    visible: entryData !== null
+                    radius: libraryLayer.cardRadius
+                    selected: cardSelected
+                    normalFill: Qt.rgba(libraryLayer.panelBg.r, libraryLayer.panelBg.g, libraryLayer.panelBg.b, 0.84)
+                    selectedFill: Qt.rgba(libraryLayer.panelAccent.r, libraryLayer.panelAccent.g, libraryLayer.panelAccent.b, 0.92)
+                    borderColor: cardSelected ? libraryLayer.borderStrong : libraryLayer.borderSoft
 
-            WheelHandler {
-                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                onWheel: (event) => {
-                    libraryList.contentY = Math.max(0, Math.min(
-                        libraryList.contentHeight - libraryList.height,
-                        libraryList.contentY - event.angleDelta.y
-                    ))
-                }
-            }
+                    Row {
+                        anchors.fill: parent
+                        anchors.margins: 6
+                        spacing: 12
 
-            ScrollBar.vertical: ScrollBar {
-                policy: ScrollBar.AsNeeded
-                width: 6
+                        Item {
+                            width: 24
+                            height: 24
+                            anchors.verticalCenter: parent.verticalCenter
 
-                contentItem: Rectangle {
-                    implicitWidth: 6
-                    radius: 3
-                    color: libraryLayer.scrollbarHandle
-                }
-
-                background: Rectangle {
-                    radius: 3
-                    color: libraryLayer.scrollbarTrack
-                    opacity: 0.35
-                }
-            }
-
-            delegate: Components.ListCardFrame {
-                id: libraryCard
-                width: parent.width
-                height: 58
-                radius: libraryLayer.cardRadius
-                selected: libraryList.currentIndex === index
-                normalFill: Qt.rgba(libraryLayer.panelBg.r, libraryLayer.panelBg.g, libraryLayer.panelBg.b, 0.84)
-                selectedFill: Qt.rgba(libraryLayer.panelAccent.r, libraryLayer.panelAccent.g, libraryLayer.panelAccent.b, 0.92)
-                borderColor: libraryList.currentIndex === index ? libraryLayer.borderStrong : libraryLayer.borderSoft
-                readonly property bool cardSelected: libraryList.currentIndex === index
-                readonly property color labelColor: cardSelected ? libraryLayer.textOnAccent : libraryLayer.textStrong
-                readonly property color descColor: cardSelected
-                                                   ? Qt.rgba(libraryLayer.textOnAccent.r, libraryLayer.textOnAccent.g, libraryLayer.textOnAccent.b, 0.92)
-                                                   : Qt.rgba(libraryLayer.textMuted.r, libraryLayer.textMuted.g, libraryLayer.textMuted.b, 0.96)
-                readonly property var resolvedEntry: CatalogMeta.resolveEntry(
-                    modelData,
-                    libraryLayer.debugDiscoveredTypes,
-                    libraryLayer.debugDiscoverAll)
-
-                Row {
-                    anchors.fill: parent
-                    anchors.margins: 6
-                    spacing: 12
-
-                    Item {
-                        width: 24
-                        height: 24
-                        anchors.verticalCenter: parent.verticalCenter
-
-                        Icons.PowerIcon {
-                            anchors.centerIn: parent
-                            width: 20
-                            height: 20
-                            visible: libraryCard.resolvedEntry.discovered
-                            radius: 4
-                            contentMargin: 2
-                            fillColor: libraryCard.selected
-                                       ? Qt.rgba(libraryLayer.panelBgStrong.r, libraryLayer.panelBgStrong.g,
-                                                 libraryLayer.panelBgStrong.b, 0.88)
-                                       : Qt.rgba(libraryLayer.iconFill.r, libraryLayer.iconFill.g,
-                                                 libraryLayer.iconFill.b, 0.96)
-                            borderColor: libraryCard.cardSelected
-                                         ? Qt.rgba(libraryLayer.textOnAccent.r, libraryLayer.textOnAccent.g,
-                                                   libraryLayer.textOnAccent.b, 0.72)
-                                         : Qt.rgba(powerColor(modelData.type).r, powerColor(modelData.type).g,
-                                                   powerColor(modelData.type).b, 0.72)
-                            borderWidth: modelData.type >= 9 ? 2 : 1
-                            powerType: Number(modelData.type)
-                            glyphColor: libraryCard.cardSelected ? libraryLayer.textOnAccent : powerColor(modelData.type)
-                        }
-
-                        Text {
-                            text: "?"
-                            color: libraryLayer.unknownText
-                            visible: !libraryCard.resolvedEntry.discovered
-                            anchors.centerIn: parent
-                            font.bold: true
-                            font.pixelSize: 12
-                        }
-                    }
-
-                    Column {
-                        width: parent.width - 50
-                        anchors.verticalCenter: parent.verticalCenter
+                            Icons.PowerIcon {
+                                anchors.centerIn: parent
+                                width: 20
+                                height: 20
+                                visible: entryData !== null && resolvedEntry.discovered
+                                radius: 4
+                                contentMargin: 2
+                                fillColor: cardSelected
+                                           ? Qt.rgba(libraryLayer.panelBgStrong.r, libraryLayer.panelBgStrong.g,
+                                                     libraryLayer.panelBgStrong.b, 0.88)
+                                           : Qt.rgba(libraryLayer.iconFill.r, libraryLayer.iconFill.g,
+                                                     libraryLayer.iconFill.b, 0.96)
+                                borderColor: cardSelected
+                                             ? Qt.rgba(libraryLayer.textOnAccent.r, libraryLayer.textOnAccent.g,
+                                                       libraryLayer.textOnAccent.b, 0.72)
+                                             : (entryData !== null
+                                                ? Qt.rgba(powerColor(entryData.type).r, powerColor(entryData.type).g,
+                                                          powerColor(entryData.type).b, 0.72)
+                                                : libraryLayer.borderSoft)
+                                borderWidth: entryData !== null && entryData.type >= 9 ? 2 : 1
+                                powerType: entryData !== null ? Number(entryData.type) : 0
+                                glyphColor: entryData !== null
+                                            ? (cardSelected ? libraryLayer.textOnAccent : powerColor(entryData.type))
+                                            : libraryLayer.textMuted
+                            }
 
                             Text {
-                                text: libraryCard.resolvedEntry.name
-                            color: libraryCard.labelColor
-                            font.family: gameFont
-                            font.pixelSize: 11
-                            font.bold: true
+                                text: "?"
+                                color: libraryLayer.unknownText
+                                visible: entryData !== null && !resolvedEntry.discovered
+                                anchors.centerIn: parent
+                                font.bold: true
+                                font.pixelSize: 12
+                            }
                         }
 
+                        Column {
+                            width: parent.width - 50
+                            anchors.verticalCenter: parent.verticalCenter
+
                             Text {
-                                text: libraryCard.resolvedEntry.description
-                            color: libraryCard.descColor
-                            font.family: gameFont
-                            font.pixelSize: 8
-                            font.bold: true
-                            opacity: 1.0
-                            width: parent.width
-                            wrapMode: Text.WordWrap
-                            maximumLineCount: 2
-                            elide: Text.ElideRight
+                                text: resolvedEntry.name
+                                color: libraryCard.labelColor
+                                font.family: gameFont
+                                font.pixelSize: 11
+                                font.bold: true
+                            }
+
+                            Text {
+                                text: resolvedEntry.description
+                                color: libraryCard.descColor
+                                font.family: gameFont
+                                font.pixelSize: 8
+                                font.bold: true
+                                opacity: 1.0
+                                width: parent.width
+                                wrapMode: Text.WordWrap
+                                maximumLineCount: 2
+                                elide: Text.ElideRight
+                            }
                         }
                     }
                 }

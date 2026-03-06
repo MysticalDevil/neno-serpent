@@ -18,6 +18,7 @@ private slots:
   void fallsBackToSecondaryBackendWhenPrimaryUnavailable();
   void usesFallbackWhenPrimaryMissing();
   void usesSearchFallbackWhenPrimaryMlDirectionEmpty();
+  void forceCenterPushRoutesToSearchCircuit();
   void usesFallbackWhenPrimaryDirectionEmpty();
   void usesFallbackWhenPrimaryChoiceEmpty();
 };
@@ -430,6 +431,45 @@ void BotRuntimeAdapterTest::usesSearchFallbackWhenPrimaryMlDirectionEmpty() {
   QVERIFY(result.usedFallback);
   QVERIFY(result.fallbackReason == QStringLiteral("direction-empty-search") ||
           result.fallbackReason == QStringLiteral("direction-empty-rule"));
+}
+
+void BotRuntimeAdapterTest::forceCenterPushRoutesToSearchCircuit() {
+  class DirectionBackend final : public nenoserpent::adapter::bot::BotBackend {
+  public:
+    [[nodiscard]] auto name() const -> QString override {
+      return QStringLiteral("rule");
+    }
+    [[nodiscard]] auto decideDirection(const nenoserpent::adapter::bot::Snapshot&,
+                                       const nenoserpent::adapter::bot::StrategyConfig&) const
+      -> std::optional<QPoint> override {
+      return QPoint(-1, 0);
+    }
+    [[nodiscard]] auto decideChoice(const QVariantList&,
+                                    const nenoserpent::adapter::bot::StrategyConfig&) const
+      -> int override {
+      return 0;
+    }
+  };
+
+  const DirectionBackend primary{};
+
+  nenoserpent::adapter::bot::RuntimeInput input{};
+  input.enabled = true;
+  input.state = AppState::Playing;
+  input.snapshot.boardWidth = 20;
+  input.snapshot.boardHeight = 18;
+  input.snapshot.head = QPoint(10, 10);
+  input.snapshot.direction = QPoint(0, -1);
+  input.snapshot.food = QPoint(0, 0);
+  input.snapshot.body = {QPoint(10, 10), QPoint(10, 11), QPoint(10, 12)};
+  input.backend = &primary;
+  input.forceCenterPush = true;
+
+  const auto result = nenoserpent::adapter::bot::step(input);
+  QVERIFY(result.enqueueDirection.has_value());
+  QCOMPARE(result.backend, QStringLiteral("search"));
+  QVERIFY(result.usedFallback);
+  QCOMPARE(result.fallbackReason, QStringLiteral("direction-empty-search-circuit"));
 }
 
 void BotRuntimeAdapterTest::usesFallbackWhenPrimaryChoiceEmpty() {

@@ -109,6 +109,12 @@ struct DirectionBackendCandidate {
   QString reason;
 };
 
+struct ForcedDirectionResult {
+  std::optional<QPoint> direction;
+  QString backend;
+  QString decisionSummary;
+};
+
 auto appendDirectionCandidate(std::vector<DirectionBackendCandidate>& out,
                               const BotBackend* backend,
                               QString reason) -> void {
@@ -143,6 +149,38 @@ auto directionCandidates(const RuntimeInput& input, const ResolvedBackend& resol
   return out;
 }
 
+auto forcedCenterDirection(const RuntimeInput& input, const StrategyConfig& strategy)
+  -> ForcedDirectionResult {
+  ForcedDirectionResult result{};
+  if (!input.forceCenterPush || input.state != AppState::Playing || input.snapshot.body.empty() ||
+      input.snapshot.boardWidth <= 0 || input.snapshot.boardHeight <= 0) {
+    return result;
+  }
+
+  Snapshot centerSnapshot = input.snapshot;
+  centerSnapshot.food = QPoint(centerSnapshot.boardWidth / 2, centerSnapshot.boardHeight / 2);
+  centerSnapshot.powerUpPos = QPoint(-1, -1);
+  centerSnapshot.powerUpType = 0;
+
+  StrategyConfig centerStrategy = strategy;
+  centerStrategy.powerTargetPriorityThreshold = 100;
+  centerStrategy.powerTargetDistanceSlack = 0;
+  centerStrategy.targetDistanceWeight = std::min(80, centerStrategy.targetDistanceWeight + 14);
+  centerStrategy.openSpaceWeight = std::min(60, centerStrategy.openSpaceWeight + 8);
+  centerStrategy.safeNeighborWeight = std::min(80, centerStrategy.safeNeighborWeight + 8);
+  centerStrategy.trapPenalty = std::min(120, centerStrategy.trapPenalty + 16);
+  centerStrategy.lookaheadDepth = std::max(centerStrategy.lookaheadDepth, 3);
+  centerStrategy.straightBonus = std::max(0, centerStrategy.straightBonus - 3);
+
+  const auto& backend = searchBackend();
+  result.direction = backend.decideDirection(centerSnapshot, centerStrategy);
+  result.decisionSummary = backend.lastDecisionSummary();
+  if (result.direction.has_value()) {
+    result.backend = backend.name();
+  }
+  return result;
+}
+
 } // namespace
 
 auto step(const RuntimeInput& input) -> RuntimeOutput {
@@ -165,6 +203,16 @@ auto step(const RuntimeInput& input) -> RuntimeOutput {
   }
 
   if (input.state == AppState::Playing) {
+    const auto forced = forcedCenterDirection(input, strategy);
+    if (forced.direction.has_value()) {
+      output.enqueueDirection = forced.direction;
+      output.decisionSummary = forced.decisionSummary;
+      output.backend = forced.backend;
+      output.usedFallback = true;
+      output.fallbackReason = QStringLiteral("direction-empty-search-circuit");
+      return output;
+    }
+
     const auto candidates = directionCandidates(input, resolved);
     for (const auto& candidate : candidates) {
       output.enqueueDirection = candidate.backend->decideDirection(input.snapshot, strategy);

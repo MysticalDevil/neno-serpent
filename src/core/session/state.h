@@ -19,6 +19,7 @@ struct SessionState {
   QList<QPoint> obstacles;
   int tickCounter = 0;
   int lastRoguelikeChoiceScore = -1000;
+  int speedDownSteps = 0;
 };
 
 } // namespace nenoserpent::core

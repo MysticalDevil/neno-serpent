@@ -60,6 +60,10 @@ public:
     m_lastBackendRoute.clear();
   }
   auto observeDirectionEmptyRuleFallback(bool usedFallback, const QString& reason) -> bool;
+  void observeDirectionFallback(bool usedFallback, const QString& reason);
+  [[nodiscard]] auto forceCenterPushActive() const -> bool {
+    return m_directionEmptySearchForceCenterTicks > 0;
+  }
   void resetDirectionEmptyRuleStats();
 
 private:
@@ -86,6 +90,10 @@ private:
   int m_directionEmptyRuleWarnThreshold = 24;
   int m_directionEmptyRuleWarnInterval = 12;
   int m_directionEmptyRuleWindowTicks = 480;
+  int m_directionEmptySearchConsecutive = 0;
+  int m_directionEmptySearchFuseThreshold = 6;
+  int m_directionEmptySearchForceCenterTicks = 0;
+  int m_directionEmptySearchForceCenterDurationTicks = 36;
 };
 
 } // namespace nenoserpent::adapter::bot

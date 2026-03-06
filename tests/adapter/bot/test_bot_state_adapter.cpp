@@ -39,6 +39,7 @@ private slots:
   void cycleBackendModeUpdatesAutoplayState();
   void setParamClampsAndAppearsInStatus();
   void initializeFromEnvironmentHonorsBackendOverride();
+  void directionEmptySearchFuseActivatesForceCenterWindow();
 };
 
 void BotStateAdapterTest::cycleBackendModeUpdatesAutoplayState() {
@@ -81,6 +82,32 @@ void BotStateAdapterTest::initializeFromEnvironmentHonorsBackendOverride() {
   QCOMPARE(state.backendModeName(), QStringLiteral("search"));
   QVERIFY(state.currentBackend() != nullptr);
   QCOMPARE(state.currentBackend()->name(), QStringLiteral("search"));
+}
+
+void BotStateAdapterTest::directionEmptySearchFuseActivatesForceCenterWindow() {
+  ScopedEnv thresholdEnv("NENOSERPENT_BOT_DIRECTION_EMPTY_SEARCH_FUSE_THRESHOLD");
+  ScopedEnv durationEnv("NENOSERPENT_BOT_DIRECTION_EMPTY_SEARCH_FUSE_FORCE_CENTER_TICKS");
+  qputenv("NENOSERPENT_BOT_DIRECTION_EMPTY_SEARCH_FUSE_THRESHOLD", "2");
+  qputenv("NENOSERPENT_BOT_DIRECTION_EMPTY_SEARCH_FUSE_FORCE_CENTER_TICKS", "5");
+
+  nenoserpent::adapter::bot::State state;
+  state.initializeFromEnvironment();
+  QVERIFY(!state.forceCenterPushActive());
+
+  state.observeDirectionFallback(true, QStringLiteral("direction-empty-search"));
+  auto status = state.status();
+  QCOMPARE(status.value(QStringLiteral("directionEmptySearchConsecutive")).toInt(), 1);
+  QCOMPARE(status.value(QStringLiteral("directionEmptySearchForceCenterTicks")).toInt(), 0);
+
+  state.observeDirectionFallback(true, QStringLiteral("direction-empty-search"));
+  status = state.status();
+  QCOMPARE(status.value(QStringLiteral("directionEmptySearchConsecutive")).toInt(), 0);
+  QCOMPARE(status.value(QStringLiteral("directionEmptySearchForceCenterTicks")).toInt(), 5);
+  QVERIFY(state.forceCenterPushActive());
+
+  state.onTick();
+  status = state.status();
+  QCOMPARE(status.value(QStringLiteral("directionEmptySearchForceCenterTicks")).toInt(), 4);
 }
 
 QTEST_MAIN(BotStateAdapterTest)

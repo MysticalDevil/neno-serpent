@@ -60,7 +60,7 @@ auto buildFruitLibraryModel(const QList<int>& discoveredFruitTypes) -> QVariantL
 
   const QList<FruitInfo> fruits{
     {.type = 1, .name = u"Ghost"_s, .description = u"Pass through yourself."_s},
-    {.type = 2, .name = u"Slow"_s, .description = u"Slows the game down."_s},
+    {.type = 2, .name = u"Slow"_s, .description = u"Drops speed by one tier."_s},
     {.type = 3, .name = u"Magnet"_s, .description = u"Standard nutritious food."_s},
     {.type = 4, .name = u"Shield"_s, .description = u"Survive one collision."_s},
     {.type = 5, .name = u"Portal"_s, .description = u"Pass through obstacle walls."_s},

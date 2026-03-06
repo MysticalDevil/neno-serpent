@@ -400,7 +400,7 @@ private slots:
     QVERIFY2(!game.hasSave(), "GameOver back-to-menu should not generate a continue save");
   }
 
-  void testLatestBuffSelectionOverridesPreviousBuff() {
+  void testSlowSelectionClearsTimedBuffState() {
     EngineAdapter game;
     game.startGame();
 
@@ -408,7 +408,9 @@ private slots:
     QCOMPARE(game.activeBuff(), static_cast<int>(PowerUpId::Ghost));
 
     QVERIFY2(pickBuff(game, PowerUpId::Slow), "Failed to pick Slow buff");
-    QCOMPARE(game.activeBuff(), static_cast<int>(PowerUpId::Slow));
+    QCOMPARE(game.activeBuff(), static_cast<int>(PowerUpId::None));
+    QCOMPARE(game.buffTicksRemaining(), 0);
+    QCOMPARE(game.buffTicksTotal(), 0);
   }
 
   void testReplayAppliesRecordedInputOnMatchingFrame() {

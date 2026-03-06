@@ -54,7 +54,7 @@ function choiceName(type) {
 
 function choiceDescription(type) {
     if (type === 1) return "Pass through self"
-    if (type === 2) return "Decrease speed"
+    if (type === 2) return "Drop speed by 1 tier"
     if (type === 3) return "Attract food"
     if (type === 4) return "One extra life"
     if (type === 5) return "Phase through walls"

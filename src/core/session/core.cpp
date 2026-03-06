@@ -20,6 +20,8 @@ constexpr int SpawnMinHeadDistance = 2;
 constexpr int SpawnMinObstacleDistance = 2;
 constexpr int SpawnTopKMin = 3;
 constexpr int SpawnTopKMax = 8;
+constexpr int SpeedStepIntervalMs = 5;
+constexpr int MaxSpeedDownSteps = 12;
 
 enum class SpawnProfile {
   NoObstacle,
@@ -697,10 +699,9 @@ auto SessionCore::tickCounter() const -> int {
 }
 
 auto SessionCore::currentTickIntervalMs() const -> int {
-  if (m_state.activeBuff == static_cast<int>(BuffId::Slow)) {
-    return 250;
-  }
-  return tickIntervalForScore(m_state.score);
+  const int baseInterval = tickIntervalForScore(m_state.score);
+  const int speedDown = std::clamp(m_state.speedDownSteps, 0, MaxSpeedDownSteps);
+  return std::clamp(baseInterval + (speedDown * SpeedStepIntervalMs), 72, 250);
 }
 
 auto SessionCore::headPosition() const -> QPoint {
@@ -1193,6 +1194,7 @@ void SessionCore::restorePersistedSession(const StateSnapshot& snapshot) {
   const QPoint persistedDirection = m_state.direction;
   const QPoint persistedFood = m_state.food;
   const int persistedScore = m_state.score;
+  const int persistedSpeedDownSteps = m_state.speedDownSteps;
   const QList<QPoint> persistedObstacles = m_state.obstacles;
 
   resetTransientRuntimeState();
@@ -1201,6 +1203,7 @@ void SessionCore::restorePersistedSession(const StateSnapshot& snapshot) {
   m_state.direction = persistedDirection;
   m_state.food = persistedFood;
   m_state.score = persistedScore;
+  m_state.speedDownSteps = persistedSpeedDownSteps;
   m_state.obstacles = persistedObstacles;
   resetStallGuard();
 }
@@ -1242,6 +1245,7 @@ void SessionCore::resetTransientRuntimeState() {
   m_state.powerUpPos = QPoint(-1, -1);
   m_state.powerUpType = 0;
   m_state.powerUpTicksRemaining = 0;
+  m_state.speedDownSteps = 0;
   m_hasLastObstacleSignature = false;
   m_lastObstacleSignature = 0;
   m_dynamicObstacleConfidenceTicks = 0;
@@ -1288,6 +1292,9 @@ void SessionCore::applyPowerUpResult(const PowerUpConsumptionResult& result) {
   m_state.activeBuff = result.activeBuffAfter;
   m_state.buffTicksRemaining = result.buffTicksRemaining;
   m_state.buffTicksTotal = result.buffTicksTotal;
+  if (result.slowMode) {
+    m_state.speedDownSteps = std::clamp(m_state.speedDownSteps + 1, 0, MaxSpeedDownSteps);
+  }
 }
 
 auto SessionCore::tickPowerUpCountdown() -> bool {

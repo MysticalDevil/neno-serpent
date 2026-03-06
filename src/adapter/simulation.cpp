@@ -155,7 +155,7 @@ void EngineAdapter::applyPowerUpConsumptionEffects(
   }
 
   emit powerUpEaten();
-  m_timer->setInterval(result.slowMode ? 250 : gameplayTickIntervalMs());
+  m_timer->setInterval(gameplayTickIntervalMs());
 
   triggerHaptic(5);
   emit buffChanged();

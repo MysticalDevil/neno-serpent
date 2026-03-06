@@ -26,7 +26,7 @@ auto pickRoguelikeChoices(const uint seed, const int count) -> QList<ChoiceSpec>
 
   std::array<ChoiceSpec, 9> allChoices{{
     {.type = BuffGhost, .name = u"Ghost"_s, .description = u"Pass through self"_s},
-    {.type = BuffSlow, .name = u"Slow"_s, .description = u"Decrease speed"_s},
+    {.type = BuffSlow, .name = u"Slow"_s, .description = u"Drop speed by 1 tier"_s},
     {.type = BuffMagnet, .name = u"Magnet"_s, .description = u"Attract food"_s},
     {.type = BuffShield, .name = u"Shield"_s, .description = u"One extra life"_s},
     {.type = BuffPortal, .name = u"Portal"_s, .description = u"Phase through walls"_s},

@@ -15,6 +15,7 @@ auto runOrchestratorTick(State& state, const OrchestratorInput& input) -> Orches
     .strategy = &state.strategyConfig(),
     .backend = state.currentBackend(),
     .fallbackBackend = &ruleBackend(),
+    .forceCenterPush = state.forceCenterPushActive(),
   });
   state.setActionCooldownTicks(decision.nextCooldownTicks);
 

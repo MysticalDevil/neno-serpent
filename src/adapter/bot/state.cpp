@@ -72,6 +72,19 @@ void State::initializeFromEnvironment() {
     "NENOSERPENT_BOT_DIRECTION_EMPTY_RULE_WINDOW_TICKS", &windowTicksOk);
   m_directionEmptyRuleWindowTicks =
     windowTicksOk ? std::max(60, windowTicksRaw) : m_directionEmptyRuleWindowTicks;
+
+  bool searchFuseThresholdOk = false;
+  const int searchFuseThresholdRaw = qEnvironmentVariableIntValue(
+    "NENOSERPENT_BOT_DIRECTION_EMPTY_SEARCH_FUSE_THRESHOLD", &searchFuseThresholdOk);
+  m_directionEmptySearchFuseThreshold = searchFuseThresholdOk ? std::max(1, searchFuseThresholdRaw)
+                                                              : m_directionEmptySearchFuseThreshold;
+
+  bool searchFuseDurationOk = false;
+  const int searchFuseDurationRaw = qEnvironmentVariableIntValue(
+    "NENOSERPENT_BOT_DIRECTION_EMPTY_SEARCH_FUSE_FORCE_CENTER_TICKS", &searchFuseDurationOk);
+  m_directionEmptySearchForceCenterDurationTicks =
+    searchFuseDurationOk ? std::max(1, searchFuseDurationRaw)
+                         : m_directionEmptySearchForceCenterDurationTicks;
   resetDirectionEmptyRuleStats();
 
   if (!envConfig.backendOverrideProvided) {
@@ -210,6 +223,11 @@ auto State::status() const -> QVariantMap {
     {u"directionEmptyRuleWarnThreshold"_s, m_directionEmptyRuleWarnThreshold},
     {u"directionEmptyRuleWarnInterval"_s, m_directionEmptyRuleWarnInterval},
     {u"directionEmptyRuleWindowTicks"_s, m_directionEmptyRuleWindowTicks},
+    {u"directionEmptySearchConsecutive"_s, m_directionEmptySearchConsecutive},
+    {u"directionEmptySearchFuseThreshold"_s, m_directionEmptySearchFuseThreshold},
+    {u"directionEmptySearchForceCenterTicks"_s, m_directionEmptySearchForceCenterTicks},
+    {u"directionEmptySearchForceCenterDurationTicks"_s,
+     m_directionEmptySearchForceCenterDurationTicks},
   };
 }
 
@@ -231,6 +249,9 @@ auto State::currentBackend() const -> const BotBackend* {
 
 void State::onTick() {
   ++m_runtimeTicks;
+  if (m_directionEmptySearchForceCenterTicks > 0) {
+    --m_directionEmptySearchForceCenterTicks;
+  }
   if (m_directionEmptyRuleWindowTicks > 0 && (m_runtimeTicks % m_directionEmptyRuleWindowTicks) == 0) {
     m_directionEmptyRuleWindow = 0;
   }
@@ -255,10 +276,28 @@ auto State::observeDirectionEmptyRuleFallback(const bool usedFallback, const QSt
           std::max(1, m_directionEmptyRuleWarnInterval)) == 0;
 }
 
+void State::observeDirectionFallback(const bool usedFallback, const QString& reason) {
+  if (usedFallback && reason == QStringLiteral("direction-empty-search")) {
+    ++m_directionEmptySearchConsecutive;
+    if (m_directionEmptySearchConsecutive >= m_directionEmptySearchFuseThreshold) {
+      m_directionEmptySearchForceCenterTicks =
+        std::max(m_directionEmptySearchForceCenterTicks,
+                 m_directionEmptySearchForceCenterDurationTicks);
+      m_directionEmptySearchConsecutive = 0;
+    }
+    return;
+  }
+  if (!usedFallback || reason != QStringLiteral("direction-empty-search-circuit")) {
+    m_directionEmptySearchConsecutive = 0;
+  }
+}
+
 void State::resetDirectionEmptyRuleStats() {
   m_runtimeTicks = 0;
   m_directionEmptyRuleTotal = 0;
   m_directionEmptyRuleWindow = 0;
+  m_directionEmptySearchConsecutive = 0;
+  m_directionEmptySearchForceCenterTicks = 0;
 }
 
 void State::configureMlOnline(const QString& modelPath) {

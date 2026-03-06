@@ -21,6 +21,7 @@ struct RuntimeInput {
   const StrategyConfig* strategy = nullptr;
   const BotBackend* backend = nullptr;
   const BotBackend* fallbackBackend = nullptr;
+  bool forceCenterPush = false;
 };
 
 struct RuntimeOutput {

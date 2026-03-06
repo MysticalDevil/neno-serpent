@@ -22,7 +22,7 @@ auto choiceSpecForType(const int type) -> std::optional<nenoserpent::core::Choic
       .type = PowerUpId::Ghost, .name = u"Ghost"_s, .description = u"Pass through self"_s};
   case PowerUpId::Slow:
     return ChoiceSpec{
-      .type = PowerUpId::Slow, .name = u"Slow"_s, .description = u"Decrease speed"_s};
+      .type = PowerUpId::Slow, .name = u"Slow"_s, .description = u"Drop speed by 1 tier"_s};
   case PowerUpId::Magnet:
     return ChoiceSpec{
       .type = PowerUpId::Magnet, .name = u"Magnet"_s, .description = u"Attract food"_s};

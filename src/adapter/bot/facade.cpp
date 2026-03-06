@@ -63,6 +63,7 @@ auto RuntimeFacade::runTick(const RuntimeTickInput& input, const RuntimeTickCall
   if (!decision.decisionSummary.isEmpty()) {
     qCDebug(nenoserpentInputLog).noquote() << decision.decisionSummary;
   }
+  m_state.observeDirectionFallback(decision.usedFallback, decision.fallbackReason);
   if (m_state.observeDirectionEmptyRuleFallback(decision.usedFallback, decision.fallbackReason)) {
     const QVariantMap stats = m_state.status();
     qCWarning(nenoserpentInputLog).noquote()

@@ -318,6 +318,8 @@ public:
     m_hasScore = false;
     m_escapeHistory.clear();
     m_recentDirections.clear();
+    m_tabooDirection.reset();
+    m_tabooTicks = 0;
   }
 
   auto observeScore(const int score) -> void {
@@ -356,90 +358,9 @@ public:
     return clampInt(revisitPenalty + (pocketPenalty * pocketScale), 0, 360);
   }
 
-  [[nodiscard]] auto escapeCycleContinuationPenalty(const QPoint& candidate,
-                                                    const bool escapeMode,
-                                                    const int noScoreTicks) const -> int {
-    if (!escapeMode || noScoreTicks < 32 || m_escapeHistory.size() < 8) {
-      return 0;
-    }
-    const auto n = static_cast<int>(m_escapeHistory.size());
-    const bool twoCycle = (m_escapeHistory[n - 1] == m_escapeHistory[n - 3]) &&
-                          (m_escapeHistory[n - 2] == m_escapeHistory[n - 4]);
-    if (twoCycle && candidate == m_escapeHistory[n - 2]) {
-      return 180 + ((noScoreTicks - 32) / 4);
-    }
-    const bool fourCycle = (m_escapeHistory[n - 1] == m_escapeHistory[n - 5]) &&
-                           (m_escapeHistory[n - 2] == m_escapeHistory[n - 6]) &&
-                           (m_escapeHistory[n - 3] == m_escapeHistory[n - 7]) &&
-                           (m_escapeHistory[n - 4] == m_escapeHistory[n - 8]);
-    if (fourCycle && candidate == m_escapeHistory[n - 4]) {
-      return 160 + ((noScoreTicks - 32) / 5);
-    }
-    return 0;
-  }
-
-  [[nodiscard]] auto escapeDirectionRepeatPenalty(const QPoint& candidate,
-                                                  const bool escapeMode,
-                                                  const int noScoreTicks) const -> int {
-    if (!escapeMode || noScoreTicks < 24 || m_escapeHistory.empty()) {
-      return 0;
-    }
-    const int n = static_cast<int>(m_escapeHistory.size());
-    int penalty = 0;
-    int streak = 0;
-    for (int i = n - 1; i >= 0; --i) {
-      if (m_escapeHistory[static_cast<std::size_t>(i)] != candidate) {
-        break;
-      }
-      ++streak;
-    }
-    if (streak >= 2) {
-      penalty += (streak - 1) * 22;
-    }
-    const int window = std::min(6, n);
-    int count = 0;
-    for (int i = n - window; i < n; ++i) {
-      if (m_escapeHistory[static_cast<std::size_t>(i)] == candidate) {
-        ++count;
-      }
-    }
-    if (count >= 4) {
-      penalty += (count - 3) * 18;
-    }
-    return penalty;
-  }
-
-  [[nodiscard]] auto repeatedDirectionPenalty(const QPoint& candidate,
-                                              const bool escapeMode,
-                                              const int noScoreTicks) const -> int {
-    if (m_recentDirections.empty()) {
-      return 0;
-    }
-    int streak = 0;
-    for (auto it = m_recentDirections.rbegin(); it != m_recentDirections.rend(); ++it) {
-      if (*it != candidate) {
-        break;
-      }
-      ++streak;
-    }
-    if (escapeMode) {
-      if (streak < 2) {
-        return 0;
-      }
-      return (streak - 1) * (18 + std::max(0, (noScoreTicks - 24) / 8));
-    }
-    if (streak < 3) {
-      return 0;
-    }
-    return (streak - 2) * (10 + std::max(0, (noScoreTicks - 12) / 10));
-  }
-
-  [[nodiscard]] auto explicitCyclePenalty(const QPoint& candidate,
-                                          const bool escapeMode,
-                                          const int noScoreTicks) const -> int {
-    if (m_recentDirections.size() < 7) {
-      return 0;
-    }
+  [[nodiscard]] auto actionSequencePenalty(const QPoint& candidate,
+                                           const bool escapeMode,
+                                           const int noScoreTicks) const -> int {
     const auto periodicRepeat = [&](const int period) -> bool {
       const int n = static_cast<int>(m_recentDirections.size());
       if (n < (period * 2) - 1) {
@@ -457,17 +378,41 @@ public:
       return true;
     };
 
-    int penalty = 0;
+    int repeatPenalty = 0;
+    int streak = 0;
+    for (auto it = m_recentDirections.rbegin(); it != m_recentDirections.rend(); ++it) {
+      if (*it != candidate) {
+        break;
+      }
+      ++streak;
+    }
+    if (escapeMode) {
+      if (streak >= 2) {
+        repeatPenalty = (streak - 1) * (20 + std::max(0, (noScoreTicks - 24) / 7));
+      }
+    } else if (streak >= 3) {
+      repeatPenalty = (streak - 2) * (12 + std::max(0, (noScoreTicks - 12) / 9));
+    }
+
+    int cyclePenalty = 0;
     if (periodicRepeat(4)) {
-      penalty += 120 + std::max(0, noScoreTicks - 16) / 3;
+      cyclePenalty += 240 + std::max(0, noScoreTicks - 16) / 2;
+    }
+    if (periodicRepeat(6)) {
+      cyclePenalty += 280 + std::max(0, noScoreTicks - 20) / 2;
     }
     if (periodicRepeat(8)) {
-      penalty += 170 + std::max(0, noScoreTicks - 24) / 2;
+      cyclePenalty += 340 + std::max(0, noScoreTicks - 24);
     }
     if (!escapeMode) {
-      penalty = (penalty * 2) / 3;
+      cyclePenalty = (cyclePenalty * 3) / 4;
     }
-    return penalty;
+
+    int tabooPenalty = 0;
+    if (m_tabooTicks > 0 && m_tabooDirection.has_value() && candidate == *m_tabooDirection) {
+      tabooPenalty = (escapeMode ? 220 : 140) + std::max(0, noScoreTicks - 20) / 2;
+    }
+    return repeatPenalty + cyclePenalty + tabooPenalty;
   }
 
   auto observeDecision(const std::optional<QPoint>& direction, const bool escapeMode)
@@ -475,9 +420,33 @@ public:
     if (!direction.has_value()) {
       return;
     }
+    if (m_tabooTicks > 0) {
+      --m_tabooTicks;
+      if (m_tabooTicks <= 0) {
+        m_tabooDirection.reset();
+      }
+    }
     m_recentDirections.push_back(*direction);
     while (m_recentDirections.size() > 20) {
       m_recentDirections.pop_front();
+    }
+    const auto recentCycleDetected = [&](const int period) -> bool {
+      const int n = static_cast<int>(m_recentDirections.size());
+      if (n < period * 2) {
+        return false;
+      }
+      for (int i = 0; i < period; ++i) {
+        const QPoint lhs = m_recentDirections[static_cast<std::size_t>(n - period + i)];
+        const QPoint rhs = m_recentDirections[static_cast<std::size_t>(n - (period * 2) + i)];
+        if (lhs != rhs) {
+          return false;
+        }
+      }
+      return true;
+    };
+    if (recentCycleDetected(4) || recentCycleDetected(6) || recentCycleDetected(8)) {
+      m_tabooDirection = *direction;
+      m_tabooTicks = escapeMode ? 5 : 3;
     }
     if (escapeMode) {
       m_escapeHistory.push_back(*direction);
@@ -493,6 +462,8 @@ private:
   bool m_hasScore = false;
   std::deque<QPoint> m_escapeHistory;
   std::deque<QPoint> m_recentDirections;
+  std::optional<QPoint> m_tabooDirection;
+  int m_tabooTicks = 0;
 };
 
 enum class TargetMode {
@@ -1384,12 +1355,10 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
         breakdown.progress = clampScoreBlock(breakdown.progress, -120, 170);
       }
       const int repeatSquaredPenalty = std::min(260, revisitCount * revisitCount * 12);
-      const int cyclePenalty =
-        loopController.escapeCycleContinuationPenalty(candidate, true, noScoreTicks);
       const int escapeLoopExtra =
         std::min(320,
                  (revisitCount * 24) + repeatSquaredPenalty + (pocketPenalty * 10) +
-                   (orbitBreakLevel * 18) + cyclePenalty + std::max(0, noScoreTicks - 24));
+                   (orbitBreakLevel * 18) + std::max(0, noScoreTicks - 24));
       breakdown.loopCost = clampScoreBlock(
         loopController.loopCost(revisitCount, pocketPenalty, tunedConfig, useSearchScoring, true) +
           escapeLoopExtra,
@@ -1457,12 +1426,10 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
         loopController.loopCost(revisitCount, pocketPenalty, tunedConfig, false, false);
     }
 
-    const int repeatPenalty =
-      loopController.repeatedDirectionPenalty(candidate, escapeMode, noScoreTicks);
-    const int explicitCyclePenalty =
-      loopController.explicitCyclePenalty(candidate, escapeMode, noScoreTicks);
+    const int actionSequencePenalty =
+      loopController.actionSequencePenalty(candidate, escapeMode, noScoreTicks);
     breakdown.loopCost = clampScoreBlock(
-      breakdown.loopCost + repeatPenalty + explicitCyclePenalty,
+      breakdown.loopCost + actionSequencePenalty,
       0,
       escapeMode ? 580 : 420);
 
@@ -1499,10 +1466,8 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
     if (deepEscapeStall) {
       const int anchorDistance = toroidalDistance(
         preview.next.head, primaryTarget, snapshot.boardWidth, snapshot.boardHeight);
-      const int cyclePenalty =
-        loopController.escapeCycleContinuationPenalty(candidate, true, noScoreTicks);
-      const int repeatPenalty =
-        loopController.escapeDirectionRepeatPenalty(candidate, true, noScoreTicks);
+      const int actionSequencePenalty =
+        loopController.actionSequencePenalty(candidate, true, noScoreTicks);
       const int directionalPenalty = candidate == snapshot.direction ? 50 : 0;
       const int deterministicJitter =
         static_cast<int>(((tieRotateSeed + static_cast<std::uint64_t>((candidateIndex + 1) * 17) +
@@ -1512,7 +1477,7 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
       const int deepEscapeScore =
         (openSpacePct * 4) + (safeNeighbors * 52) + (candidateStats->tailReachable ? 48 : -96) -
         (anchorDistance * 28) - (revisitCount * 64) - breakdown.loopCost - breakdown.risk -
-        cyclePenalty - repeatPenalty - directionalPenalty + deterministicJitter;
+        actionSequencePenalty - directionalPenalty + deterministicJitter;
       breakdown.progress = clampScoreBlock(deepEscapeScore, -520, 320);
       breakdown.survival = 0;
       breakdown.reward = 0;
@@ -1560,8 +1525,7 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
     int tieRank = (rawIndex - tieRotateOffset + static_cast<int>(kDirections.size())) %
                   static_cast<int>(kDirections.size());
     if (deepEscapeStall) {
-      tieRank += loopController.escapeCycleContinuationPenalty(candidate, true, noScoreTicks) / 8;
-      tieRank += loopController.escapeDirectionRepeatPenalty(candidate, true, noScoreTicks) / 10;
+      tieRank += loopController.actionSequencePenalty(candidate, true, noScoreTicks) / 14;
     }
     if (score > bestScore || (score == bestScore && tieRank < bestTieRank)) {
       bestScore = score;

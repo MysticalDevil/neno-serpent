@@ -26,8 +26,18 @@ auto buildPowerUpResult(const int powerUpType,
   if (acquired == static_cast<int>(nenoserpent::core::BuffId::Mini)) {
     result.miniApplied = true;
     result.activeBuffAfter = static_cast<int>(nenoserpent::core::BuffId::None);
+  } else if (acquired == static_cast<int>(nenoserpent::core::BuffId::Slow)) {
+    // Slow now permanently reduces speed by one tier, not as a timed active buff.
+    result.activeBuffAfter = static_cast<int>(nenoserpent::core::BuffId::None);
   } else {
     result.activeBuffAfter = acquired;
+  }
+
+  result.slowMode = (acquired == static_cast<int>(nenoserpent::core::BuffId::Slow));
+  if (result.slowMode) {
+    result.buffTicksRemaining = 0;
+    result.buffTicksTotal = 0;
+    return result;
   }
 
   const nenoserpent::core::BuffId durationBuff =
@@ -38,7 +48,6 @@ auto buildPowerUpResult(const int powerUpType,
                          : baseDurationTicks;
   result.buffTicksRemaining = duration;
   result.buffTicksTotal = duration;
-  result.slowMode = (acquired == static_cast<int>(nenoserpent::core::BuffId::Slow));
   return result;
 }
 

@@ -26,7 +26,7 @@ private slots:
   void testBootstrapForLevelPreservesAliasedObstacleInput();
   void testSeedPreviewStateOverwritesSessionWithPreviewState();
   void testApplyReplayTimelineConsumesMatchingFrames();
-  void testCurrentTickIntervalTracksScoreAndSlowBuff();
+  void testCurrentTickIntervalTracksScoreAndSlowStepDown();
   void testRuntimeUpdateHooksExpireBuffAndAdvanceTick();
   void testRestorePersistedSessionClearsTransientRuntimeButKeepsPersistedFields();
   void testMetaActionFacadeRoutesBootstrapAndPreviewSeeding();
@@ -443,13 +443,21 @@ void TestSessionCore::testApplyReplayTimelineConsumesMatchingFrames() {
   QCOMPARE(choiceHistoryIndex, 2);
 }
 
-void TestSessionCore::testCurrentTickIntervalTracksScoreAndSlowBuff() {
+void TestSessionCore::testCurrentTickIntervalTracksScoreAndSlowStepDown() {
   nenoserpent::core::SessionCore core;
   core.state().score = 25;
   QCOMPARE(core.currentTickIntervalMs(), 215);
 
-  core.state().activeBuff = static_cast<int>(nenoserpent::core::BuffId::Slow);
-  QCOMPARE(core.currentTickIntervalMs(), 250);
+  core.state().powerUpPos = QPoint(5, 5);
+  core.state().powerUpType = static_cast<int>(nenoserpent::core::BuffId::Slow);
+  const auto slowResult = core.consumePowerUp(QPoint(5, 5), 40, true);
+  QVERIFY(slowResult.ate);
+  QVERIFY(slowResult.slowMode);
+  QCOMPARE(core.state().activeBuff, static_cast<int>(nenoserpent::core::BuffId::None));
+  QCOMPARE(core.state().buffTicksRemaining, 0);
+  QCOMPARE(core.state().buffTicksTotal, 0);
+  QCOMPARE(core.state().speedDownSteps, 1);
+  QCOMPARE(core.currentTickIntervalMs(), 220);
 }
 
 void TestSessionCore::testRuntimeUpdateHooksExpireBuffAndAdvanceTick() {

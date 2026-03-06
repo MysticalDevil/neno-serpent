@@ -1284,14 +1284,26 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
     }
     int score = breakdown.total();
     if (deepEscapeStall) {
-      const int deepEscapeScore = (openSpacePct * 6) + (safeNeighbors * 80) +
-                                  (candidateStats->tailReachable ? 40 : -80) - (revisitCount * 50) -
-                                  breakdown.loopCost - breakdown.risk -
-                                  (candidate == snapshot.direction ? 60 : 0);
-      breakdown.progress = clampScoreBlock(deepEscapeScore, -360, 360);
+      const int anchorDistance = toroidalDistance(
+        preview.next.head, primaryTarget, snapshot.boardWidth, snapshot.boardHeight);
+      const int cyclePenalty =
+        loopController.escapeCycleContinuationPenalty(candidate, true, noScoreTicks);
+      const int directionalPenalty = candidate == snapshot.direction ? 50 : 0;
+      const int deterministicJitter =
+        static_cast<int>(((tieRotateSeed + static_cast<std::uint64_t>((candidateIndex + 1) * 17) +
+                           static_cast<std::uint64_t>(noScoreTicks)) %
+                          9ULL)) -
+        4;
+      const int deepEscapeScore =
+        (openSpacePct * 4) + (safeNeighbors * 52) + (candidateStats->tailReachable ? 48 : -96) -
+        (anchorDistance * 28) - (revisitCount * 64) - breakdown.loopCost - breakdown.risk -
+        cyclePenalty - directionalPenalty + deterministicJitter;
+      breakdown.progress = clampScoreBlock(deepEscapeScore, -520, 320);
       breakdown.survival = 0;
       breakdown.reward = 0;
       breakdown.drift = 0;
+      breakdown.risk = 0;
+      breakdown.loopCost = 0;
       score = breakdown.total();
     }
     if (!escapeMode && noScoreTicks >= 12) {
@@ -1316,8 +1328,11 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
     }
 
     const int rawIndex = candidateIndex;
-    const int tieRank = (rawIndex - tieRotateOffset + static_cast<int>(kDirections.size())) %
-                        static_cast<int>(kDirections.size());
+    int tieRank = (rawIndex - tieRotateOffset + static_cast<int>(kDirections.size())) %
+                  static_cast<int>(kDirections.size());
+    if (deepEscapeStall) {
+      tieRank += loopController.escapeCycleContinuationPenalty(candidate, true, noScoreTicks) / 8;
+    }
     if (score > bestScore || (score == bestScore && tieRank < bestTieRank)) {
       bestScore = score;
       bestTieRank = tieRank;

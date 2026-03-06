@@ -169,9 +169,10 @@ struct ScoreBreakdown {
   int reward = 0;
   int risk = 0;
   int loopCost = 0;
+  int drift = 0;
 
   [[nodiscard]] auto total() const -> int {
-    return progress + survival + reward - risk - loopCost;
+    return progress + survival + reward + drift - risk - loopCost;
   }
 };
 
@@ -1176,10 +1177,10 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
       const int distanceDelta = nextPrimaryDistance - currentPrimaryDistance;
       if (distanceDelta > 0) {
         const int stallPenalty = std::min(180, distanceDelta * (8 + (noScoreTicks / 4)));
-        breakdown.progress = clampScoreBlock(breakdown.progress - stallPenalty, -280, 280);
+        breakdown.drift = -stallPenalty;
       } else if (distanceDelta < 0) {
         const int stallBonus = std::min(96, (-distanceDelta) * (6 + (noScoreTicks / 8)));
-        breakdown.progress = clampScoreBlock(breakdown.progress + stallBonus, -280, 280);
+        breakdown.drift = stallBonus;
       }
       score = breakdown.total();
     }
@@ -1212,13 +1213,14 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
     topItems.reserve(topCount);
     for (int i = 0; i < topCount; ++i) {
       const auto& item = candidateTelemetry[static_cast<std::size_t>(i)];
-      topItems.append(QStringLiteral("(%1,%2)=%3[p=%4 s=%5 r=%6 rk=%7 lc=%8]")
+      topItems.append(QStringLiteral("(%1,%2)=%3[p=%4 s=%5 r=%6 d=%7 rk=%8 lc=%9]")
                         .arg(item.direction.x())
                         .arg(item.direction.y())
                         .arg(item.total)
                         .arg(item.breakdown.progress)
                         .arg(item.breakdown.survival)
                         .arg(item.breakdown.reward)
+                        .arg(item.breakdown.drift)
                         .arg(item.breakdown.risk)
                         .arg(item.breakdown.loopCost));
     }

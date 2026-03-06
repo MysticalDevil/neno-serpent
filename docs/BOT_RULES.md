@@ -67,7 +67,8 @@ As of the latest refactor, `rule` and `search` backends use a unified staged pip
 4. `Loop Control`
    - Loop observation (`LoopMemory`) is separated from loop penalty/escape policy (`LoopController`).
 5. `Decision Telemetry`
-   - Runtime summary includes filter acceptance/reject stats and top-3 candidate score contributions.
+   - Runtime summary includes filter acceptance/reject stats and top-3 candidate score contributions
+     (`p/s/r/d/rk/lc`, where `d` is stall drift shaping).
 
 This pipeline is intentionally backend-internal, so adapter/QML does not depend on
 scoring internals.

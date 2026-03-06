@@ -19,6 +19,7 @@ void State::initializeFromEnvironment() {
   m_baseStrategyConfig = strategyLoad.config;
   m_strategyConfig = m_baseStrategyConfig;
   applyModeDefaults();
+  m_directionEmptySearchForceCenterDurationTicks = m_strategyConfig.recovery.centerRecoverTicks;
   if (strategyLoad.loaded) {
     qCInfo(nenoserpentInputLog).noquote()
       << "bot strategy loaded profile=" << strategyLoad.profile << "source=" << strategyLoad.source;
@@ -61,9 +62,8 @@ void State::initializeFromEnvironment() {
     warnThresholdOk ? std::max(1, warnThresholdRaw) : m_directionEmptyRuleWarnThreshold;
 
   bool warnIntervalOk = false;
-  const int warnIntervalRaw =
-    qEnvironmentVariableIntValue("NENOSERPENT_BOT_DIRECTION_EMPTY_RULE_WARN_INTERVAL",
-                                 &warnIntervalOk);
+  const int warnIntervalRaw = qEnvironmentVariableIntValue(
+    "NENOSERPENT_BOT_DIRECTION_EMPTY_RULE_WARN_INTERVAL", &warnIntervalOk);
   m_directionEmptyRuleWarnInterval =
     warnIntervalOk ? std::max(1, warnIntervalRaw) : m_directionEmptyRuleWarnInterval;
 
@@ -147,44 +147,108 @@ auto State::setParam(const QString& key, const int value) -> bool {
   };
 
   bool changed = false;
-  if (normalized == u"openspaceweight"_s) {
-    m_strategyConfig.openSpaceWeight = clampRange(value, 0, 60);
+  if (normalized == u"openspaceweight"_s || normalized == u"modeweights.openspaceweight"_s) {
+    m_strategyConfig.modeWeights.openSpaceWeight = clampRange(value, 0, 60);
+    m_strategyConfig.openSpaceWeight = m_strategyConfig.modeWeights.openSpaceWeight;
     changed = true;
-  } else if (normalized == u"safeneighborweight"_s) {
-    m_strategyConfig.safeNeighborWeight = clampRange(value, 0, 80);
+  } else if (normalized == u"safeneighborweight"_s ||
+             normalized == u"modeweights.safeneighborweight"_s) {
+    m_strategyConfig.modeWeights.safeNeighborWeight = clampRange(value, 0, 80);
+    m_strategyConfig.safeNeighborWeight = m_strategyConfig.modeWeights.safeNeighborWeight;
     changed = true;
-  } else if (normalized == u"targetdistanceweight"_s) {
-    m_strategyConfig.targetDistanceWeight = clampRange(value, 0, 80);
+  } else if (normalized == u"targetdistanceweight"_s ||
+             normalized == u"modeweights.targetdistanceweight"_s) {
+    m_strategyConfig.modeWeights.targetDistanceWeight = clampRange(value, 0, 80);
+    m_strategyConfig.targetDistanceWeight = m_strategyConfig.modeWeights.targetDistanceWeight;
     changed = true;
-  } else if (normalized == u"straightbonus"_s) {
-    m_strategyConfig.straightBonus = clampRange(value, 0, 40);
+  } else if (normalized == u"straightbonus"_s || normalized == u"modeweights.straightbonus"_s) {
+    m_strategyConfig.modeWeights.straightBonus = clampRange(value, 0, 40);
+    m_strategyConfig.straightBonus = m_strategyConfig.modeWeights.straightBonus;
     changed = true;
-  } else if (normalized == u"foodconsumebonus"_s) {
-    m_strategyConfig.foodConsumeBonus = clampRange(value, 0, 80);
+  } else if (normalized == u"foodconsumebonus"_s ||
+             normalized == u"modeweights.foodconsumebonus"_s) {
+    m_strategyConfig.modeWeights.foodConsumeBonus = clampRange(value, 0, 80);
+    m_strategyConfig.foodConsumeBonus = m_strategyConfig.modeWeights.foodConsumeBonus;
     changed = true;
-  } else if (normalized == u"trappenalty"_s) {
-    m_strategyConfig.trapPenalty = clampRange(value, 0, 120);
+  } else if (normalized == u"trappenalty"_s || normalized == u"modeweights.trappenalty"_s) {
+    m_strategyConfig.modeWeights.trapPenalty = clampRange(value, 0, 120);
+    m_strategyConfig.trapPenalty = m_strategyConfig.modeWeights.trapPenalty;
     changed = true;
-  } else if (normalized == u"lookaheaddepth"_s) {
-    m_strategyConfig.lookaheadDepth = clampRange(value, 0, 4);
+  } else if (normalized == u"lookaheaddepth"_s || normalized == u"modeweights.lookaheaddepth"_s) {
+    m_strategyConfig.modeWeights.lookaheadDepth = clampRange(value, 0, 6);
+    m_strategyConfig.lookaheadDepth = m_strategyConfig.modeWeights.lookaheadDepth;
     changed = true;
-  } else if (normalized == u"lookaheadweight"_s) {
-    m_strategyConfig.lookaheadWeight = clampRange(value, 0, 60);
+  } else if (normalized == u"lookaheadweight"_s || normalized == u"modeweights.lookaheadweight"_s) {
+    m_strategyConfig.modeWeights.lookaheadWeight = clampRange(value, 0, 80);
+    m_strategyConfig.lookaheadWeight = m_strategyConfig.modeWeights.lookaheadWeight;
     changed = true;
-  } else if (normalized == u"powertargetprioritythreshold"_s) {
-    m_strategyConfig.powerTargetPriorityThreshold = clampRange(value, 0, 100);
+  } else if (normalized == u"powertargetprioritythreshold"_s ||
+             normalized == u"modeweights.powertargetprioritythreshold"_s) {
+    m_strategyConfig.modeWeights.powerTargetPriorityThreshold = clampRange(value, 0, 100);
+    m_strategyConfig.powerTargetPriorityThreshold =
+      m_strategyConfig.modeWeights.powerTargetPriorityThreshold;
     changed = true;
-  } else if (normalized == u"powertargetdistanceslack"_s) {
-    m_strategyConfig.powerTargetDistanceSlack = clampRange(value, 0, 20);
+  } else if (normalized == u"powertargetdistanceslack"_s ||
+             normalized == u"modeweights.powertargetdistanceslack"_s) {
+    m_strategyConfig.modeWeights.powerTargetDistanceSlack = clampRange(value, 0, 30);
+    m_strategyConfig.powerTargetDistanceSlack =
+      m_strategyConfig.modeWeights.powerTargetDistanceSlack;
+    changed = true;
+  } else if (normalized == u"looprepeatpenalty"_s ||
+             normalized == u"loopguard.looprepeatpenalty"_s) {
+    m_strategyConfig.loopGuard.loopRepeatPenalty = clampRange(value, 0, 320);
+    m_strategyConfig.loopRepeatPenalty = m_strategyConfig.loopGuard.loopRepeatPenalty;
+    changed = true;
+  } else if (normalized == u"loopescapepenalty"_s ||
+             normalized == u"loopguard.loopescapepenalty"_s) {
+    m_strategyConfig.loopGuard.loopEscapePenalty = clampRange(value, 0, 480);
+    m_strategyConfig.loopEscapePenalty = m_strategyConfig.loopGuard.loopEscapePenalty;
+    changed = true;
+  } else if (normalized == u"loopguard.repeatstreakpenalty"_s) {
+    m_strategyConfig.loopGuard.repeatStreakPenalty = clampRange(value, 0, 120);
+    changed = true;
+  } else if (normalized == u"loopguard.cycle4penalty"_s) {
+    m_strategyConfig.loopGuard.cycle4Penalty = clampRange(value, 0, 600);
+    changed = true;
+  } else if (normalized == u"loopguard.cycle6penalty"_s) {
+    m_strategyConfig.loopGuard.cycle6Penalty = clampRange(value, 0, 700);
+    changed = true;
+  } else if (normalized == u"loopguard.cycle8penalty"_s) {
+    m_strategyConfig.loopGuard.cycle8Penalty = clampRange(value, 0, 800);
+    changed = true;
+  } else if (normalized == u"loopguard.taboopenalty"_s) {
+    m_strategyConfig.loopGuard.tabooPenalty = clampRange(value, 0, 700);
+    changed = true;
+  } else if (normalized == u"loopguard.tabooescapeticks"_s) {
+    m_strategyConfig.loopGuard.tabooEscapeTicks = clampRange(value, 0, 30);
+    changed = true;
+  } else if (normalized == u"loopguard.taboonormalticks"_s) {
+    m_strategyConfig.loopGuard.tabooNormalTicks = clampRange(value, 0, 30);
+    changed = true;
+  } else if (normalized == u"recovery.noprogresspenaltybase"_s) {
+    m_strategyConfig.recovery.noProgressPenaltyBase = clampRange(value, 0, 80);
+    changed = true;
+  } else if (normalized == u"recovery.noprogresspenaltyscale"_s) {
+    m_strategyConfig.recovery.noProgressPenaltyScale = clampRange(value, 1, 8);
+    changed = true;
+  } else if (normalized == u"recovery.centerbiasweight"_s) {
+    m_strategyConfig.recovery.centerBiasWeight = clampRange(value, 0, 120);
+    changed = true;
+  } else if (normalized == u"recovery.cornerleavebonus"_s) {
+    m_strategyConfig.recovery.cornerLeaveBonus = clampRange(value, 0, 300);
+    changed = true;
+  } else if (normalized == u"recovery.cornerstickpenalty"_s) {
+    m_strategyConfig.recovery.cornerStickPenalty = clampRange(value, 0, 300);
+    changed = true;
+  } else if (normalized == u"recovery.escaperatiosoftcappermille"_s) {
+    m_strategyConfig.recovery.escapeRatioSoftCapPermille = clampRange(value, 300, 980);
+    changed = true;
+  } else if (normalized == u"recovery.centerrecoverticks"_s) {
+    m_strategyConfig.recovery.centerRecoverTicks = clampRange(value, 1, 240);
+    m_directionEmptySearchForceCenterDurationTicks = m_strategyConfig.recovery.centerRecoverTicks;
     changed = true;
   } else if (normalized == u"tiebreakseed"_s) {
     m_strategyConfig.tieBreakSeed = value;
-    changed = true;
-  } else if (normalized == u"looprepeatpenalty"_s) {
-    m_strategyConfig.loopRepeatPenalty = clampRange(value, 0, 240);
-    changed = true;
-  } else if (normalized == u"loopescapepenalty"_s) {
-    m_strategyConfig.loopEscapePenalty = clampRange(value, 0, 420);
     changed = true;
   } else if (normalized == u"choicecooldownticks"_s) {
     m_strategyConfig.choiceCooldownTicks = clampRange(value, 0, 60);
@@ -216,8 +280,34 @@ auto State::status() const -> QVariantMap {
     {u"tieBreakSeed"_s, m_strategyConfig.tieBreakSeed},
     {u"loopRepeatPenalty"_s, m_strategyConfig.loopRepeatPenalty},
     {u"loopEscapePenalty"_s, m_strategyConfig.loopEscapePenalty},
+    {u"modeWeights.openSpaceWeight"_s, m_strategyConfig.modeWeights.openSpaceWeight},
+    {u"modeWeights.safeNeighborWeight"_s, m_strategyConfig.modeWeights.safeNeighborWeight},
+    {u"modeWeights.targetDistanceWeight"_s, m_strategyConfig.modeWeights.targetDistanceWeight},
+    {u"modeWeights.straightBonus"_s, m_strategyConfig.modeWeights.straightBonus},
+    {u"modeWeights.foodConsumeBonus"_s, m_strategyConfig.modeWeights.foodConsumeBonus},
+    {u"modeWeights.trapPenalty"_s, m_strategyConfig.modeWeights.trapPenalty},
+    {u"modeWeights.lookaheadDepth"_s, m_strategyConfig.modeWeights.lookaheadDepth},
+    {u"modeWeights.lookaheadWeight"_s, m_strategyConfig.modeWeights.lookaheadWeight},
+    {u"loopGuard.loopRepeatPenalty"_s, m_strategyConfig.loopGuard.loopRepeatPenalty},
+    {u"loopGuard.loopEscapePenalty"_s, m_strategyConfig.loopGuard.loopEscapePenalty},
+    {u"loopGuard.repeatStreakPenalty"_s, m_strategyConfig.loopGuard.repeatStreakPenalty},
+    {u"loopGuard.cycle4Penalty"_s, m_strategyConfig.loopGuard.cycle4Penalty},
+    {u"loopGuard.cycle6Penalty"_s, m_strategyConfig.loopGuard.cycle6Penalty},
+    {u"loopGuard.cycle8Penalty"_s, m_strategyConfig.loopGuard.cycle8Penalty},
+    {u"loopGuard.tabooPenalty"_s, m_strategyConfig.loopGuard.tabooPenalty},
+    {u"loopGuard.tabooEscapeTicks"_s, m_strategyConfig.loopGuard.tabooEscapeTicks},
+    {u"loopGuard.tabooNormalTicks"_s, m_strategyConfig.loopGuard.tabooNormalTicks},
+    {u"recovery.noProgressPenaltyBase"_s, m_strategyConfig.recovery.noProgressPenaltyBase},
+    {u"recovery.noProgressPenaltyScale"_s, m_strategyConfig.recovery.noProgressPenaltyScale},
+    {u"recovery.centerBiasWeight"_s, m_strategyConfig.recovery.centerBiasWeight},
+    {u"recovery.cornerLeaveBonus"_s, m_strategyConfig.recovery.cornerLeaveBonus},
+    {u"recovery.cornerStickPenalty"_s, m_strategyConfig.recovery.cornerStickPenalty},
+    {u"recovery.escapeRatioSoftCapPermille"_s,
+     m_strategyConfig.recovery.escapeRatioSoftCapPermille},
+    {u"recovery.centerRecoverTicks"_s, m_strategyConfig.recovery.centerRecoverTicks},
     {u"choiceCooldownTicks"_s, m_strategyConfig.choiceCooldownTicks},
     {u"stateActionCooldownTicks"_s, m_strategyConfig.stateActionCooldownTicks},
+    {u"deprecatedLegacyStrategyParams"_s, true},
     {u"directionEmptyRuleTotal"_s, m_directionEmptyRuleTotal},
     {u"directionEmptyRuleWindow"_s, m_directionEmptyRuleWindow},
     {u"directionEmptyRuleWarnThreshold"_s, m_directionEmptyRuleWarnThreshold},
@@ -252,7 +342,8 @@ void State::onTick() {
   if (m_directionEmptySearchForceCenterTicks > 0) {
     --m_directionEmptySearchForceCenterTicks;
   }
-  if (m_directionEmptyRuleWindowTicks > 0 && (m_runtimeTicks % m_directionEmptyRuleWindowTicks) == 0) {
+  if (m_directionEmptyRuleWindowTicks > 0 &&
+      (m_runtimeTicks % m_directionEmptyRuleWindowTicks) == 0) {
     m_directionEmptyRuleWindow = 0;
   }
   pollMlOnlineModelHotReload();
@@ -280,9 +371,8 @@ void State::observeDirectionFallback(const bool usedFallback, const QString& rea
   if (usedFallback && reason == QStringLiteral("direction-empty-search")) {
     ++m_directionEmptySearchConsecutive;
     if (m_directionEmptySearchConsecutive >= m_directionEmptySearchFuseThreshold) {
-      m_directionEmptySearchForceCenterTicks =
-        std::max(m_directionEmptySearchForceCenterTicks,
-                 m_directionEmptySearchForceCenterDurationTicks);
+      m_directionEmptySearchForceCenterTicks = std::max(
+        m_directionEmptySearchForceCenterTicks, m_directionEmptySearchForceCenterDurationTicks);
       m_directionEmptySearchConsecutive = 0;
     }
     return;

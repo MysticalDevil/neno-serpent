@@ -101,8 +101,8 @@ auto cornerDistance(const QPoint& point, const Snapshot& snapshot) -> int {
   };
   int best = std::numeric_limits<int>::max();
   for (const QPoint& corner : corners) {
-    best = std::min(best,
-                    toroidalDistance(point, corner, snapshot.boardWidth, snapshot.boardHeight));
+    best =
+      std::min(best, toroidalDistance(point, corner, snapshot.boardWidth, snapshot.boardHeight));
   }
   return best;
 }
@@ -130,55 +130,64 @@ auto stageAdjustedStrategy(const StrategyConfig& base, const Snapshot& snapshot)
   const DecisionPolicy policy = decisionPolicyFromEnvironment();
 
   if (policy == DecisionPolicy::Conservative) {
-    adjusted.safeNeighborWeight += 8;
-    adjusted.openSpaceWeight += 2;
-    adjusted.trapPenalty += 20;
-    adjusted.targetDistanceWeight = std::max(0, adjusted.targetDistanceWeight - 2);
-    adjusted.foodConsumeBonus = std::max(0, adjusted.foodConsumeBonus - 4);
-    adjusted.straightBonus = std::max(0, adjusted.straightBonus - 2);
-    adjusted.lookaheadDepth += 1;
-    adjusted.powerTargetDistanceSlack = std::max(0, adjusted.powerTargetDistanceSlack - 1);
+    adjusted.modeWeights.safeNeighborWeight += 8;
+    adjusted.modeWeights.openSpaceWeight += 2;
+    adjusted.modeWeights.trapPenalty += 20;
+    adjusted.modeWeights.targetDistanceWeight =
+      std::max(0, adjusted.modeWeights.targetDistanceWeight - 2);
+    adjusted.modeWeights.foodConsumeBonus = std::max(0, adjusted.modeWeights.foodConsumeBonus - 4);
+    adjusted.modeWeights.straightBonus = std::max(0, adjusted.modeWeights.straightBonus - 2);
+    adjusted.modeWeights.lookaheadDepth += 1;
+    adjusted.modeWeights.powerTargetDistanceSlack =
+      std::max(0, adjusted.modeWeights.powerTargetDistanceSlack - 1);
   } else if (policy == DecisionPolicy::Aggressive) {
-    adjusted.safeNeighborWeight = std::max(0, adjusted.safeNeighborWeight - 6);
-    adjusted.openSpaceWeight = std::max(0, adjusted.openSpaceWeight - 1);
-    adjusted.trapPenalty = std::max(0, adjusted.trapPenalty - 14);
-    adjusted.targetDistanceWeight += 2;
-    adjusted.foodConsumeBonus += 8;
-    adjusted.straightBonus += 4;
-    adjusted.powerTargetDistanceSlack += 2;
+    adjusted.modeWeights.safeNeighborWeight =
+      std::max(0, adjusted.modeWeights.safeNeighborWeight - 6);
+    adjusted.modeWeights.openSpaceWeight = std::max(0, adjusted.modeWeights.openSpaceWeight - 1);
+    adjusted.modeWeights.trapPenalty = std::max(0, adjusted.modeWeights.trapPenalty - 14);
+    adjusted.modeWeights.targetDistanceWeight += 2;
+    adjusted.modeWeights.foodConsumeBonus += 8;
+    adjusted.modeWeights.straightBonus += 4;
+    adjusted.modeWeights.powerTargetDistanceSlack += 2;
   }
 
   if (stage.lateGame) {
-    adjusted.safeNeighborWeight += 7;
-    adjusted.openSpaceWeight += 3;
-    adjusted.trapPenalty += 18;
-    adjusted.targetDistanceWeight = std::max(0, adjusted.targetDistanceWeight - 2);
-    adjusted.powerTargetDistanceSlack = std::max(1, adjusted.powerTargetDistanceSlack - 1);
-    adjusted.lookaheadDepth = std::max(adjusted.lookaheadDepth, 3);
+    adjusted.modeWeights.safeNeighborWeight += 7;
+    adjusted.modeWeights.openSpaceWeight += 3;
+    adjusted.modeWeights.trapPenalty += 18;
+    adjusted.modeWeights.targetDistanceWeight =
+      std::max(0, adjusted.modeWeights.targetDistanceWeight - 2);
+    adjusted.modeWeights.powerTargetDistanceSlack =
+      std::max(1, adjusted.modeWeights.powerTargetDistanceSlack - 1);
+    adjusted.modeWeights.lookaheadDepth = std::max(adjusted.modeWeights.lookaheadDepth, 3);
   }
 
   if (stage.crowded) {
-    adjusted.safeNeighborWeight += 4;
-    adjusted.trapPenalty += 14;
-    adjusted.targetDistanceWeight = std::max(0, adjusted.targetDistanceWeight - 1);
-    adjusted.lookaheadDepth = std::max(adjusted.lookaheadDepth, 3);
+    adjusted.modeWeights.safeNeighborWeight += 4;
+    adjusted.modeWeights.trapPenalty += 14;
+    adjusted.modeWeights.targetDistanceWeight =
+      std::max(0, adjusted.modeWeights.targetDistanceWeight - 1);
+    adjusted.modeWeights.lookaheadDepth = std::max(adjusted.modeWeights.lookaheadDepth, 3);
   }
 
   if (snapshot.score < 20 && stage.snakeFillPermille < 140 && !stage.crowded) {
-    adjusted.foodConsumeBonus += 4;
-    adjusted.straightBonus += 2;
-    if (adjusted.targetDistanceWeight > 0) {
-      adjusted.targetDistanceWeight += 1;
+    adjusted.modeWeights.foodConsumeBonus += 4;
+    adjusted.modeWeights.straightBonus += 2;
+    if (adjusted.modeWeights.targetDistanceWeight > 0) {
+      adjusted.modeWeights.targetDistanceWeight += 1;
     }
   }
 
-  adjusted.openSpaceWeight = clampInt(adjusted.openSpaceWeight, 0, 60);
-  adjusted.safeNeighborWeight = clampInt(adjusted.safeNeighborWeight, 0, 90);
-  adjusted.targetDistanceWeight = clampInt(adjusted.targetDistanceWeight, 0, 80);
-  adjusted.foodConsumeBonus = clampInt(adjusted.foodConsumeBonus, 0, 100);
-  adjusted.trapPenalty = clampInt(adjusted.trapPenalty, 0, 160);
-  adjusted.lookaheadDepth = clampInt(adjusted.lookaheadDepth, 0, 6);
-  adjusted.powerTargetDistanceSlack = clampInt(adjusted.powerTargetDistanceSlack, 0, 20);
+  adjusted.modeWeights.openSpaceWeight = clampInt(adjusted.modeWeights.openSpaceWeight, 0, 60);
+  adjusted.modeWeights.safeNeighborWeight =
+    clampInt(adjusted.modeWeights.safeNeighborWeight, 0, 90);
+  adjusted.modeWeights.targetDistanceWeight =
+    clampInt(adjusted.modeWeights.targetDistanceWeight, 0, 80);
+  adjusted.modeWeights.foodConsumeBonus = clampInt(adjusted.modeWeights.foodConsumeBonus, 0, 100);
+  adjusted.modeWeights.trapPenalty = clampInt(adjusted.modeWeights.trapPenalty, 0, 160);
+  adjusted.modeWeights.lookaheadDepth = clampInt(adjusted.modeWeights.lookaheadDepth, 0, 6);
+  adjusted.modeWeights.powerTargetDistanceSlack =
+    clampInt(adjusted.modeWeights.powerTargetDistanceSlack, 0, 20);
   return adjusted;
 }
 
@@ -261,6 +270,8 @@ auto stateHash(const Snapshot& snapshot, const MoveState& state) -> std::uint64_
   return hash;
 }
 
+auto directionIndex(const QPoint& direction) -> int;
+
 class LoopMemory {
 public:
   auto clear() -> void {
@@ -318,8 +329,13 @@ public:
     m_hasScore = false;
     m_escapeHistory.clear();
     m_recentDirections.clear();
-    m_tabooDirection.reset();
-    m_tabooTicks = 0;
+    m_tabooActionTicks.fill(0);
+    m_cycle4Count = 0;
+    m_cycle6Count = 0;
+    m_cycle8Count = 0;
+    m_tabooHits = 0;
+    m_cycleBurstScore = 0;
+    m_cycleTrendTicks = 0;
   }
 
   auto observeScore(const int score) -> void {
@@ -336,6 +352,42 @@ public:
     return m_noScoreTicks;
   }
 
+  [[nodiscard]] auto cycle4Count() const -> int {
+    return m_cycle4Count;
+  }
+
+  [[nodiscard]] auto cycle6Count() const -> int {
+    return m_cycle6Count;
+  }
+
+  [[nodiscard]] auto cycle8Count() const -> int {
+    return m_cycle8Count;
+  }
+
+  [[nodiscard]] auto tabooHits() const -> int {
+    return m_tabooHits;
+  }
+
+  [[nodiscard]] auto centerRecoverRecommended() const -> bool {
+    return m_cycleBurstScore >= 3 || m_cycleTrendTicks >= 2;
+  }
+
+  [[nodiscard]] auto recoveryTarget(const Snapshot& snapshot) const -> QPoint {
+    const QPoint center = boardCenter(snapshot);
+    auto axisTarget = [](const int headCoord, const int centerCoord, const int boardSize) -> int {
+      const int delta = centerCoord - headCoord;
+      if (std::abs(delta) <= 2) {
+        return centerCoord;
+      }
+      const int step = std::clamp(delta / 2, -4, 4);
+      const int margin = std::min(2, std::max(0, (boardSize / 2) - 1));
+      return std::clamp(headCoord + step, margin, std::max(margin, boardSize - margin - 1));
+    };
+    const QPoint waypoint(axisTarget(snapshot.head.x(), center.x(), snapshot.boardWidth),
+                          axisTarget(snapshot.head.y(), center.y(), snapshot.boardHeight));
+    return waypoint == snapshot.head ? center : waypoint;
+  }
+
   [[nodiscard]] auto escapeMode(const int repeats) const -> bool {
     constexpr int kLoopRepeatThreshold = 4;
     constexpr int kNoScoreEscapeTicks = 28;
@@ -348,19 +400,22 @@ public:
                               const StrategyConfig& config,
                               const bool useSearchScoring,
                               const bool escapeMode) const -> int {
+    const auto& guard = config.loopGuard;
     if (escapeMode) {
-      return clampInt(revisitCount * config.loopEscapePenalty, 0, 420);
+      return clampInt(revisitCount * guard.loopEscapePenalty, 0, 520);
     }
     const int revisitPenalty =
       revisitCount *
-      (useSearchScoring ? std::max(1, config.loopRepeatPenalty - 8) : config.loopRepeatPenalty);
+      (useSearchScoring ? std::max(1, guard.loopRepeatPenalty - 8) : guard.loopRepeatPenalty);
     const int pocketScale = useSearchScoring ? 2 : 1;
-    return clampInt(revisitPenalty + (pocketPenalty * pocketScale), 0, 360);
+    return clampInt(revisitPenalty + (pocketPenalty * pocketScale), 0, 420);
   }
 
   [[nodiscard]] auto actionSequencePenalty(const QPoint& candidate,
                                            const bool escapeMode,
-                                           const int noScoreTicks) const -> int {
+                                           const int noScoreTicks,
+                                           const StrategyConfig& config) const -> int {
+    const auto& guard = config.loopGuard;
     const auto periodicRepeat = [&](const int period) -> bool {
       const int n = static_cast<int>(m_recentDirections.size());
       if (n < (period * 2) - 1) {
@@ -388,42 +443,46 @@ public:
     }
     if (escapeMode) {
       if (streak >= 2) {
-        repeatPenalty = (streak - 1) * (20 + std::max(0, (noScoreTicks - 24) / 7));
+        repeatPenalty =
+          (streak - 1) * (guard.repeatStreakPenalty + std::max(0, (noScoreTicks - 24) / 7));
       }
     } else if (streak >= 3) {
-      repeatPenalty = (streak - 2) * (12 + std::max(0, (noScoreTicks - 12) / 9));
+      repeatPenalty =
+        (streak - 2) * ((guard.repeatStreakPenalty * 3 / 5) + std::max(0, (noScoreTicks - 12) / 9));
     }
 
     int cyclePenalty = 0;
     if (periodicRepeat(4)) {
-      cyclePenalty += 240 + std::max(0, noScoreTicks - 16) / 2;
+      cyclePenalty += guard.cycle4Penalty + std::max(0, noScoreTicks - 16) / 2;
     }
     if (periodicRepeat(6)) {
-      cyclePenalty += 280 + std::max(0, noScoreTicks - 20) / 2;
+      cyclePenalty += guard.cycle6Penalty + std::max(0, noScoreTicks - 20) / 2;
     }
     if (periodicRepeat(8)) {
-      cyclePenalty += 340 + std::max(0, noScoreTicks - 24);
+      cyclePenalty += guard.cycle8Penalty + std::max(0, noScoreTicks - 24);
     }
     if (!escapeMode) {
       cyclePenalty = (cyclePenalty * 3) / 4;
     }
 
     int tabooPenalty = 0;
-    if (m_tabooTicks > 0 && m_tabooDirection.has_value() && candidate == *m_tabooDirection) {
-      tabooPenalty = (escapeMode ? 220 : 140) + std::max(0, noScoreTicks - 20) / 2;
+    const int candidateIndex = directionIndex(candidate);
+    if (candidateIndex >= 0 && m_tabooActionTicks[static_cast<std::size_t>(candidateIndex)] > 0) {
+      tabooPenalty = (escapeMode ? guard.tabooPenalty : (guard.tabooPenalty * 2 / 3)) +
+                     std::max(0, noScoreTicks - 20) / 2;
     }
     return repeatPenalty + cyclePenalty + tabooPenalty;
   }
 
-  auto observeDecision(const std::optional<QPoint>& direction, const bool escapeMode)
-    -> void {
+  auto observeDecision(const std::optional<QPoint>& direction,
+                       const bool escapeMode,
+                       const StrategyConfig& config) -> void {
     if (!direction.has_value()) {
       return;
     }
-    if (m_tabooTicks > 0) {
-      --m_tabooTicks;
-      if (m_tabooTicks <= 0) {
-        m_tabooDirection.reset();
+    for (int& tabooTicks : m_tabooActionTicks) {
+      if (tabooTicks > 0) {
+        --tabooTicks;
       }
     }
     m_recentDirections.push_back(*direction);
@@ -444,9 +503,33 @@ public:
       }
       return true;
     };
-    if (recentCycleDetected(4) || recentCycleDetected(6) || recentCycleDetected(8)) {
-      m_tabooDirection = *direction;
-      m_tabooTicks = escapeMode ? 5 : 3;
+    const bool cycle4 = recentCycleDetected(4);
+    const bool cycle6 = recentCycleDetected(6);
+    const bool cycle8 = recentCycleDetected(8);
+    if (cycle4) {
+      ++m_cycle4Count;
+    }
+    if (cycle6) {
+      ++m_cycle6Count;
+    }
+    if (cycle8) {
+      ++m_cycle8Count;
+    }
+    if (cycle4 || cycle6 || cycle8) {
+      const int tabooTicks =
+        escapeMode ? config.loopGuard.tabooEscapeTicks : config.loopGuard.tabooNormalTicks;
+      applyTaboo(*direction, tabooTicks);
+      if (m_recentDirections.size() >= 2) {
+        applyTaboo(m_recentDirections[m_recentDirections.size() - 2], std::max(1, tabooTicks - 1));
+      }
+      ++m_tabooHits;
+      m_cycleBurstScore += cycle8 ? 4 : (cycle6 ? 3 : 2);
+      m_cycleBurstScore = std::min(m_cycleBurstScore, 12);
+      m_cycleTrendTicks += cycle6 || cycle8 ? 2 : 1;
+      m_cycleTrendTicks = std::min(m_cycleTrendTicks, 8);
+    } else if (m_cycleBurstScore > 0) {
+      --m_cycleBurstScore;
+      m_cycleTrendTicks = std::max(0, m_cycleTrendTicks - 1);
     }
     if (escapeMode) {
       m_escapeHistory.push_back(*direction);
@@ -457,22 +540,37 @@ public:
   }
 
 private:
+  auto applyTaboo(const QPoint& direction, const int ticks) -> void {
+    const int index = directionIndex(direction);
+    if (index < 0) {
+      return;
+    }
+    auto& slot = m_tabooActionTicks[static_cast<std::size_t>(index)];
+    slot = std::max(slot, ticks);
+  }
+
   int m_lastScore = 0;
   int m_noScoreTicks = 0;
   bool m_hasScore = false;
   std::deque<QPoint> m_escapeHistory;
   std::deque<QPoint> m_recentDirections;
-  std::optional<QPoint> m_tabooDirection;
-  int m_tabooTicks = 0;
+  std::array<int, 4> m_tabooActionTicks = {0, 0, 0, 0};
+  int m_cycle4Count = 0;
+  int m_cycle6Count = 0;
+  int m_cycle8Count = 0;
+  int m_tabooHits = 0;
+  int m_cycleBurstScore = 0;
+  int m_cycleTrendTicks = 0;
 };
 
 enum class TargetMode {
   FoodChase,
   PowerChase,
   Escape,
+  CenterRecover,
 };
 
-class TargetFsm {
+class ModePlanner {
 public:
   auto clear() -> void {
     m_mode = TargetMode::FoodChase;
@@ -480,6 +578,7 @@ public:
     m_lastObserveTick = 0;
     m_forceTailChaseTicks = 0;
     m_powerChaseCooldownTicks = 0;
+    m_centerRecoverTicks = 0;
     m_escapeWindow.clear();
   }
 
@@ -488,7 +587,7 @@ public:
   }
 
   [[nodiscard]] auto suppressPowerChase() const -> bool {
-    return m_powerChaseCooldownTicks > 0 || m_forceTailChaseTicks > 0;
+    return m_powerChaseCooldownTicks > 0 || m_forceTailChaseTicks > 0 || m_centerRecoverTicks > 0;
   }
 
   [[nodiscard]] auto forceTailChaseActive() const -> bool {
@@ -497,6 +596,7 @@ public:
 
   auto update(const Snapshot& snapshot,
               const StrategyConfig& config,
+              const LoopController& loopController,
               const int repeats,
               const int noScoreTicks,
               const std::uint64_t observeTick) -> void {
@@ -509,6 +609,9 @@ public:
       if (m_powerChaseCooldownTicks > 0) {
         --m_powerChaseCooldownTicks;
       }
+      if (m_centerRecoverTicks > 0) {
+        --m_centerRecoverTicks;
+      }
     }
 
     if (noScoreTicks >= 56) {
@@ -516,13 +619,29 @@ public:
       m_powerChaseCooldownTicks = std::max(m_powerChaseCooldownTicks, 40);
     }
 
-    const bool hasPowerCandidate =
-      snapshot.powerUpPos.x() >= 0 && snapshot.powerUpPos.y() >= 0 &&
-      powerPriority(config, snapshot.powerUpType) >= config.powerTargetPriorityThreshold;
+    const int centerDistance = toroidalDistance(
+      snapshot.head, boardCenter(snapshot), snapshot.boardWidth, snapshot.boardHeight);
+    if (loopController.centerRecoverRecommended() && centerDistance >= 2) {
+      const int recoverTicks =
+        config.recovery.centerRecoverTicks + std::max(0, noScoreTicks - 24) / 4;
+      m_centerRecoverTicks = std::max(m_centerRecoverTicks, recoverTicks);
+    }
+    if (m_centerRecoverTicks > 0) {
+      if (m_mode != TargetMode::CenterRecover) {
+        switchMode(TargetMode::CenterRecover);
+      }
+      recordEscapeMode();
+      return;
+    }
+
+    const bool hasPowerCandidate = snapshot.powerUpPos.x() >= 0 && snapshot.powerUpPos.y() >= 0 &&
+                                   powerPriority(config, snapshot.powerUpType) >=
+                                     config.modeWeights.powerTargetPriorityThreshold;
     const bool hasPower = hasPowerCandidate && !suppressPowerChase();
     const bool hardEscape = noScoreTicks >= 96 || repeats >= 6;
     bool wantEscape = repeats >= 4 || noScoreTicks >= 28 || m_forceTailChaseTicks > 0;
-    if (wantEscape && !hardEscape && escapeRatio() >= 0.70F && noScoreTicks < 72) {
+    if (wantEscape && !hardEscape &&
+        escapeRatioPermille() >= config.recovery.escapeRatioSoftCapPermille && noScoreTicks < 72) {
       wantEscape = false;
     }
     const TargetMode desired =
@@ -550,16 +669,22 @@ public:
     recordEscapeMode();
   }
 
-  auto targetPoint(const Snapshot& snapshot, const StrategyConfig& config) const -> QPoint {
+  auto targetPoint(const Snapshot& snapshot,
+                   const StrategyConfig& config,
+                   const LoopController& loopController) const -> QPoint {
     if (m_forceTailChaseTicks > 0) {
       return snapshot.body.empty() ? snapshot.food : snapshot.body.back();
+    }
+    if (m_mode == TargetMode::CenterRecover) {
+      return loopController.recoveryTarget(snapshot);
     }
     if (m_mode == TargetMode::Escape) {
       return snapshot.body.empty() ? snapshot.food : snapshot.body.back();
     }
     if (m_mode == TargetMode::PowerChase && snapshot.powerUpPos.x() >= 0 &&
         snapshot.powerUpPos.y() >= 0 &&
-        powerPriority(config, snapshot.powerUpType) >= config.powerTargetPriorityThreshold) {
+        powerPriority(config, snapshot.powerUpType) >=
+          config.modeWeights.powerTargetPriorityThreshold) {
       return snapshot.powerUpPos;
     }
     return snapshot.food;
@@ -573,9 +698,9 @@ private:
     }
   }
 
-  [[nodiscard]] auto escapeRatio() const -> float {
+  [[nodiscard]] auto escapeRatioPermille() const -> int {
     if (m_escapeWindow.empty()) {
-      return 0.0F;
+      return 0;
     }
     int escapeTicks = 0;
     for (const bool active : m_escapeWindow) {
@@ -583,7 +708,7 @@ private:
         ++escapeTicks;
       }
     }
-    return static_cast<float>(escapeTicks) / static_cast<float>(m_escapeWindow.size());
+    return (escapeTicks * 1000) / static_cast<int>(m_escapeWindow.size());
   }
 
   auto switchMode(const TargetMode mode) -> void {
@@ -595,6 +720,7 @@ private:
   int m_modeTicks = 0;
   int m_forceTailChaseTicks = 0;
   int m_powerChaseCooldownTicks = 0;
+  int m_centerRecoverTicks = 0;
   std::uint64_t m_lastObserveTick = 0;
   std::deque<bool> m_escapeWindow;
 };
@@ -607,6 +733,8 @@ auto targetModeName(const TargetMode mode) -> QString {
     return QStringLiteral("PowerChase");
   case TargetMode::Escape:
     return QStringLiteral("Escape");
+  case TargetMode::CenterRecover:
+    return QStringLiteral("CenterRecover");
   }
   return QStringLiteral("Unknown");
 }
@@ -900,9 +1028,10 @@ auto evaluateLeaf(const Snapshot& snapshot,
   const QPoint tailFallback = state.body.empty() ? state.head : state.body.back();
   const TargetDistance targetDistance =
     resolveTargetDistance(state.head, target, snapshot, blocked, tailFallback);
-  const int trapPenalty = safeNeighbors <= 1 ? config.trapPenalty : 0;
-  return (openSpace * config.openSpaceWeight) + (safeNeighbors * config.safeNeighborWeight) -
-         (targetDistance.distance * config.targetDistanceWeight) - trapPenalty +
+  const int trapPenalty = safeNeighbors <= 1 ? config.modeWeights.trapPenalty : 0;
+  return (openSpace * config.modeWeights.openSpaceWeight) +
+         (safeNeighbors * config.modeWeights.safeNeighborWeight) -
+         (targetDistance.distance * config.modeWeights.targetDistanceWeight) - trapPenalty +
          (state.score * 48) - targetDistance.unreachablePenalty;
 }
 
@@ -923,9 +1052,9 @@ auto searchValue(const Snapshot& snapshot,
       continue;
     }
     hasMove = true;
-    int immediate = (candidate == state.direction ? config.straightBonus : 0);
+    int immediate = (candidate == state.direction ? config.modeWeights.straightBonus : 0);
     if (preview.ateFood) {
-      immediate += config.foodConsumeBonus;
+      immediate += config.modeWeights.foodConsumeBonus;
     }
     if (preview.atePower) {
       immediate += powerPriority(config, snapshot.powerUpType);
@@ -943,7 +1072,7 @@ auto searchValue(const Snapshot& snapshot,
 }
 
 auto rolloutHorizon(const StrategyConfig& config) -> int {
-  return clampInt(8 + (config.lookaheadDepth * 2), 8, 20);
+  return clampInt(8 + (config.modeWeights.lookaheadDepth * 2), 8, 20);
 }
 
 auto rolloutScore(const Snapshot& snapshot,
@@ -964,7 +1093,7 @@ auto rolloutScore(const Snapshot& snapshot,
       }
       int score = evaluateLeaf(snapshot, preview.next, config, target);
       if (preview.ateFood) {
-        score += config.foodConsumeBonus * 2;
+        score += config.modeWeights.foodConsumeBonus * 2;
       }
       if (preview.atePower) {
         score += powerPriority(config, snapshot.powerUpType);
@@ -1004,11 +1133,11 @@ auto evaluateEscapeCandidate(const Snapshot& snapshot,
   const int tailDistance =
     toroidalDistance(preview.next.head, tail, snapshot.boardWidth, snapshot.boardHeight);
 
-  int score = (openSpace * config.openSpaceWeight * 2) +
-              (safeNeighbors * config.safeNeighborWeight * 3) + (tailDistance * 14) -
-              (revisitCount * config.loopEscapePenalty);
+  int score = (openSpace * config.modeWeights.openSpaceWeight * 2) +
+              (safeNeighbors * config.modeWeights.safeNeighborWeight * 3) + (tailDistance * 14) -
+              (revisitCount * config.loopGuard.loopEscapePenalty);
   if (preview.ateFood) {
-    score += config.foodConsumeBonus * 6;
+    score += config.modeWeights.foodConsumeBonus * 6;
   }
   if (preview.atePower) {
     score += powerPriority(config, snapshot.powerUpType) * 4;
@@ -1074,10 +1203,10 @@ auto approachTargetBonus(const QPoint& currentHead,
   const int nextDistance =
     toroidalDistance(nextHead, target, snapshot.boardWidth, snapshot.boardHeight);
   const int delta = currentDistance - nextDistance;
-  int scale = config.targetDistanceWeight + (config.foodConsumeBonus / 2);
+  int scale = config.modeWeights.targetDistanceWeight + (config.modeWeights.foodConsumeBonus / 2);
   if (target == snapshot.food && snapshot.score < 60 &&
       static_cast<int>(snapshot.body.size()) < 12) {
-    scale += config.foodConsumeBonus / 2;
+    scale += config.modeWeights.foodConsumeBonus / 2;
   }
   if (scale <= 0) {
     return 0;
@@ -1131,65 +1260,292 @@ auto passesHardFilter(const CandidateStats& stats, const HardFilterConfig& conf)
   return std::nullopt;
 }
 
-auto selectLoopAwareDirection(const Snapshot& snapshot,
-                              const StrategyConfig& config,
-                              LoopMemory& memory,
-                              LoopController& loopController,
-                              TargetFsm& targetFsm,
-                              QString* decisionSummaryOut,
-                              const bool useSearchScoring) -> std::optional<QPoint> {
-  if (snapshot.body.empty() || snapshot.boardWidth <= 0 || snapshot.boardHeight <= 0) {
-    if (decisionSummaryOut != nullptr) {
-      *decisionSummaryOut = QStringLiteral("bot decision: invalid snapshot");
+struct DecisionContext {
+  const Snapshot& snapshot;
+  const StrategyConfig& config;
+  const MoveState& initial;
+  const LoopController& loopController;
+  const ModePlanner& modePlanner;
+  const QPoint& primaryTarget;
+  const QPoint& boardMid;
+  bool useSearchScoring = false;
+  bool escapeMode = false;
+  int noScoreTicks = 0;
+  int repeats = 0;
+  int riskBudget = 0;
+  int depth = 0;
+  int currentPrimaryDistance = 0;
+  int currentFoodDistance = 0;
+  bool centerFoodPush = false;
+  bool earlyFoodChaseGuard = false;
+  bool hasNonWorseningFoodMove = false;
+  bool deepEscapeStall = false;
+  std::uint64_t tieRotateSeed = 0;
+  int tieRotateOffset = 0;
+  int orbitBreakLevel = 0;
+  int orbitPreferredIndex = -1;
+};
+
+struct CandidateEvaluation {
+  ScoreBreakdown breakdown;
+  int score = std::numeric_limits<int>::min();
+  int tieRank = std::numeric_limits<int>::max();
+};
+
+auto evaluateCandidateScore(const CandidateStats& candidateStats, const DecisionContext& ctx)
+  -> CandidateEvaluation {
+  CandidateEvaluation evaluation{};
+  const QPoint candidate = candidateStats.candidate;
+  const int candidateIndex = directionIndex(candidate);
+  const MovePreview& preview = candidateStats.preview;
+  const int revisitCount = candidateStats.revisitCount;
+  const int openSpace = candidateStats.openSpace;
+  const int safeNeighbors = candidateStats.safeNeighbors;
+  const auto& blocked = candidateStats.blocked;
+  const int pocketPenalty =
+    pocketPenaltyTowardTarget(preview.next.head, ctx.primaryTarget, ctx.snapshot, blocked);
+  const int boardArea = std::max(1, ctx.snapshot.boardWidth * ctx.snapshot.boardHeight);
+  const int openSpacePct = (openSpace * 100) / boardArea;
+  const int normalizedSafeNeighbors = safeNeighbors * 20;
+
+  if (ctx.escapeMode) {
+    const int escapeBase = evaluateEscapeCandidate(ctx.snapshot, preview, ctx.config, revisitCount);
+    const int compressedEscapeBase = (escapeBase * 3) / 10;
+    const int openSpaceTerm = (openSpacePct * 7) / 4;
+    const int safeNeighborTerm = safeNeighbors * 22;
+    const int tailReachTerm = candidateStats.tailReachable ? 14 : -42;
+    const int stallDecay = std::min(120, std::max(0, ctx.noScoreTicks - 20) * 3);
+    const int escapeSurvival =
+      compressedEscapeBase + openSpaceTerm + safeNeighborTerm + tailReachTerm - stallDecay;
+    evaluation.breakdown.survival = clampScoreBlock(escapeSurvival, -60, 190);
+    evaluation.breakdown.progress = clampScoreBlock(approachTargetBonus(ctx.initial.head,
+                                                                        preview.next.head,
+                                                                        ctx.primaryTarget,
+                                                                        ctx.snapshot,
+                                                                        ctx.config,
+                                                                        ctx.repeats),
+                                                    -80,
+                                                    120);
+    if (preview.ateFood) {
+      evaluation.breakdown.reward += ctx.config.modeWeights.foodConsumeBonus * 2;
     }
-    return std::nullopt;
+    if (preview.atePower && !ctx.modePlanner.suppressPowerChase()) {
+      evaluation.breakdown.reward += powerPriority(ctx.config, ctx.snapshot.powerUpType) * 2;
+    }
+    evaluation.breakdown.reward = clampScoreBlock(evaluation.breakdown.reward, 0, 240);
+    if (ctx.orbitBreakLevel > 0) {
+      if (ctx.orbitPreferredIndex >= 0 && candidate == kDirections[ctx.orbitPreferredIndex]) {
+        evaluation.breakdown.progress += ctx.orbitBreakLevel * 10;
+      }
+      if (candidate == ctx.snapshot.direction) {
+        evaluation.breakdown.progress -= ctx.orbitBreakLevel * 8;
+      }
+      const int straightIndex = directionIndex(ctx.snapshot.direction);
+      if (straightIndex >= 0 &&
+          candidateIndex == ((straightIndex + 2) % static_cast<int>(kDirections.size()))) {
+        evaluation.breakdown.progress -= ctx.orbitBreakLevel * 6;
+      }
+      evaluation.breakdown.progress = clampScoreBlock(evaluation.breakdown.progress, -120, 170);
+    }
+    const int repeatSquaredPenalty = std::min(260, revisitCount * revisitCount * 12);
+    const int escapeLoopExtra =
+      std::min(320,
+               (revisitCount * 24) + repeatSquaredPenalty + (pocketPenalty * 10) +
+                 (ctx.orbitBreakLevel * 18) + std::max(0, ctx.noScoreTicks - 24));
+    evaluation.breakdown.loopCost =
+      clampScoreBlock(ctx.loopController.loopCost(
+                        revisitCount, pocketPenalty, ctx.config, ctx.useSearchScoring, true) +
+                        escapeLoopExtra,
+                      0,
+                      520);
+  } else if (ctx.useSearchScoring) {
+    int immediate =
+      (candidate == ctx.snapshot.direction ? ctx.config.modeWeights.straightBonus : 0);
+    if (preview.ateFood) {
+      immediate += ctx.config.modeWeights.foodConsumeBonus;
+    }
+    if (preview.atePower && !ctx.modePlanner.suppressPowerChase()) {
+      immediate += powerPriority(ctx.config, ctx.snapshot.powerUpType);
+    }
+    const QPoint tailFallback =
+      preview.next.body.empty() ? preview.next.head : preview.next.body.back();
+    const TargetDistance targetDistance = resolveTargetDistance(
+      preview.next.head, ctx.primaryTarget, ctx.snapshot, blocked, tailFallback);
+    const int searchTerm =
+      searchValue(ctx.snapshot, preview.next, ctx.config, ctx.depth - 1, ctx.primaryTarget);
+    const int rolloutTerm =
+      rolloutScore(ctx.snapshot, preview.next, ctx.config, ctx.primaryTarget) / 6;
+    evaluation.breakdown.progress =
+      clampScoreBlock(approachTargetBonus(ctx.initial.head,
+                                          preview.next.head,
+                                          ctx.primaryTarget,
+                                          ctx.snapshot,
+                                          ctx.config,
+                                          ctx.repeats) +
+                        (searchTerm / 8) + (rolloutTerm / 4) -
+                        (targetDistance.distance * ctx.config.modeWeights.targetDistanceWeight) -
+                        targetDistance.unreachablePenalty,
+                      -160,
+                      190);
+    evaluation.breakdown.survival = clampScoreBlock(
+      ((openSpacePct * ctx.config.modeWeights.openSpaceWeight) / 8) + normalizedSafeNeighbors +
+        (safeNeighbors * ctx.config.modeWeights.safeNeighborWeight) +
+        (candidateStats.tailReachable ? 22 : -44),
+      -120,
+      170);
+    evaluation.breakdown.reward = clampScoreBlock(immediate, 0, 220);
+    evaluation.breakdown.loopCost =
+      ctx.loopController.loopCost(revisitCount, pocketPenalty, ctx.config, true, false);
+  } else {
+    const QPoint tailFallback =
+      preview.next.body.empty() ? preview.next.head : preview.next.body.back();
+    const TargetDistance targetDistance = resolveTargetDistance(
+      preview.next.head, ctx.primaryTarget, ctx.snapshot, blocked, tailFallback);
+    int immediate =
+      (candidate == ctx.snapshot.direction ? ctx.config.modeWeights.straightBonus : 0);
+    if (preview.ateFood) {
+      immediate += ctx.config.modeWeights.foodConsumeBonus;
+    }
+    if (preview.atePower && !ctx.modePlanner.suppressPowerChase()) {
+      immediate += powerPriority(ctx.config, ctx.snapshot.powerUpType);
+    }
+    evaluation.breakdown.progress =
+      clampScoreBlock(approachTargetBonus(ctx.initial.head,
+                                          preview.next.head,
+                                          ctx.primaryTarget,
+                                          ctx.snapshot,
+                                          ctx.config,
+                                          ctx.repeats) -
+                        (targetDistance.distance * ctx.config.modeWeights.targetDistanceWeight) -
+                        targetDistance.unreachablePenalty,
+                      -140,
+                      170);
+    evaluation.breakdown.survival = clampScoreBlock(
+      ((openSpacePct * ctx.config.modeWeights.openSpaceWeight) / 8) + normalizedSafeNeighbors +
+        (safeNeighbors * ctx.config.modeWeights.safeNeighborWeight) +
+        (candidateStats.tailReachable ? 20 : -44),
+      -110,
+      160);
+    evaluation.breakdown.reward = clampScoreBlock(immediate, 0, 220);
+    evaluation.breakdown.loopCost =
+      ctx.loopController.loopCost(revisitCount, pocketPenalty, ctx.config, false, false);
   }
-  const StrategyConfig tunedConfig = stageAdjustedStrategy(config, snapshot);
-  const MoveState initial{
-    .head = snapshot.head,
-    .direction = snapshot.direction,
-    .body = snapshot.body,
-    .score = snapshot.score,
-  };
 
-  const int repeats = memory.observe(snapshot, initial);
-  loopController.observeScore(initial.score);
-  const int noScoreTicks = loopController.noScoreTicks();
-  targetFsm.update(snapshot, tunedConfig, repeats, noScoreTicks, memory.observeTick());
-  const bool escapeMode =
-    (targetFsm.mode() == TargetMode::Escape) || loopController.escapeMode(repeats);
-  const int riskBudget = riskBudgetFor(snapshot, repeats);
-  const int depth = std::clamp(tunedConfig.lookaheadDepth + 1, 2, 6);
-  QPoint primaryTarget = targetFsm.targetPoint(snapshot, tunedConfig);
-  if (escapeMode && noScoreTicks >= 72) {
-    const std::array<QPoint, 4> escapeAnchors = {
-      QPoint(0, 0),
-      QPoint(snapshot.boardWidth - 1, 0),
-      QPoint(snapshot.boardWidth - 1, snapshot.boardHeight - 1),
-      QPoint(0, snapshot.boardHeight - 1),
-    };
-    const auto anchorIndex = static_cast<int>((memory.observeTick() / 8U) %
-                                              static_cast<std::uint64_t>(escapeAnchors.size()));
-    primaryTarget = escapeAnchors[static_cast<std::size_t>(anchorIndex)];
-  }
-  const int currentPrimaryDistance =
-    toroidalDistance(initial.head, primaryTarget, snapshot.boardWidth, snapshot.boardHeight);
-  const int currentFoodDistance =
-    toroidalDistance(initial.head, snapshot.food, snapshot.boardWidth, snapshot.boardHeight);
-  auto initialBlocked = buildBlockedMap(snapshot, initial.body);
-  if (const auto headIndex = tryBoardIndex(initial.head, snapshot.boardWidth, snapshot.boardHeight);
-      headIndex.has_value()) {
-    initialBlocked[*headIndex] = false;
-  }
-  const bool foodReachable = shortestReachableDistance(
-                               initial.head, snapshot.food, snapshot, initialBlocked)
-                               .has_value();
-  const bool centerFoodPush = foodReachable && isPointInCenterBand(snapshot.food, snapshot);
-  const QPoint boardMid = boardCenter(snapshot);
-  const bool earlyFoodChaseGuard = (targetFsm.mode() == TargetMode::FoodChase) &&
-                                   (primaryTarget == snapshot.food) && snapshot.score < 40 &&
-                                   static_cast<int>(snapshot.body.size()) < 12 && !escapeMode;
+  const int actionSequencePenalty = ctx.loopController.actionSequencePenalty(
+    candidate, ctx.escapeMode, ctx.noScoreTicks, ctx.config);
+  evaluation.breakdown.loopCost = clampScoreBlock(
+    evaluation.breakdown.loopCost + actionSequencePenalty, 0, ctx.escapeMode ? 580 : 420);
 
+  if (ctx.centerFoodPush) {
+    const int centerDelta =
+      toroidalDistance(
+        ctx.initial.head, ctx.boardMid, ctx.snapshot.boardWidth, ctx.snapshot.boardHeight) -
+      toroidalDistance(
+        preview.next.head, ctx.boardMid, ctx.snapshot.boardWidth, ctx.snapshot.boardHeight);
+    const bool leaveCorner = isNearCorner(ctx.initial.head, ctx.snapshot) &&
+                             !isNearCorner(preview.next.head, ctx.snapshot);
+    const bool stuckCorner = !isNearCorner(ctx.initial.head, ctx.snapshot) &&
+                             isNearCorner(preview.next.head, ctx.snapshot);
+    evaluation.breakdown.progress += centerDelta * ctx.config.recovery.centerBiasWeight;
+    if (leaveCorner) {
+      evaluation.breakdown.progress += ctx.config.recovery.cornerLeaveBonus;
+    }
+    if (stuckCorner) {
+      evaluation.breakdown.progress -= ctx.config.recovery.cornerStickPenalty;
+    }
+    evaluation.breakdown.progress = clampScoreBlock(evaluation.breakdown.progress, -260, 260);
+  }
+
+  const int riskCost = candidateRiskCost(openSpace, safeNeighbors, revisitCount, ctx.snapshot);
+  const int trapPenalty = safeNeighbors <= 1 ? ctx.config.modeWeights.trapPenalty : 0;
+  evaluation.breakdown.risk =
+    clampScoreBlock(trapPenalty + std::max(0, riskCost - ctx.riskBudget) * 6, 0, 320);
+  if (ctx.snapshot.score < 50 && static_cast<int>(ctx.snapshot.body.size()) < 14) {
+    if (safeNeighbors <= 2) {
+      evaluation.breakdown.risk =
+        clampScoreBlock(evaluation.breakdown.risk + ((3 - safeNeighbors) * 48), 0, 380);
+    }
+    if (openSpace < static_cast<int>(preview.next.body.size()) + 8) {
+      evaluation.breakdown.risk = clampScoreBlock(evaluation.breakdown.risk + 56, 0, 380);
+    }
+  }
+
+  evaluation.score = evaluation.breakdown.total();
+  if (ctx.deepEscapeStall) {
+    const int anchorDistance = toroidalDistance(
+      preview.next.head, ctx.primaryTarget, ctx.snapshot.boardWidth, ctx.snapshot.boardHeight);
+    const int escapeActionPenalty =
+      ctx.loopController.actionSequencePenalty(candidate, true, ctx.noScoreTicks, ctx.config);
+    const int directionalPenalty = candidate == ctx.snapshot.direction ? 50 : 0;
+    const int deterministicJitter =
+      static_cast<int>(((ctx.tieRotateSeed + static_cast<std::uint64_t>((candidateIndex + 1) * 17) +
+                         static_cast<std::uint64_t>(ctx.noScoreTicks)) %
+                        9ULL)) -
+      4;
+    const int deepEscapeScore =
+      (openSpacePct * 4) + (safeNeighbors * 52) + (candidateStats.tailReachable ? 48 : -96) -
+      (anchorDistance * 28) - (revisitCount * 64) - evaluation.breakdown.loopCost -
+      evaluation.breakdown.risk - escapeActionPenalty - directionalPenalty + deterministicJitter;
+    evaluation.breakdown.progress = clampScoreBlock(deepEscapeScore, -520, 320);
+    evaluation.breakdown.survival = 0;
+    evaluation.breakdown.reward = 0;
+    evaluation.breakdown.drift = 0;
+    evaluation.breakdown.risk = 0;
+    evaluation.breakdown.loopCost = 0;
+    evaluation.score = evaluation.breakdown.total();
+  }
+
+  if (!ctx.escapeMode && ctx.noScoreTicks >= 12) {
+    const int nextPrimaryDistance = toroidalDistance(
+      preview.next.head, ctx.primaryTarget, ctx.snapshot.boardWidth, ctx.snapshot.boardHeight);
+    const int distanceDelta = nextPrimaryDistance - ctx.currentPrimaryDistance;
+    if (distanceDelta > 0) {
+      const int stallPenalty = std::min(180, distanceDelta * (8 + (ctx.noScoreTicks / 4)));
+      evaluation.breakdown.drift = -stallPenalty;
+    } else if (distanceDelta < 0) {
+      const int stallBonus = std::min(96, (-distanceDelta) * (6 + (ctx.noScoreTicks / 8)));
+      evaluation.breakdown.drift = stallBonus;
+    }
+    evaluation.score = evaluation.breakdown.total();
+  }
+
+  if (ctx.noScoreTicks >= ctx.config.recovery.noProgressPenaltyBase) {
+    const int nextFoodDistance = toroidalDistance(
+      preview.next.head, ctx.snapshot.food, ctx.snapshot.boardWidth, ctx.snapshot.boardHeight);
+    const int foodDelta = nextFoodDistance - ctx.currentFoodDistance;
+    if (foodDelta >= 0) {
+      const int noProgressPenalty = std::min(
+        420,
+        (foodDelta + 1) * (ctx.config.recovery.noProgressPenaltyBase +
+                           (ctx.noScoreTicks / ctx.config.recovery.noProgressPenaltyScale)));
+      evaluation.breakdown.drift -= noProgressPenalty;
+    } else {
+      const int progressBonus = std::min(150, (-foodDelta) * (10 + (ctx.noScoreTicks / 10)));
+      evaluation.breakdown.drift += progressBonus;
+    }
+    evaluation.score = evaluation.breakdown.total();
+  }
+
+  if (ctx.earlyFoodChaseGuard && ctx.hasNonWorseningFoodMove) {
+    const int nextFoodDistance = toroidalDistance(
+      preview.next.head, ctx.snapshot.food, ctx.snapshot.boardWidth, ctx.snapshot.boardHeight);
+    if (nextFoodDistance > ctx.currentFoodDistance) {
+      evaluation.score -= 720;
+    }
+  }
+
+  const int rawIndex = candidateIndex;
+  evaluation.tieRank = (rawIndex - ctx.tieRotateOffset + static_cast<int>(kDirections.size())) %
+                       static_cast<int>(kDirections.size());
+  if (ctx.deepEscapeStall) {
+    evaluation.tieRank +=
+      ctx.loopController.actionSequencePenalty(candidate, true, ctx.noScoreTicks, ctx.config) / 14;
+  }
+  return evaluation;
+}
+
+auto collectLegalCandidates(const Snapshot& snapshot, const MoveState& initial, LoopMemory& memory)
+  -> std::vector<CandidateStats> {
   std::vector<CandidateStats> legalCandidates;
   legalCandidates.reserve(kDirections.size());
   for (const QPoint& candidate : kDirections) {
@@ -1222,6 +1578,118 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
         .has_value();
     legalCandidates.push_back(std::move(stats));
   }
+  return legalCandidates;
+}
+
+auto formatDecisionSummary(const FilterStats& filterStats,
+                           const std::vector<CandidateTelemetry>& candidateTelemetry,
+                           const ModePlanner& modePlanner,
+                           const LoopController& loopController,
+                           const std::optional<QPoint>& bestDirection,
+                           const int bestScore) -> QString {
+  std::vector<CandidateTelemetry> sortedTelemetry = candidateTelemetry;
+  std::sort(sortedTelemetry.begin(),
+            sortedTelemetry.end(),
+            [](const CandidateTelemetry& lhs, const CandidateTelemetry& rhs) {
+              return lhs.total > rhs.total;
+            });
+  const int topCount = std::min(3, static_cast<int>(sortedTelemetry.size()));
+  QStringList topItems;
+  topItems.reserve(topCount);
+  for (int i = 0; i < topCount; ++i) {
+    const auto& item = sortedTelemetry[static_cast<std::size_t>(i)];
+    topItems.append(QStringLiteral("(%1,%2)=%3[p=%4 s=%5 r=%6 d=%7 rk=%8 lc=%9]")
+                      .arg(item.direction.x())
+                      .arg(item.direction.y())
+                      .arg(item.total)
+                      .arg(item.breakdown.progress)
+                      .arg(item.breakdown.survival)
+                      .arg(item.breakdown.reward)
+                      .arg(item.breakdown.drift)
+                      .arg(item.breakdown.risk)
+                      .arg(item.breakdown.loopCost));
+  }
+  return QStringLiteral(
+           "bot decision: mode=%1 legal=%2 strict_ok=%3 reject{safe=%4 space=%5 tail=%6}"
+           " viable=%7 selected=(%8,%9) score=%10 loops{c4=%11 c6=%12 c8=%13 taboo=%14}"
+           " top3=%15")
+    .arg(targetModeName(modePlanner.mode()))
+    .arg(filterStats.legal)
+    .arg(filterStats.strictAccepted)
+    .arg(filterStats.strictSafeReject)
+    .arg(filterStats.strictSpaceReject)
+    .arg(filterStats.strictTailReject)
+    .arg(candidateTelemetry.size())
+    .arg(bestDirection.has_value() ? bestDirection->x() : 0)
+    .arg(bestDirection.has_value() ? bestDirection->y() : 0)
+    .arg(bestScore)
+    .arg(loopController.cycle4Count())
+    .arg(loopController.cycle6Count())
+    .arg(loopController.cycle8Count())
+    .arg(loopController.tabooHits())
+    .arg(topItems.join(QStringLiteral(" ")));
+}
+
+auto selectLoopAwareDirection(const Snapshot& snapshot,
+                              const StrategyConfig& config,
+                              LoopMemory& memory,
+                              LoopController& loopController,
+                              ModePlanner& modePlanner,
+                              QString* decisionSummaryOut,
+                              const bool useSearchScoring) -> std::optional<QPoint> {
+  if (snapshot.body.empty() || snapshot.boardWidth <= 0 || snapshot.boardHeight <= 0) {
+    if (decisionSummaryOut != nullptr) {
+      *decisionSummaryOut = QStringLiteral("bot decision: invalid snapshot");
+    }
+    return std::nullopt;
+  }
+  const StrategyConfig tunedConfig = stageAdjustedStrategy(config, snapshot);
+  const MoveState initial{
+    .head = snapshot.head,
+    .direction = snapshot.direction,
+    .body = snapshot.body,
+    .score = snapshot.score,
+  };
+
+  const int repeats = memory.observe(snapshot, initial);
+  loopController.observeScore(initial.score);
+  const int noScoreTicks = loopController.noScoreTicks();
+  modePlanner.update(
+    snapshot, tunedConfig, loopController, repeats, noScoreTicks, memory.observeTick());
+  const bool escapeMode =
+    (modePlanner.mode() == TargetMode::Escape) || loopController.escapeMode(repeats);
+  const int riskBudget = riskBudgetFor(snapshot, repeats);
+  const int depth = std::clamp(tunedConfig.modeWeights.lookaheadDepth + 1, 2, 6);
+  QPoint primaryTarget = modePlanner.targetPoint(snapshot, tunedConfig, loopController);
+  if (escapeMode && noScoreTicks >= 72) {
+    const std::array<QPoint, 4> escapeAnchors = {
+      QPoint(0, 0),
+      QPoint(snapshot.boardWidth - 1, 0),
+      QPoint(snapshot.boardWidth - 1, snapshot.boardHeight - 1),
+      QPoint(0, snapshot.boardHeight - 1),
+    };
+    const auto anchorIndex = static_cast<int>((memory.observeTick() / 8U) %
+                                              static_cast<std::uint64_t>(escapeAnchors.size()));
+    primaryTarget = escapeAnchors[static_cast<std::size_t>(anchorIndex)];
+  }
+  const int currentPrimaryDistance =
+    toroidalDistance(initial.head, primaryTarget, snapshot.boardWidth, snapshot.boardHeight);
+  const int currentFoodDistance =
+    toroidalDistance(initial.head, snapshot.food, snapshot.boardWidth, snapshot.boardHeight);
+  auto initialBlocked = buildBlockedMap(snapshot, initial.body);
+  if (const auto headIndex = tryBoardIndex(initial.head, snapshot.boardWidth, snapshot.boardHeight);
+      headIndex.has_value()) {
+    initialBlocked[*headIndex] = false;
+  }
+  const bool foodReachable =
+    shortestReachableDistance(initial.head, snapshot.food, snapshot, initialBlocked).has_value();
+  const bool centerFoodPush = foodReachable && isPointInCenterBand(snapshot.food, snapshot);
+  const QPoint boardMid = boardCenter(snapshot);
+  const bool earlyFoodChaseGuard = (modePlanner.mode() == TargetMode::FoodChase) &&
+                                   (primaryTarget == snapshot.food) && snapshot.score < 40 &&
+                                   static_cast<int>(snapshot.body.size()) < 12 && !escapeMode;
+
+  std::vector<CandidateStats> legalCandidates = collectLegalCandidates(snapshot, initial, memory);
   if (legalCandidates.empty()) {
     if (decisionSummaryOut != nullptr) {
       *decisionSummaryOut = QStringLiteral("bot decision: no legal candidates");
@@ -1304,274 +1772,48 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
   std::optional<QPoint> bestDirection;
   std::vector<CandidateTelemetry> candidateTelemetry;
   candidateTelemetry.reserve(viable.size());
+  const DecisionContext decisionContext{
+    .snapshot = snapshot,
+    .config = tunedConfig,
+    .initial = initial,
+    .loopController = loopController,
+    .modePlanner = modePlanner,
+    .primaryTarget = primaryTarget,
+    .boardMid = boardMid,
+    .useSearchScoring = useSearchScoring,
+    .escapeMode = escapeMode,
+    .noScoreTicks = noScoreTicks,
+    .repeats = repeats,
+    .riskBudget = riskBudget,
+    .depth = depth,
+    .currentPrimaryDistance = currentPrimaryDistance,
+    .currentFoodDistance = currentFoodDistance,
+    .centerFoodPush = centerFoodPush,
+    .earlyFoodChaseGuard = earlyFoodChaseGuard,
+    .hasNonWorseningFoodMove = hasNonWorseningFoodMove,
+    .deepEscapeStall = deepEscapeStall,
+    .tieRotateSeed = tieRotateSeed,
+    .tieRotateOffset = tieRotateOffset,
+    .orbitBreakLevel = orbitBreakLevel,
+    .orbitPreferredIndex = orbitPreferredIndex,
+  };
   for (const CandidateStats* candidateStats : viable) {
-    const QPoint candidate = candidateStats->candidate;
-    const int candidateIndex = directionIndex(candidate);
-    const MovePreview& preview = candidateStats->preview;
-    const int revisitCount = candidateStats->revisitCount;
-    const int openSpace = candidateStats->openSpace;
-    const int safeNeighbors = candidateStats->safeNeighbors;
-    const auto& blocked = candidateStats->blocked;
-    const int pocketPenalty =
-      pocketPenaltyTowardTarget(preview.next.head, primaryTarget, snapshot, blocked);
-    const int boardArea = std::max(1, snapshot.boardWidth * snapshot.boardHeight);
-    const int openSpacePct = (openSpace * 100) / boardArea;
-    const int normalizedSafeNeighbors = safeNeighbors * 20;
-    ScoreBreakdown breakdown{};
-    if (escapeMode) {
-      const int escapeBase = evaluateEscapeCandidate(snapshot, preview, tunedConfig, revisitCount);
-      const int compressedEscapeBase = (escapeBase * 3) / 10;
-      const int openSpaceTerm = (openSpacePct * 7) / 4;
-      const int safeNeighborTerm = safeNeighbors * 22;
-      const int tailReachTerm = candidateStats->tailReachable ? 14 : -42;
-      const int stallDecay = std::min(120, std::max(0, noScoreTicks - 20) * 3);
-      const int escapeSurvival =
-        compressedEscapeBase + openSpaceTerm + safeNeighborTerm + tailReachTerm - stallDecay;
-      breakdown.survival = clampScoreBlock(escapeSurvival, -60, 190);
-      breakdown.progress = clampScoreBlock(
-        approachTargetBonus(
-          initial.head, preview.next.head, primaryTarget, snapshot, tunedConfig, repeats),
-        -80,
-        120);
-      if (preview.ateFood) {
-        breakdown.reward += tunedConfig.foodConsumeBonus * 2;
-      }
-      if (preview.atePower && !targetFsm.suppressPowerChase()) {
-        breakdown.reward += powerPriority(tunedConfig, snapshot.powerUpType) * 2;
-      }
-      breakdown.reward = clampScoreBlock(breakdown.reward, 0, 240);
-      if (orbitBreakLevel > 0) {
-        if (orbitPreferredIndex >= 0 && candidate == kDirections[orbitPreferredIndex]) {
-          breakdown.progress += orbitBreakLevel * 10;
-        }
-        if (candidate == snapshot.direction) {
-          breakdown.progress -= orbitBreakLevel * 8;
-        }
-        const int straightIndex = directionIndex(snapshot.direction);
-        if (straightIndex >= 0 &&
-            candidateIndex == ((straightIndex + 2) % static_cast<int>(kDirections.size()))) {
-          breakdown.progress -= orbitBreakLevel * 6;
-        }
-        breakdown.progress = clampScoreBlock(breakdown.progress, -120, 170);
-      }
-      const int repeatSquaredPenalty = std::min(260, revisitCount * revisitCount * 12);
-      const int escapeLoopExtra =
-        std::min(320,
-                 (revisitCount * 24) + repeatSquaredPenalty + (pocketPenalty * 10) +
-                   (orbitBreakLevel * 18) + std::max(0, noScoreTicks - 24));
-      breakdown.loopCost = clampScoreBlock(
-        loopController.loopCost(revisitCount, pocketPenalty, tunedConfig, useSearchScoring, true) +
-          escapeLoopExtra,
-        0,
-        520);
-    } else if (useSearchScoring) {
-      int immediate = (candidate == snapshot.direction ? tunedConfig.straightBonus : 0);
-      if (preview.ateFood) {
-        immediate += tunedConfig.foodConsumeBonus;
-      }
-      if (preview.atePower && !targetFsm.suppressPowerChase()) {
-        immediate += powerPriority(tunedConfig, snapshot.powerUpType);
-      }
-      const QPoint tailFallback =
-        preview.next.body.empty() ? preview.next.head : preview.next.body.back();
-      const TargetDistance targetDistance =
-        resolveTargetDistance(preview.next.head, primaryTarget, snapshot, blocked, tailFallback);
-      const int searchTerm =
-        searchValue(snapshot, preview.next, tunedConfig, depth - 1, primaryTarget);
-      const int rolloutTerm = rolloutScore(snapshot, preview.next, tunedConfig, primaryTarget) / 6;
-      breakdown.progress = clampScoreBlock(
-        approachTargetBonus(
-          initial.head, preview.next.head, primaryTarget, snapshot, tunedConfig, repeats) +
-          (searchTerm / 8) + (rolloutTerm / 4) -
-          (targetDistance.distance * tunedConfig.targetDistanceWeight) -
-          targetDistance.unreachablePenalty,
-        -160,
-        190);
-      breakdown.survival = clampScoreBlock(((openSpacePct * tunedConfig.openSpaceWeight) / 8) +
-                                             normalizedSafeNeighbors +
-                                             (safeNeighbors * tunedConfig.safeNeighborWeight) +
-                                             (candidateStats->tailReachable ? 22 : -44),
-                                           -120,
-                                           170);
-      breakdown.reward = clampScoreBlock(immediate, 0, 220);
-      breakdown.loopCost =
-        loopController.loopCost(revisitCount, pocketPenalty, tunedConfig, true, false);
-    } else {
-      const QPoint tailFallback =
-        preview.next.body.empty() ? preview.next.head : preview.next.body.back();
-      const TargetDistance targetDistance =
-        resolveTargetDistance(preview.next.head, primaryTarget, snapshot, blocked, tailFallback);
-      int immediate = (candidate == snapshot.direction ? tunedConfig.straightBonus : 0);
-      if (preview.ateFood) {
-        immediate += tunedConfig.foodConsumeBonus;
-      }
-      if (preview.atePower && !targetFsm.suppressPowerChase()) {
-        immediate += powerPriority(tunedConfig, snapshot.powerUpType);
-      }
-      breakdown.progress = clampScoreBlock(
-        approachTargetBonus(
-          initial.head, preview.next.head, primaryTarget, snapshot, tunedConfig, repeats) -
-          (targetDistance.distance * tunedConfig.targetDistanceWeight) -
-          targetDistance.unreachablePenalty,
-        -140,
-        170);
-      breakdown.survival = clampScoreBlock(((openSpacePct * tunedConfig.openSpaceWeight) / 8) +
-                                             normalizedSafeNeighbors +
-                                             (safeNeighbors * tunedConfig.safeNeighborWeight) +
-                                             (candidateStats->tailReachable ? 20 : -44),
-                                           -110,
-                                           160);
-      breakdown.reward = clampScoreBlock(immediate, 0, 220);
-      breakdown.loopCost =
-        loopController.loopCost(revisitCount, pocketPenalty, tunedConfig, false, false);
+    const CandidateEvaluation evaluation = evaluateCandidateScore(*candidateStats, decisionContext);
+    if (evaluation.score > bestScore ||
+        (evaluation.score == bestScore && evaluation.tieRank < bestTieRank)) {
+      bestScore = evaluation.score;
+      bestTieRank = evaluation.tieRank;
+      bestDirection = candidateStats->candidate;
     }
-
-    const int actionSequencePenalty =
-      loopController.actionSequencePenalty(candidate, escapeMode, noScoreTicks);
-    breakdown.loopCost = clampScoreBlock(
-      breakdown.loopCost + actionSequencePenalty,
-      0,
-      escapeMode ? 580 : 420);
-
-    if (centerFoodPush) {
-      const int centerDelta =
-        toroidalDistance(initial.head, boardMid, snapshot.boardWidth, snapshot.boardHeight) -
-        toroidalDistance(preview.next.head, boardMid, snapshot.boardWidth, snapshot.boardHeight);
-      const bool leaveCorner = isNearCorner(initial.head, snapshot) &&
-                               !isNearCorner(preview.next.head, snapshot);
-      const bool stuckCorner = !isNearCorner(initial.head, snapshot) &&
-                               isNearCorner(preview.next.head, snapshot);
-      breakdown.progress += centerDelta * 26;
-      if (leaveCorner) {
-        breakdown.progress += 96;
-      }
-      if (stuckCorner) {
-        breakdown.progress -= 108;
-      }
-      breakdown.progress = clampScoreBlock(breakdown.progress, -260, 260);
-    }
-
-    const int riskCost = candidateRiskCost(openSpace, safeNeighbors, revisitCount, snapshot);
-    const int trapPenalty = safeNeighbors <= 1 ? tunedConfig.trapPenalty : 0;
-    breakdown.risk = clampScoreBlock(trapPenalty + std::max(0, riskCost - riskBudget) * 6, 0, 320);
-    if (snapshot.score < 50 && static_cast<int>(snapshot.body.size()) < 14) {
-      if (safeNeighbors <= 2) {
-        breakdown.risk = clampScoreBlock(breakdown.risk + ((3 - safeNeighbors) * 48), 0, 380);
-      }
-      if (openSpace < static_cast<int>(preview.next.body.size()) + 8) {
-        breakdown.risk = clampScoreBlock(breakdown.risk + 56, 0, 380);
-      }
-    }
-    int score = breakdown.total();
-    if (deepEscapeStall) {
-      const int anchorDistance = toroidalDistance(
-        preview.next.head, primaryTarget, snapshot.boardWidth, snapshot.boardHeight);
-      const int actionSequencePenalty =
-        loopController.actionSequencePenalty(candidate, true, noScoreTicks);
-      const int directionalPenalty = candidate == snapshot.direction ? 50 : 0;
-      const int deterministicJitter =
-        static_cast<int>(((tieRotateSeed + static_cast<std::uint64_t>((candidateIndex + 1) * 17) +
-                           static_cast<std::uint64_t>(noScoreTicks)) %
-                          9ULL)) -
-        4;
-      const int deepEscapeScore =
-        (openSpacePct * 4) + (safeNeighbors * 52) + (candidateStats->tailReachable ? 48 : -96) -
-        (anchorDistance * 28) - (revisitCount * 64) - breakdown.loopCost - breakdown.risk -
-        actionSequencePenalty - directionalPenalty + deterministicJitter;
-      breakdown.progress = clampScoreBlock(deepEscapeScore, -520, 320);
-      breakdown.survival = 0;
-      breakdown.reward = 0;
-      breakdown.drift = 0;
-      breakdown.risk = 0;
-      breakdown.loopCost = 0;
-      score = breakdown.total();
-    }
-    if (!escapeMode && noScoreTicks >= 12) {
-      const int nextPrimaryDistance = toroidalDistance(
-        preview.next.head, primaryTarget, snapshot.boardWidth, snapshot.boardHeight);
-      const int distanceDelta = nextPrimaryDistance - currentPrimaryDistance;
-      if (distanceDelta > 0) {
-        const int stallPenalty = std::min(180, distanceDelta * (8 + (noScoreTicks / 4)));
-        breakdown.drift = -stallPenalty;
-      } else if (distanceDelta < 0) {
-        const int stallBonus = std::min(96, (-distanceDelta) * (6 + (noScoreTicks / 8)));
-        breakdown.drift = stallBonus;
-      }
-      score = breakdown.total();
-    }
-    if (noScoreTicks >= 16) {
-      const int nextFoodDistance =
-        toroidalDistance(preview.next.head, snapshot.food, snapshot.boardWidth, snapshot.boardHeight);
-      const int foodDelta = nextFoodDistance - currentFoodDistance;
-      if (foodDelta >= 0) {
-        const int noProgressPenalty =
-          std::min(420, (foodDelta + 1) * (16 + (noScoreTicks / 2)));
-        breakdown.drift -= noProgressPenalty;
-      } else {
-        const int progressBonus = std::min(150, (-foodDelta) * (10 + (noScoreTicks / 10)));
-        breakdown.drift += progressBonus;
-      }
-      score = breakdown.total();
-    }
-    if (earlyFoodChaseGuard && hasNonWorseningFoodMove) {
-      const int nextFoodDistance = toroidalDistance(
-        preview.next.head, snapshot.food, snapshot.boardWidth, snapshot.boardHeight);
-      if (nextFoodDistance > currentFoodDistance) {
-        score -= 720;
-      }
-    }
-
-    const int rawIndex = candidateIndex;
-    int tieRank = (rawIndex - tieRotateOffset + static_cast<int>(kDirections.size())) %
-                  static_cast<int>(kDirections.size());
-    if (deepEscapeStall) {
-      tieRank += loopController.actionSequencePenalty(candidate, true, noScoreTicks) / 14;
-    }
-    if (score > bestScore || (score == bestScore && tieRank < bestTieRank)) {
-      bestScore = score;
-      bestTieRank = tieRank;
-      bestDirection = candidate;
-    }
-    candidateTelemetry.push_back({.direction = candidate, .breakdown = breakdown, .total = score});
+    candidateTelemetry.push_back({.direction = candidateStats->candidate,
+                                  .breakdown = evaluation.breakdown,
+                                  .total = evaluation.score});
   }
   if (decisionSummaryOut != nullptr) {
-    std::sort(candidateTelemetry.begin(),
-              candidateTelemetry.end(),
-              [](const CandidateTelemetry& lhs, const CandidateTelemetry& rhs) {
-                return lhs.total > rhs.total;
-              });
-    const int topCount = std::min(3, static_cast<int>(candidateTelemetry.size()));
-    QStringList topItems;
-    topItems.reserve(topCount);
-    for (int i = 0; i < topCount; ++i) {
-      const auto& item = candidateTelemetry[static_cast<std::size_t>(i)];
-      topItems.append(QStringLiteral("(%1,%2)=%3[p=%4 s=%5 r=%6 d=%7 rk=%8 lc=%9]")
-                        .arg(item.direction.x())
-                        .arg(item.direction.y())
-                        .arg(item.total)
-                        .arg(item.breakdown.progress)
-                        .arg(item.breakdown.survival)
-                        .arg(item.breakdown.reward)
-                        .arg(item.breakdown.drift)
-                        .arg(item.breakdown.risk)
-                        .arg(item.breakdown.loopCost));
-    }
-    *decisionSummaryOut =
-      QStringLiteral("bot decision: mode=%1 legal=%2 strict_ok=%3 reject{safe=%4 space=%5 tail=%6}"
-                     " viable=%7 selected=(%8,%9) score=%10 top3=%11")
-        .arg(targetModeName(targetFsm.mode()))
-        .arg(filterStats.legal)
-        .arg(filterStats.strictAccepted)
-        .arg(filterStats.strictSafeReject)
-        .arg(filterStats.strictSpaceReject)
-        .arg(filterStats.strictTailReject)
-        .arg(viable.size())
-        .arg(bestDirection.has_value() ? bestDirection->x() : 0)
-        .arg(bestDirection.has_value() ? bestDirection->y() : 0)
-        .arg(bestScore)
-        .arg(topItems.join(QStringLiteral(" ")));
+    *decisionSummaryOut = formatDecisionSummary(
+      filterStats, candidateTelemetry, modePlanner, loopController, bestDirection, bestScore);
   }
-  loopController.observeDecision(bestDirection, escapeMode);
+  loopController.observeDecision(bestDirection, escapeMode, tunedConfig);
   return bestDirection;
 }
 
@@ -1583,8 +1825,13 @@ public:
 
   [[nodiscard]] auto decideDirection(const Snapshot& snapshot, const StrategyConfig& config) const
     -> std::optional<QPoint> override {
-    return selectLoopAwareDirection(
-      snapshot, config, m_loopMemory, m_loopController, m_targetFsm, &m_lastDecisionSummary, false);
+    return selectLoopAwareDirection(snapshot,
+                                    config,
+                                    m_loopMemory,
+                                    m_loopController,
+                                    m_modePlanner,
+                                    &m_lastDecisionSummary,
+                                    false);
   }
 
   [[nodiscard]] auto decideChoice(const QVariantList& choices, const StrategyConfig& config) const
@@ -1599,14 +1846,14 @@ public:
   void reset() override {
     m_loopMemory.clear();
     m_loopController.clear();
-    m_targetFsm.clear();
+    m_modePlanner.clear();
     m_lastDecisionSummary.clear();
   }
 
 private:
   mutable LoopMemory m_loopMemory;
   mutable LoopController m_loopController;
-  mutable TargetFsm m_targetFsm;
+  mutable ModePlanner m_modePlanner;
   mutable QString m_lastDecisionSummary;
 };
 
@@ -1618,8 +1865,13 @@ public:
 
   [[nodiscard]] auto decideDirection(const Snapshot& snapshot, const StrategyConfig& config) const
     -> std::optional<QPoint> override {
-    return selectLoopAwareDirection(
-      snapshot, config, m_loopMemory, m_loopController, m_targetFsm, &m_lastDecisionSummary, true);
+    return selectLoopAwareDirection(snapshot,
+                                    config,
+                                    m_loopMemory,
+                                    m_loopController,
+                                    m_modePlanner,
+                                    &m_lastDecisionSummary,
+                                    true);
   }
 
   [[nodiscard]] auto decideChoice(const QVariantList& choices, const StrategyConfig& config) const
@@ -1634,14 +1886,14 @@ public:
   void reset() override {
     m_loopMemory.clear();
     m_loopController.clear();
-    m_targetFsm.clear();
+    m_modePlanner.clear();
     m_lastDecisionSummary.clear();
   }
 
 private:
   mutable LoopMemory m_loopMemory;
   mutable LoopController m_loopController;
-  mutable TargetFsm m_targetFsm;
+  mutable ModePlanner m_modePlanner;
   mutable QString m_lastDecisionSummary;
 };
 

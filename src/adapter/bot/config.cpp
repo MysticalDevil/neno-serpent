@@ -20,8 +20,11 @@ auto buildDefaultPowerPriority() -> QHash<int, int> {
     {PowerUpId::Portal, 82},
     {PowerUpId::Laser, 76},
     {PowerUpId::Magnet, 68},
-    {PowerUpId::Double, 58},
-    {PowerUpId::Rich, 54},
+    {PowerUpId::Gold, 58},
+    {PowerUpId::Freeze, 52},
+    {PowerUpId::Scout, 46},
+    {PowerUpId::Vacuum, 50},
+    {PowerUpId::Anchor, 56},
     {PowerUpId::Ghost, 40},
     {PowerUpId::Slow, 28},
   };
@@ -30,6 +33,38 @@ auto buildDefaultPowerPriority() -> QHash<int, int> {
 auto intOrDefault(const QJsonObject& object, const QString& key, const int fallback) -> int {
   const auto value = object.value(key);
   return value.isDouble() ? value.toInt() : fallback;
+}
+
+auto syncLegacyToGrouped(StrategyConfig& config) -> void {
+  config.modeWeights.openSpaceWeight = config.openSpaceWeight;
+  config.modeWeights.safeNeighborWeight = config.safeNeighborWeight;
+  config.modeWeights.targetDistanceWeight = config.targetDistanceWeight;
+  config.modeWeights.straightBonus = config.straightBonus;
+  config.modeWeights.foodConsumeBonus = config.foodConsumeBonus;
+  config.modeWeights.trapPenalty = config.trapPenalty;
+  config.modeWeights.lookaheadDepth = config.lookaheadDepth;
+  config.modeWeights.lookaheadWeight = config.lookaheadWeight;
+  config.modeWeights.powerTargetPriorityThreshold = config.powerTargetPriorityThreshold;
+  config.modeWeights.powerTargetDistanceSlack = config.powerTargetDistanceSlack;
+
+  config.loopGuard.loopRepeatPenalty = config.loopRepeatPenalty;
+  config.loopGuard.loopEscapePenalty = config.loopEscapePenalty;
+}
+
+auto syncGroupedToLegacy(StrategyConfig& config) -> void {
+  config.openSpaceWeight = config.modeWeights.openSpaceWeight;
+  config.safeNeighborWeight = config.modeWeights.safeNeighborWeight;
+  config.targetDistanceWeight = config.modeWeights.targetDistanceWeight;
+  config.straightBonus = config.modeWeights.straightBonus;
+  config.foodConsumeBonus = config.modeWeights.foodConsumeBonus;
+  config.trapPenalty = config.modeWeights.trapPenalty;
+  config.lookaheadDepth = config.modeWeights.lookaheadDepth;
+  config.lookaheadWeight = config.modeWeights.lookaheadWeight;
+  config.powerTargetPriorityThreshold = config.modeWeights.powerTargetPriorityThreshold;
+  config.powerTargetDistanceSlack = config.modeWeights.powerTargetDistanceSlack;
+
+  config.loopRepeatPenalty = config.loopGuard.loopRepeatPenalty;
+  config.loopEscapePenalty = config.loopGuard.loopEscapePenalty;
 }
 
 void applyOverrides(StrategyConfig& config, const QJsonObject& object) {
@@ -62,6 +97,89 @@ void applyOverrides(StrategyConfig& config, const QJsonObject& object) {
   config.stateActionCooldownTicks = intOrDefault(
     object, QStringLiteral("stateActionCooldownTicks"), config.stateActionCooldownTicks);
 
+  syncLegacyToGrouped(config);
+
+  bool groupedOverride = false;
+  const auto modeWeightsValue = object.value(QStringLiteral("modeWeights"));
+  if (modeWeightsValue.isObject()) {
+    const auto modeWeights = modeWeightsValue.toObject();
+    config.modeWeights.openSpaceWeight = intOrDefault(
+      modeWeights, QStringLiteral("openSpaceWeight"), config.modeWeights.openSpaceWeight);
+    config.modeWeights.safeNeighborWeight = intOrDefault(
+      modeWeights, QStringLiteral("safeNeighborWeight"), config.modeWeights.safeNeighborWeight);
+    config.modeWeights.targetDistanceWeight = intOrDefault(
+      modeWeights, QStringLiteral("targetDistanceWeight"), config.modeWeights.targetDistanceWeight);
+    config.modeWeights.straightBonus =
+      intOrDefault(modeWeights, QStringLiteral("straightBonus"), config.modeWeights.straightBonus);
+    config.modeWeights.foodConsumeBonus = intOrDefault(
+      modeWeights, QStringLiteral("foodConsumeBonus"), config.modeWeights.foodConsumeBonus);
+    config.modeWeights.trapPenalty =
+      intOrDefault(modeWeights, QStringLiteral("trapPenalty"), config.modeWeights.trapPenalty);
+    config.modeWeights.lookaheadDepth = intOrDefault(
+      modeWeights, QStringLiteral("lookaheadDepth"), config.modeWeights.lookaheadDepth);
+    config.modeWeights.lookaheadWeight = intOrDefault(
+      modeWeights, QStringLiteral("lookaheadWeight"), config.modeWeights.lookaheadWeight);
+    config.modeWeights.powerTargetPriorityThreshold =
+      intOrDefault(modeWeights,
+                   QStringLiteral("powerTargetPriorityThreshold"),
+                   config.modeWeights.powerTargetPriorityThreshold);
+    config.modeWeights.powerTargetDistanceSlack =
+      intOrDefault(modeWeights,
+                   QStringLiteral("powerTargetDistanceSlack"),
+                   config.modeWeights.powerTargetDistanceSlack);
+    groupedOverride = true;
+  }
+
+  const auto loopGuardValue = object.value(QStringLiteral("loopGuard"));
+  if (loopGuardValue.isObject()) {
+    const auto loopGuard = loopGuardValue.toObject();
+    config.loopGuard.loopRepeatPenalty = intOrDefault(
+      loopGuard, QStringLiteral("loopRepeatPenalty"), config.loopGuard.loopRepeatPenalty);
+    config.loopGuard.loopEscapePenalty = intOrDefault(
+      loopGuard, QStringLiteral("loopEscapePenalty"), config.loopGuard.loopEscapePenalty);
+    config.loopGuard.repeatStreakPenalty = intOrDefault(
+      loopGuard, QStringLiteral("repeatStreakPenalty"), config.loopGuard.repeatStreakPenalty);
+    config.loopGuard.cycle4Penalty =
+      intOrDefault(loopGuard, QStringLiteral("cycle4Penalty"), config.loopGuard.cycle4Penalty);
+    config.loopGuard.cycle6Penalty =
+      intOrDefault(loopGuard, QStringLiteral("cycle6Penalty"), config.loopGuard.cycle6Penalty);
+    config.loopGuard.cycle8Penalty =
+      intOrDefault(loopGuard, QStringLiteral("cycle8Penalty"), config.loopGuard.cycle8Penalty);
+    config.loopGuard.tabooPenalty =
+      intOrDefault(loopGuard, QStringLiteral("tabooPenalty"), config.loopGuard.tabooPenalty);
+    config.loopGuard.tabooEscapeTicks = intOrDefault(
+      loopGuard, QStringLiteral("tabooEscapeTicks"), config.loopGuard.tabooEscapeTicks);
+    config.loopGuard.tabooNormalTicks = intOrDefault(
+      loopGuard, QStringLiteral("tabooNormalTicks"), config.loopGuard.tabooNormalTicks);
+    groupedOverride = true;
+  }
+
+  const auto recoveryValue = object.value(QStringLiteral("recovery"));
+  if (recoveryValue.isObject()) {
+    const auto recovery = recoveryValue.toObject();
+    config.recovery.noProgressPenaltyBase = intOrDefault(
+      recovery, QStringLiteral("noProgressPenaltyBase"), config.recovery.noProgressPenaltyBase);
+    config.recovery.noProgressPenaltyScale = intOrDefault(
+      recovery, QStringLiteral("noProgressPenaltyScale"), config.recovery.noProgressPenaltyScale);
+    config.recovery.centerBiasWeight =
+      intOrDefault(recovery, QStringLiteral("centerBiasWeight"), config.recovery.centerBiasWeight);
+    config.recovery.cornerLeaveBonus =
+      intOrDefault(recovery, QStringLiteral("cornerLeaveBonus"), config.recovery.cornerLeaveBonus);
+    config.recovery.cornerStickPenalty = intOrDefault(
+      recovery, QStringLiteral("cornerStickPenalty"), config.recovery.cornerStickPenalty);
+    config.recovery.escapeRatioSoftCapPermille =
+      intOrDefault(recovery,
+                   QStringLiteral("escapeRatioSoftCapPermille"),
+                   config.recovery.escapeRatioSoftCapPermille);
+    config.recovery.centerRecoverTicks = intOrDefault(
+      recovery, QStringLiteral("centerRecoverTicks"), config.recovery.centerRecoverTicks);
+    groupedOverride = true;
+  }
+
+  if (groupedOverride) {
+    syncGroupedToLegacy(config);
+  }
+
   const auto powerPriorityValue = object.value(QStringLiteral("powerPriorityByType"));
   if (!powerPriorityValue.isObject()) {
     return;
@@ -90,24 +208,27 @@ auto loadJsonBytes(const QString& filePath, QByteArray& outBytes, QString& outEr
 } // namespace
 
 auto defaultStrategyConfig() -> const StrategyConfig& {
-  static const StrategyConfig kConfig{
-    .openSpaceWeight = 3,
-    .safeNeighborWeight = 12,
-    .targetDistanceWeight = 8,
-    .straightBonus = 4,
-    .foodConsumeBonus = 10,
-    .trapPenalty = 40,
-    .lookaheadDepth = 2,
-    .lookaheadWeight = 10,
-    .powerTargetPriorityThreshold = 30,
-    .powerTargetDistanceSlack = 4,
-    .tieBreakSeed = 0,
-    .loopRepeatPenalty = 56,
-    .loopEscapePenalty = 220,
-    .choiceCooldownTicks = 2,
-    .stateActionCooldownTicks = 4,
-    .powerPriorityByType = buildDefaultPowerPriority(),
-  };
+  static const StrategyConfig kConfig = []() {
+    StrategyConfig config{};
+    config.openSpaceWeight = 3;
+    config.safeNeighborWeight = 12;
+    config.targetDistanceWeight = 8;
+    config.straightBonus = 4;
+    config.foodConsumeBonus = 10;
+    config.trapPenalty = 40;
+    config.lookaheadDepth = 2;
+    config.lookaheadWeight = 10;
+    config.powerTargetPriorityThreshold = 30;
+    config.powerTargetDistanceSlack = 4;
+    config.tieBreakSeed = 0;
+    config.loopRepeatPenalty = 56;
+    config.loopEscapePenalty = 220;
+    config.choiceCooldownTicks = 2;
+    config.stateActionCooldownTicks = 4;
+    config.powerPriorityByType = buildDefaultPowerPriority();
+    syncLegacyToGrouped(config);
+    return config;
+  }();
   return kConfig;
 }
 
@@ -157,6 +278,7 @@ void applyModeDefaults(StrategyConfig& config, const BotMode mode) {
     config.trapPenalty = std::max(0, config.trapPenalty - 8);
     break;
   }
+  syncLegacyToGrouped(config);
 }
 
 auto backendModeName(const BotBackendMode mode) -> QString {

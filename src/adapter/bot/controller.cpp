@@ -203,29 +203,30 @@ auto pickDirection(const Snapshot& snapshot, const StrategyConfig& config)
     const int safeNeighbors = countSafeNeighbors(wrappedHead, snapshot, blocked);
 
     QPoint target = snapshot.food;
-    if (hasPowerUp && priority >= config.powerTargetPriorityThreshold) {
+    if (hasPowerUp && priority >= config.modeWeights.powerTargetPriorityThreshold) {
       const int foodDistance =
         toroidalDistance(wrappedHead, snapshot.food, snapshot.boardWidth, snapshot.boardHeight);
       const int powerDistance = toroidalDistance(
         wrappedHead, snapshot.powerUpPos, snapshot.boardWidth, snapshot.boardHeight);
-      if (powerDistance <= foodDistance + config.powerTargetDistanceSlack) {
+      if (powerDistance <= foodDistance + config.modeWeights.powerTargetDistanceSlack) {
         target = snapshot.powerUpPos;
       }
     }
 
     const int distanceToTarget =
       toroidalDistance(wrappedHead, target, snapshot.boardWidth, snapshot.boardHeight);
-    const int straightBonus = (candidate == snapshot.direction) ? config.straightBonus : 0;
+    const int straightBonus =
+      (candidate == snapshot.direction) ? config.modeWeights.straightBonus : 0;
     const int consumeBonus =
-      (wouldEatFood ? config.foodConsumeBonus : 0) + (wouldEatPower ? priority : 0);
-    const int trapPenalty = safeNeighbors <= 1 ? config.trapPenalty : 0;
+      (wouldEatFood ? config.modeWeights.foodConsumeBonus : 0) + (wouldEatPower ? priority : 0);
+    const int trapPenalty = safeNeighbors <= 1 ? config.modeWeights.trapPenalty : 0;
     const int lookahead = countSafeContinuations(
-      snapshot, wrappedHead, candidate, preview.nextBody, config.lookaheadDepth);
+      snapshot, wrappedHead, candidate, preview.nextBody, config.modeWeights.lookaheadDepth);
 
-    const int score = (openSpace * config.openSpaceWeight) +
-                      (safeNeighbors * config.safeNeighborWeight) + straightBonus + consumeBonus -
-                      (distanceToTarget * config.targetDistanceWeight) - trapPenalty +
-                      (lookahead * config.lookaheadWeight);
+    const int score = (openSpace * config.modeWeights.openSpaceWeight) +
+                      (safeNeighbors * config.modeWeights.safeNeighborWeight) + straightBonus +
+                      consumeBonus - (distanceToTarget * config.modeWeights.targetDistanceWeight) -
+                      trapPenalty + (lookahead * config.modeWeights.lookaheadWeight);
     if (score > bestScore) {
       bestScore = score;
       bestDirection = candidate;

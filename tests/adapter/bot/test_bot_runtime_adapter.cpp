@@ -60,8 +60,8 @@ void BotRuntimeAdapterTest::choiceSelectionPicksChoiceAndConfirms() {
 void BotRuntimeAdapterTest::choiceSelectionContextBoostsLaserOnDenseObstacles() {
   const QVariantList choices = {
     QVariantMap{{"type", 5}}, // Portal
-    QVariantMap{{"type", 8}}, // Laser
-    QVariantMap{{"type", 7}}, // Rich
+    QVariantMap{{"type", 7}}, // Laser
+    QVariantMap{{"type", 6}}, // Gold
   };
 
   nenoserpent::adapter::bot::RuntimeInput input{};

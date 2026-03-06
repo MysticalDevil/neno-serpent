@@ -40,6 +40,7 @@ private slots:
   void setParamClampsAndAppearsInStatus();
   void initializeFromEnvironmentHonorsBackendOverride();
   void directionEmptySearchFuseActivatesForceCenterWindow();
+  void groupedStrategyParamsAppearInStatus();
 };
 
 void BotStateAdapterTest::cycleBackendModeUpdatesAutoplayState() {
@@ -108,6 +109,20 @@ void BotStateAdapterTest::directionEmptySearchFuseActivatesForceCenterWindow() {
   state.onTick();
   status = state.status();
   QCOMPARE(status.value(QStringLiteral("directionEmptySearchForceCenterTicks")).toInt(), 4);
+}
+
+void BotStateAdapterTest::groupedStrategyParamsAppearInStatus() {
+  nenoserpent::adapter::bot::State state;
+  QVERIFY(state.setParam(QStringLiteral("loopGuard.cycle4Penalty"), 999));
+  QVERIFY(state.setParam(QStringLiteral("recovery.centerRecoverTicks"), 17));
+  QVERIFY(state.setParam(QStringLiteral("modeWeights.openSpaceWeight"), 77));
+
+  const auto status = state.status();
+  QCOMPARE(status.value(QStringLiteral("modeWeights.openSpaceWeight")).toInt(), 60);
+  QCOMPARE(status.value(QStringLiteral("openSpaceWeight")).toInt(), 60);
+  QCOMPARE(status.value(QStringLiteral("loopGuard.cycle4Penalty")).toInt(), 600);
+  QCOMPARE(status.value(QStringLiteral("recovery.centerRecoverTicks")).toInt(), 17);
+  QVERIFY(status.value(QStringLiteral("deprecatedLegacyStrategyParams")).toBool());
 }
 
 QTEST_MAIN(BotStateAdapterTest)

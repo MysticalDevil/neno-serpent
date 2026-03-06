@@ -58,14 +58,15 @@ auto contextualChoiceStrategy(const StrategyConfig& base, const Snapshot& snapsh
     boostPriority(PowerUpId::Mini, 18);
     boostPriority(PowerUpId::Shield, 14);
     boostPriority(PowerUpId::Portal, 10);
-    boostPriority(PowerUpId::Double, -8);
-    boostPriority(PowerUpId::Rich, -10);
+    boostPriority(PowerUpId::Gold, -6);
+    boostPriority(PowerUpId::Freeze, 10);
+    boostPriority(PowerUpId::Anchor, 12);
   } else if (policy == DecisionPolicy::Aggressive) {
     boostPriority(PowerUpId::Mini, -10);
     boostPriority(PowerUpId::Shield, -8);
-    boostPriority(PowerUpId::Double, 14);
-    boostPriority(PowerUpId::Rich, 18);
+    boostPriority(PowerUpId::Gold, 14);
     boostPriority(PowerUpId::Magnet, 8);
+    boostPriority(PowerUpId::Vacuum, 12);
   }
 
   if (bodyPermille >= 200 || snapshot.body.size() >= 18) {
@@ -75,10 +76,11 @@ auto contextualChoiceStrategy(const StrategyConfig& base, const Snapshot& snapsh
   if (obstaclePermille >= 90 || static_cast<int>(snapshot.obstacles.size()) >= 12) {
     boostPriority(PowerUpId::Laser, 32);
     boostPriority(PowerUpId::Portal, 22);
+    boostPriority(PowerUpId::Freeze, 18);
   }
   if (snapshot.score >= 120 && snapshot.body.size() <= 12) {
-    boostPriority(PowerUpId::Double, 16);
-    boostPriority(PowerUpId::Rich, 18);
+    boostPriority(PowerUpId::Gold, 16);
+    boostPriority(PowerUpId::Anchor, 10);
   }
   return contextual;
 }
@@ -139,11 +141,9 @@ auto directionCandidates(const RuntimeInput& input, const ResolvedBackend& resol
     resolved.primary != nullptr && isMlLikeBackendName(resolved.primary->name());
   if (primaryIsMlLike) {
     appendDirectionCandidate(out, &searchBackend(), QStringLiteral("direction-empty-search"));
-    appendDirectionCandidate(
-      out, input.fallbackBackend, QStringLiteral("direction-empty-rule"));
+    appendDirectionCandidate(out, input.fallbackBackend, QStringLiteral("direction-empty-rule"));
   } else {
-    appendDirectionCandidate(
-      out, input.fallbackBackend, QStringLiteral("direction-empty-rule"));
+    appendDirectionCandidate(out, input.fallbackBackend, QStringLiteral("direction-empty-rule"));
     appendDirectionCandidate(out, &searchBackend(), QStringLiteral("direction-empty-search"));
   }
   return out;
@@ -163,14 +163,20 @@ auto forcedCenterDirection(const RuntimeInput& input, const StrategyConfig& stra
   centerSnapshot.powerUpType = 0;
 
   StrategyConfig centerStrategy = strategy;
-  centerStrategy.powerTargetPriorityThreshold = 100;
-  centerStrategy.powerTargetDistanceSlack = 0;
-  centerStrategy.targetDistanceWeight = std::min(80, centerStrategy.targetDistanceWeight + 14);
-  centerStrategy.openSpaceWeight = std::min(60, centerStrategy.openSpaceWeight + 8);
-  centerStrategy.safeNeighborWeight = std::min(80, centerStrategy.safeNeighborWeight + 8);
-  centerStrategy.trapPenalty = std::min(120, centerStrategy.trapPenalty + 16);
-  centerStrategy.lookaheadDepth = std::max(centerStrategy.lookaheadDepth, 3);
-  centerStrategy.straightBonus = std::max(0, centerStrategy.straightBonus - 3);
+  centerStrategy.modeWeights.powerTargetPriorityThreshold = 100;
+  centerStrategy.modeWeights.powerTargetDistanceSlack = 0;
+  centerStrategy.modeWeights.targetDistanceWeight =
+    std::min(80, centerStrategy.modeWeights.targetDistanceWeight + 14);
+  centerStrategy.modeWeights.openSpaceWeight =
+    std::min(60, centerStrategy.modeWeights.openSpaceWeight + 8);
+  centerStrategy.modeWeights.safeNeighborWeight =
+    std::min(80, centerStrategy.modeWeights.safeNeighborWeight + 8);
+  centerStrategy.modeWeights.trapPenalty =
+    std::min(120, centerStrategy.modeWeights.trapPenalty + 16);
+  centerStrategy.modeWeights.lookaheadDepth =
+    std::max(centerStrategy.modeWeights.lookaheadDepth, 3);
+  centerStrategy.modeWeights.straightBonus =
+    std::max(0, centerStrategy.modeWeights.straightBonus - 3);
 
   const auto& backend = searchBackend();
   result.direction = backend.decideDirection(centerSnapshot, centerStrategy);

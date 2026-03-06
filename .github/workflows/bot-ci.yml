@@ -2,22 +2,6 @@ name: NenoSerpent Bot CI
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["main"]
-    tags: ["v*"]
-  pull_request:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/bot-ci.yml"
-      - "CMakePresets.json"
-      - "CMakeLists.txt"
-      - "src/adapter/bot/**"
-      - "src/core/game/**"
-      - "src/core/session/**"
-      - "tests/adapter/bot/**"
-      - "tests/core/**"
-      - "scripts/ci/bot_*"
-      - "scripts/dev/bot_*"
 
 concurrency:
   group: bot-ci-${{ github.event.pull_request.number || github.ref }}

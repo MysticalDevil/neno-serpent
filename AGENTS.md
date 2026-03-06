@@ -53,6 +53,12 @@ This file intentionally keeps only repository-specific rules and avoids repeatin
 - Do not place LCD-internal elements above LCD shader path just for styling.
 - `OSDLayer` stays topmost above CRT/screen treatment layers.
 
+## File Editing Restrictions
+
+- Do not use `python`, `perl`, `ruby`, `sed`, or `awk` to create, rewrite, or patch repository files.
+- For file edits, use built-in edit tools first, especially `apply_patch`.
+- Shell commands using the tools above are allowed only for read-only inspection, not for modifying tracked files.
+
 ## Related Plan Docs
 
 - Audio system: `docs/AUDIO_SYSTEM_PLAN.md`

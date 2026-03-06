@@ -161,6 +161,18 @@ struct CandidateStats {
   bool tailReachable = false;
 };
 
+struct ScoreBreakdown {
+  int progress = 0;
+  int survival = 0;
+  int reward = 0;
+  int risk = 0;
+  int loopCost = 0;
+
+  [[nodiscard]] auto total() const -> int {
+    return progress + survival + reward - risk - loopCost;
+  }
+};
+
 auto mixHash(std::uint64_t seed, const std::uint64_t value) -> std::uint64_t {
   constexpr std::uint64_t kPrime = 1099511628211ULL;
   seed ^= value + 0x9e3779b97f4a7c15ULL + (seed << 6U) + (seed >> 2U);
@@ -810,6 +822,10 @@ auto approachTargetBonus(const QPoint& currentHead,
   return bonus;
 }
 
+auto clampScoreBlock(const int value, const int minValue, const int maxValue) -> int {
+  return std::max(minValue, std::min(value, maxValue));
+}
+
 struct HardFilterConfig {
   int minSafeNeighbors = 1;
   int minOpenSpace = 0;
@@ -958,11 +974,23 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
     const auto& blocked = candidateStats->blocked;
     const int pocketPenalty =
       pocketPenaltyTowardTarget(preview.next.head, primaryTarget, snapshot, blocked);
-    int score = 0;
+    ScoreBreakdown breakdown{};
     if (escapeMode) {
-      score = evaluateEscapeCandidate(snapshot, preview, tunedConfig, revisitCount);
-      score += approachTargetBonus(
-        initial.head, preview.next.head, primaryTarget, snapshot, tunedConfig, repeats);
+      breakdown.survival = clampScoreBlock(
+        evaluateEscapeCandidate(snapshot, preview, tunedConfig, revisitCount), -120, 420);
+      breakdown.progress = clampScoreBlock(
+        approachTargetBonus(
+          initial.head, preview.next.head, primaryTarget, snapshot, tunedConfig, repeats),
+        -120,
+        120);
+      if (preview.ateFood) {
+        breakdown.reward += tunedConfig.foodConsumeBonus * 2;
+      }
+      if (preview.atePower) {
+        breakdown.reward += powerPriority(tunedConfig, snapshot.powerUpType) * 2;
+      }
+      breakdown.reward = clampScoreBlock(breakdown.reward, 0, 240);
+      breakdown.loopCost = clampScoreBlock(revisitCount * tunedConfig.loopEscapePenalty, 0, 420);
     } else if (useSearchScoring) {
       int immediate = (candidate == snapshot.direction ? tunedConfig.straightBonus : 0);
       if (preview.ateFood) {
@@ -971,13 +999,30 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
       if (preview.atePower) {
         immediate += powerPriority(tunedConfig, snapshot.powerUpType);
       }
-      score = immediate +
-              searchValue(snapshot, preview.next, tunedConfig, depth - 1, primaryTarget) -
-              (revisitCount * std::max(1, tunedConfig.loopRepeatPenalty - 8));
-      score += rolloutScore(snapshot, preview.next, tunedConfig, primaryTarget) / 6;
-      score += approachTargetBonus(
-        initial.head, preview.next.head, primaryTarget, snapshot, tunedConfig, repeats);
-      score -= pocketPenalty * 2;
+      const QPoint tailFallback =
+        preview.next.body.empty() ? preview.next.head : preview.next.body.back();
+      const TargetDistance targetDistance =
+        resolveTargetDistance(preview.next.head, primaryTarget, snapshot, blocked, tailFallback);
+      const int searchTerm =
+        searchValue(snapshot, preview.next, tunedConfig, depth - 1, primaryTarget);
+      const int rolloutTerm = rolloutScore(snapshot, preview.next, tunedConfig, primaryTarget) / 6;
+      breakdown.progress = clampScoreBlock(
+        approachTargetBonus(
+          initial.head, preview.next.head, primaryTarget, snapshot, tunedConfig, repeats) +
+          searchTerm + rolloutTerm - (targetDistance.distance * tunedConfig.targetDistanceWeight) -
+          targetDistance.unreachablePenalty,
+        -280,
+        340);
+      breakdown.survival = clampScoreBlock((openSpace * tunedConfig.openSpaceWeight) +
+                                             (safeNeighbors * tunedConfig.safeNeighborWeight) +
+                                             (candidateStats->tailReachable ? 32 : -64),
+                                           -240,
+                                           340);
+      breakdown.reward = clampScoreBlock(immediate, 0, 220);
+      breakdown.loopCost = clampScoreBlock(
+        (revisitCount * std::max(1, tunedConfig.loopRepeatPenalty - 8)) + (pocketPenalty * 2),
+        0,
+        360);
     } else {
       const QPoint tailFallback =
         preview.next.body.empty() ? preview.next.head : preview.next.body.back();
@@ -990,21 +1035,35 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
       if (preview.atePower) {
         immediate += powerPriority(tunedConfig, snapshot.powerUpType);
       }
-      const int trapPenalty = safeNeighbors <= 1 ? tunedConfig.trapPenalty : 0;
-      score = (openSpace * tunedConfig.openSpaceWeight) +
-              (safeNeighbors * tunedConfig.safeNeighborWeight) -
-              (targetDistance.distance * tunedConfig.targetDistanceWeight) + immediate -
-              trapPenalty - (revisitCount * tunedConfig.loopRepeatPenalty) -
-              targetDistance.unreachablePenalty;
-      score += approachTargetBonus(
-        initial.head, preview.next.head, primaryTarget, snapshot, tunedConfig, repeats);
-      score -= pocketPenalty;
+      breakdown.progress = clampScoreBlock(
+        approachTargetBonus(
+          initial.head, preview.next.head, primaryTarget, snapshot, tunedConfig, repeats) -
+          (targetDistance.distance * tunedConfig.targetDistanceWeight) -
+          targetDistance.unreachablePenalty,
+        -220,
+        220);
+      breakdown.survival = clampScoreBlock((openSpace * tunedConfig.openSpaceWeight) +
+                                             (safeNeighbors * tunedConfig.safeNeighborWeight) +
+                                             (candidateStats->tailReachable ? 24 : -56),
+                                           -200,
+                                           300);
+      breakdown.reward = clampScoreBlock(immediate, 0, 220);
+      breakdown.loopCost =
+        clampScoreBlock((revisitCount * tunedConfig.loopRepeatPenalty) + pocketPenalty, 0, 320);
     }
 
     const int riskCost = candidateRiskCost(openSpace, safeNeighbors, revisitCount, snapshot);
-    if (riskCost > riskBudget) {
-      score -= (riskCost - riskBudget) * 6;
+    const int trapPenalty = safeNeighbors <= 1 ? tunedConfig.trapPenalty : 0;
+    breakdown.risk = clampScoreBlock(trapPenalty + std::max(0, riskCost - riskBudget) * 6, 0, 320);
+    if (snapshot.score < 50 && static_cast<int>(snapshot.body.size()) < 14) {
+      if (safeNeighbors <= 2) {
+        breakdown.risk = clampScoreBlock(breakdown.risk + ((3 - safeNeighbors) * 48), 0, 380);
+      }
+      if (openSpace < static_cast<int>(preview.next.body.size()) + 8) {
+        breakdown.risk = clampScoreBlock(breakdown.risk + 56, 0, 380);
+      }
     }
+    int score = breakdown.total();
     if (earlyFoodChaseGuard && hasNonWorseningFoodMove) {
       const int nextFoodDistance = toroidalDistance(
         preview.next.head, snapshot.food, snapshot.boardWidth, snapshot.boardHeight);

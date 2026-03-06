@@ -10,7 +10,6 @@ Item {
     property var menuColor
     property string gameFont: ""
     property real elapsed: 0
-    property var drawPowerSymbol
     property var rarityTier
     property var rarityName
     property var rarityColor
@@ -125,7 +124,6 @@ Item {
         choiceIndex: overlays.choiceIndex
         gameFont: overlays.gameFont
         elapsed: overlays.elapsed
-        drawPowerSymbol: overlays.drawPowerSymbol
         rarityTier: overlays.rarityTier
         rarityName: overlays.rarityName
         rarityColor: overlays.rarityColor

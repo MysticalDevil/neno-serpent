@@ -7,7 +7,6 @@ ModalSurface {
     property int choiceIndex: 0
     property string gameFont: ""
     property real elapsed: 0
-    property var drawPowerSymbol
     property var rarityTier
     property var rarityName
     property var rarityColor
@@ -123,7 +122,6 @@ ModalSurface {
                     badgeColor: Qt.rgba(accent.r, accent.g, accent.b, selected ? 0.16 : 0.10)
                     badgeBorderColor: selected ? Qt.darker(accent, 1.30) : levelUpModal.cardBorderColor
                     badgeTextColor: levelUpModal.modalCardTitleInk
-                    drawPowerSymbol: levelUpModal.drawPowerSymbol
                     rarityTier: levelUpModal.rarityTier
                 }
             }

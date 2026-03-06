@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import "meta/PowerMeta.js" as PowerMeta
 import "meta/AchievementMeta.js" as AchievementMeta
 import "icons" as Icons
@@ -23,8 +24,11 @@ Rectangle {
     readonly property int contentSpacing: 4
     readonly property int headerHeight: 24
     readonly property int infoHeight: 28
-    readonly property int sectionHeaderHeight: 14
-    readonly property int medalSectionHeight: 42
+    readonly property int sectionHeaderHeight: 12
+    readonly property int fruitTileHeight: 30
+    readonly property int medalTileHeight: 18
+    readonly property int fruitColumns: 3
+    readonly property int medalColumns: 4
     readonly property int footerHeight: 14
     readonly property color panelBgStrong: menuColor("cardPrimary")
     readonly property color panelBg: menuColor("cardSecondary")
@@ -68,228 +72,240 @@ Rectangle {
             subtitleColor: Qt.rgba(iconLabLayer.textMuted.r, iconLabLayer.textMuted.g, iconLabLayer.textMuted.b, 0.9)
         }
 
-        Row {
-            width: parent.width
-            spacing: iconLabLayer.contentSpacing
-            Rectangle {
-                width: 90
-                height: iconLabLayer.infoHeight
-                radius: 3
-                color: Qt.rgba(iconLabLayer.panelBg.r, iconLabLayer.panelBg.g, iconLabLayer.panelBg.b, 0.84)
-                border.color: iconLabLayer.borderSoft
-                border.width: 1
-
-                Row {
-                    anchors.centerIn: parent
-                    spacing: 8
-                    Rectangle {
-                        width: 20
-                        height: 20
-                        radius: 3
-                        color: Qt.rgba(iconLabLayer.panelBgSoft.r, iconLabLayer.panelBgSoft.g, iconLabLayer.panelBgSoft.b, 0.86)
-                        border.color: iconLabLayer.borderStrong
-                        border.width: 1
-                        Icons.FoodGlyph {
-                            anchors.fill: parent
-                            strokeColor: iconLabLayer.borderStrong
-                            coreColor: iconLabLayer.panelAccent
-                            highlightColor: iconLabLayer.panelBgStrong
-                            stemColor: iconLabLayer.borderStrong
-                            sparkColor: iconLabLayer.textMuted
-                        }
-                    }
-                    Column {
-                        anchors.verticalCenter: parent.verticalCenter
-                        Text { text: "FOOD"; color: iconLabLayer.textStrong; font.family: gameFont; font.pixelSize: 8; font.bold: true }
-                        Text { text: "BASE"; color: iconLabLayer.textMuted; font.family: gameFont; font.pixelSize: 7; font.bold: true }
-                    }
-                }
-            }
-
-            Rectangle {
-                width: Math.max(64, parent.width - 90 - iconLabLayer.contentSpacing)
-                height: iconLabLayer.infoHeight
-                radius: 3
-                color: Qt.rgba(iconLabLayer.panelBg.r, iconLabLayer.panelBg.g, iconLabLayer.panelBg.b, 0.84)
-                border.color: iconLabLayer.borderSoft
-                border.width: 1
-                Text {
-                    anchors.centerIn: parent
-                    text: "POWERUP ICON SUITE"
-                    color: iconLabLayer.textStrong
-                    font.family: gameFont
-                    font.pixelSize: 8
-                    font.bold: true
-                }
-            }
-        }
-
-        Grid {
-            id: iconLabGrid
+        Flickable {
+            id: scrollArea
             width: parent.width
             height: Math.max(
                         0,
-                        parent.height - iconLabLayer.headerHeight - iconLabLayer.infoHeight
-                        - iconLabLayer.sectionHeaderHeight - iconLabLayer.medalSectionHeight
-                        - iconLabLayer.footerHeight - (iconLabLayer.contentSpacing * 4))
-            columns: 3
-            columnSpacing: iconLabLayer.contentSpacing
-            rowSpacing: iconLabLayer.contentSpacing
+                        parent.height - iconLabLayer.headerHeight - iconLabLayer.footerHeight
+                        - iconLabLayer.contentSpacing)
+            clip: true
+            contentWidth: width
+            contentHeight: scrollContent.height
+            boundsBehavior: Flickable.StopAtBounds
 
-            Repeater {
-                model: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-                delegate: Rectangle {
-                    width: Math.floor((iconLabGrid.width - (iconLabGrid.columnSpacing * 2)) / 3)
-                    height: Math.floor((iconLabGrid.height - (iconLabGrid.rowSpacing * 3)) / 4)
-                    radius: 4
-                    property int iconIdx: index
-                    clip: true
-                    color: Qt.rgba(iconLabLayer.panelBg.r, iconLabLayer.panelBg.g, iconLabLayer.panelBg.b, 0.8)
-                    border.color: powerColor(modelData)
-                    border.width: 1
+            ScrollBar.vertical: ScrollBar {
+                policy: ScrollBar.AsNeeded
+                width: 5
+
+                contentItem: Rectangle {
+                    implicitWidth: 5
+                    radius: 3
+                    color: iconLabLayer.borderStrong
+                }
+
+                background: Rectangle {
+                    radius: 3
+                    color: iconLabLayer.panelBgSoft
+                    opacity: 0.35
+                }
+            }
+
+            Column {
+                id: scrollContent
+                width: scrollArea.width - 6
+                spacing: iconLabLayer.contentSpacing
+
+                Row {
+                    width: parent.width
+                    spacing: iconLabLayer.contentSpacing
 
                     Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: 1
+                        width: 90
+                        height: iconLabLayer.infoHeight
                         radius: 3
-                        color: "transparent"
-                        border.color: iconLabLayer.borderStrong
+                        color: Qt.rgba(iconLabLayer.panelBg.r, iconLabLayer.panelBg.g, iconLabLayer.panelBg.b, 0.84)
+                        border.color: iconLabLayer.borderSoft
                         border.width: 1
-                        visible: iconLabLayer.iconLabSelection === iconIdx
-                        opacity: (Math.floor(iconLabLayer.elapsed * 8) % 2 === 0) ? 0.9 : 0.5
+
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 8
+                            Rectangle {
+                                width: 20
+                                height: 20
+                                radius: 3
+                                color: Qt.rgba(iconLabLayer.panelBgSoft.r, iconLabLayer.panelBgSoft.g, iconLabLayer.panelBgSoft.b, 0.86)
+                                border.color: iconLabLayer.borderStrong
+                                border.width: 1
+                                Icons.FoodGlyph {
+                                    anchors.fill: parent
+                                    strokeColor: iconLabLayer.borderStrong
+                                    coreColor: iconLabLayer.panelAccent
+                                    highlightColor: iconLabLayer.panelBgStrong
+                                    stemColor: iconLabLayer.borderStrong
+                                    sparkColor: iconLabLayer.textMuted
+                                }
+                            }
+                            Column {
+                                anchors.verticalCenter: parent.verticalCenter
+                                Text { text: "FOOD"; color: iconLabLayer.textStrong; font.family: gameFont; font.pixelSize: 8; font.bold: true }
+                                Text { text: "BASE"; color: iconLabLayer.textMuted; font.family: gameFont; font.pixelSize: 7; font.bold: true }
+                            }
+                        }
                     }
 
                     Rectangle {
-                        anchors.right: parent.right
-                        anchors.top: parent.top
-                        anchors.rightMargin: 3
-                        anchors.topMargin: 3
-                        width: 22
-                        height: 10
-                        radius: 2
-                        visible: iconLabLayer.iconLabSelection === iconIdx
-                        color: iconLabLayer.panelAccent
-                        border.color: iconLabLayer.borderStrong
+                        width: Math.max(64, parent.width - 90 - iconLabLayer.contentSpacing)
+                        height: iconLabLayer.infoHeight
+                        radius: 3
+                        color: Qt.rgba(iconLabLayer.panelBg.r, iconLabLayer.panelBg.g, iconLabLayer.panelBg.b, 0.84)
+                        border.color: iconLabLayer.borderSoft
                         border.width: 1
                         Text {
                             anchors.centerIn: parent
-                            text: "SEL"
-                            color: iconLabLayer.textOnAccent
+                            text: "POWERUP ICON SUITE"
+                            color: iconLabLayer.textStrong
                             font.family: gameFont
-                            font.pixelSize: 7
+                            font.pixelSize: 8
                             font.bold: true
                         }
                     }
+                }
 
-                    Row {
-                        anchors.fill: parent
-                        anchors.margins: 4
-                        spacing: 4
-                        clip: true
+                Grid {
+                    id: iconLabGrid
+                    width: parent.width
+                    height: (Math.ceil(12 / iconLabLayer.fruitColumns) * iconLabLayer.fruitTileHeight)
+                            + ((Math.ceil(12 / iconLabLayer.fruitColumns) - 1) * iconLabLayer.contentSpacing)
+                    columns: iconLabLayer.fruitColumns
+                    columnSpacing: iconLabLayer.contentSpacing
+                    rowSpacing: iconLabLayer.contentSpacing
 
-                        Rectangle {
-                            width: Math.max(16, parent.height - 10)
-                            height: width
+                    Repeater {
+                        model: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+                        delegate: Rectangle {
+                            width: Math.floor((iconLabGrid.width - (iconLabGrid.columnSpacing * (iconLabLayer.fruitColumns - 1))) / iconLabLayer.fruitColumns)
+                            height: iconLabLayer.fruitTileHeight
                             radius: 4
-                            color: Qt.rgba(iconLabLayer.panelBgSoft.r, iconLabLayer.panelBgSoft.g, iconLabLayer.panelBgSoft.b, 0.86)
-                            border.color: iconLabLayer.borderStrong
+                            property int iconIdx: index
+                            clip: true
+                            color: Qt.rgba(iconLabLayer.panelBg.r, iconLabLayer.panelBg.g, iconLabLayer.panelBg.b, 0.8)
+                            border.color: powerColor(modelData)
                             border.width: 1
-                            anchors.verticalCenter: parent.verticalCenter
 
-                            Icons.PowerGlyph {
+                            Rectangle {
                                 anchors.fill: parent
-                                powerType: modelData
-                                glyphColor: powerColor(modelData)
+                                anchors.margins: 1
+                                radius: 3
+                                color: "transparent"
+                                border.color: iconLabLayer.borderStrong
+                                border.width: 1
+                                visible: iconLabLayer.iconLabSelection === iconIdx
+                                opacity: (Math.floor(iconLabLayer.elapsed * 8) % 2 === 0) ? 0.9 : 0.5
                             }
-                        }
 
-                        Column {
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 0
-                            Text {
-                                text: PowerMeta.buffName(modelData)
-                                color: iconLabLayer.textStrong
-                                font.family: gameFont
-                                font.pixelSize: 8
-                                font.bold: true
+                            Components.StatusPill {
+                                anchors.right: parent.right
+                                anchors.top: parent.top
+                                anchors.rightMargin: 2
+                                anchors.topMargin: 2
+                                width: 20
+                                height: 9
+                                visible: iconLabLayer.iconLabSelection === iconIdx
+                                color: iconLabLayer.panelAccent
+                                borderColor: iconLabLayer.borderStrong
+                                textColor: iconLabLayer.textOnAccent
+                                gameFont: gameFont
+                                label: "SEL"
                             }
-                            Text {
-                                text: PowerMeta.rarityName(modelData)
-                                color: powerColor(modelData)
-                                font.family: gameFont
-                                font.pixelSize: 7
-                                font.bold: true
-                            }
-                            Text {
-                                text: `GLYPH ${PowerMeta.powerGlyph(modelData)}`
-                                color: iconLabLayer.textMuted
-                                font.family: gameFont
-                                font.pixelSize: 7
-                                font.bold: true
-                                visible: parent.parent.height >= 42
+
+                            Row {
+                                anchors.fill: parent
+                                anchors.margins: 4
+                                spacing: 4
+
+                                Rectangle {
+                                    width: 18
+                                    height: 18
+                                    radius: 4
+                                    color: Qt.rgba(iconLabLayer.panelBgSoft.r, iconLabLayer.panelBgSoft.g, iconLabLayer.panelBgSoft.b, 0.86)
+                                    border.color: iconLabLayer.borderStrong
+                                    border.width: 1
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    Icons.PowerGlyph {
+                                        anchors.fill: parent
+                                        powerType: modelData
+                                        glyphColor: powerColor(modelData)
+                                    }
+                                }
+
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width - 22
+                                    text: PowerMeta.choiceName(modelData).toUpperCase()
+                                    color: iconLabLayer.textStrong
+                                    font.family: gameFont
+                                    font.pixelSize: 7
+                                    font.bold: true
+                                    elide: Text.ElideRight
+                                }
                             }
                         }
                     }
                 }
-            }
-        }
 
-        Components.SectionHeader {
-            width: parent.width
-            height: iconLabLayer.sectionHeaderHeight
-            color: Qt.rgba(iconLabLayer.panelBg.r, iconLabLayer.panelBg.g, iconLabLayer.panelBg.b, 0.84)
-            border.color: iconLabLayer.borderSoft
-            titleText: "ACHIEVEMENT GLYPHS"
-            gameFont: gameFont
-            textColor: iconLabLayer.textStrong
-        }
-
-        Grid {
-            width: parent.width
-            height: iconLabLayer.medalSectionHeight
-            columns: 4
-            columnSpacing: iconLabLayer.contentSpacing
-            rowSpacing: iconLabLayer.contentSpacing
-
-            Repeater {
-                model: iconLabLayer.medalSpecs
-
-                delegate: Rectangle {
-                    width: Math.floor((parent.width - (parent.columnSpacing * 3)) / 4)
-                    height: Math.floor((parent.height - parent.rowSpacing) / 2)
-                    radius: 3
-                    color: Qt.rgba(iconLabLayer.panelBg.r, iconLabLayer.panelBg.g, iconLabLayer.panelBg.b, 0.8)
+                Components.SectionHeader {
+                    width: parent.width
+                    height: iconLabLayer.sectionHeaderHeight
+                    color: Qt.rgba(iconLabLayer.panelBg.r, iconLabLayer.panelBg.g, iconLabLayer.panelBg.b, 0.84)
                     border.color: iconLabLayer.borderSoft
-                    border.width: 1
+                    titleText: "ACHIEVEMENT GLYPHS"
+                    gameFont: gameFont
+                    textColor: iconLabLayer.textStrong
+                    titlePixelSize: 8
+                }
 
-                    Row {
-                        anchors.fill: parent
-                        anchors.margins: 3
-                        spacing: 4
+                Grid {
+                    width: parent.width
+                    height: (Math.ceil(iconLabLayer.medalSpecs.length / iconLabLayer.medalColumns) * iconLabLayer.medalTileHeight)
+                            + ((Math.ceil(iconLabLayer.medalSpecs.length / iconLabLayer.medalColumns) - 1) * iconLabLayer.contentSpacing)
+                    columns: iconLabLayer.medalColumns
+                    columnSpacing: iconLabLayer.contentSpacing
+                    rowSpacing: iconLabLayer.contentSpacing
 
-                        Icons.AchievementBadgeIcon {
-                            width: Math.max(14, parent.height - 4)
-                            height: width
-                            anchors.verticalCenter: parent.verticalCenter
-                            achievementId: modelData.id
-                            unlocked: true
-                            badgeFill: iconLabLayer.panelAccent
-                            badgeText: iconLabLayer.textOnAccent
-                            iconFill: iconLabLayer.panelBgSoft
-                            unknownText: iconLabLayer.textMuted
-                            borderColor: iconLabLayer.borderStrong
-                            borderWidth: 1
-                        }
+                    Repeater {
+                        model: iconLabLayer.medalSpecs
 
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width - parent.spacing - 22
-                            text: AchievementMeta.shortLabel(modelData.id)
-                            color: iconLabLayer.textStrong
-                            font.family: gameFont
-                            font.pixelSize: 6
-                            font.bold: true
-                            elide: Text.ElideRight
+                        delegate: Rectangle {
+                            width: Math.floor((parent.width - (parent.columnSpacing * (iconLabLayer.medalColumns - 1))) / iconLabLayer.medalColumns)
+                            height: iconLabLayer.medalTileHeight
+                            radius: 3
+                            color: Qt.rgba(iconLabLayer.panelBg.r, iconLabLayer.panelBg.g, iconLabLayer.panelBg.b, 0.8)
+                            border.color: iconLabLayer.borderSoft
+                            border.width: 1
+
+                            Row {
+                                anchors.fill: parent
+                                anchors.margins: 2
+                                spacing: 3
+
+                                Icons.AchievementBadgeIcon {
+                                    width: 14
+                                    height: 14
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    achievementId: modelData.id
+                                    unlocked: true
+                                    badgeFill: iconLabLayer.panelAccent
+                                    badgeText: iconLabLayer.textOnAccent
+                                    iconFill: iconLabLayer.panelBgSoft
+                                    unknownText: iconLabLayer.textMuted
+                                    borderColor: iconLabLayer.borderStrong
+                                    borderWidth: 1
+                                }
+
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width - 20
+                                    text: AchievementMeta.shortLabel(modelData.id)
+                                    color: iconLabLayer.textStrong
+                                    font.family: gameFont
+                                    font.pixelSize: 6
+                                    font.bold: true
+                                    elide: Text.ElideRight
+                                }
+                            }
                         }
                     }
                 }

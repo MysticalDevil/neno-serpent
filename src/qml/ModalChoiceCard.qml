@@ -23,7 +23,6 @@ Components.ListCardFrame {
     property color badgeColor: "white"
     property color badgeBorderColor: "black"
     property color badgeTextColor: "black"
-    property var drawPowerSymbol
     property var rarityTier
 
     width: parent ? parent.width : 0

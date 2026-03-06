@@ -420,7 +420,6 @@ Rectangle {
             choiceIndex: staticSceneLayer.previewChoiceIndex
             gameFont: staticSceneLayer.gameFont
             elapsed: 0
-            drawPowerSymbol: staticSceneLayer.drawPowerSymbol
             rarityTier: staticSceneLayer.rarityTier
             rarityName: staticSceneLayer.rarityName
             rarityColor: staticSceneLayer.rarityColor

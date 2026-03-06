@@ -1167,10 +1167,15 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
     const int normalizedSafeNeighbors = safeNeighbors * 20;
     ScoreBreakdown breakdown{};
     if (escapeMode) {
+      const int escapeBase = evaluateEscapeCandidate(snapshot, preview, tunedConfig, revisitCount);
+      const int compressedEscapeBase = (escapeBase * 3) / 10;
+      const int openSpaceTerm = (openSpacePct * 7) / 4;
+      const int safeNeighborTerm = safeNeighbors * 22;
+      const int tailReachTerm = candidateStats->tailReachable ? 14 : -42;
+      const int stallDecay = std::min(120, std::max(0, noScoreTicks - 20) * 3);
       const int escapeSurvival =
-        (evaluateEscapeCandidate(snapshot, preview, tunedConfig, revisitCount) / 2) +
-        (openSpacePct * 2) + (safeNeighbors * 25) + (candidateStats->tailReachable ? 20 : -40);
-      breakdown.survival = clampScoreBlock(escapeSurvival, -80, 260);
+        compressedEscapeBase + openSpaceTerm + safeNeighborTerm + tailReachTerm - stallDecay;
+      breakdown.survival = clampScoreBlock(escapeSurvival, -60, 190);
       breakdown.progress = clampScoreBlock(
         approachTargetBonus(
           initial.head, preview.next.head, primaryTarget, snapshot, tunedConfig, repeats),

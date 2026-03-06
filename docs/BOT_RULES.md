@@ -65,6 +65,7 @@ As of the latest refactor, `rule` and `search` backends use a unified staged pip
    - Score composition:
      - `Progress + Survival + Reward - Risk - LoopCost`
    - Each block is range-clamped and normalized to avoid long-run saturation.
+   - Escape survival term uses compressed scoring plus stall-decay to reduce late-stage flattening.
    - Under no-score stall windows, target-distance drift shaping is applied:
      - moving farther from primary target gets extra progress penalty
      - moving closer gets bounded progress bonus

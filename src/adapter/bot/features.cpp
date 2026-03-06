@@ -1,22 +1,37 @@
 #include "adapter/bot/features.h"
 
-#include <ranges>
+#include <deque>
+
+#include "core/game/rules.h"
 
 namespace nenoserpent::adapter::bot {
 
 namespace {
 
-auto collidesAt(const Snapshot& snapshot, const QPoint& cell) -> float {
-  const bool outOfBounds = cell.x() < 0 || cell.y() < 0 || cell.x() >= snapshot.boardWidth ||
-                           cell.y() >= snapshot.boardHeight;
-  if (outOfBounds) {
+auto isFatalCollisionOnMove(const Snapshot& snapshot, const QPoint& candidate) -> float {
+  if (snapshot.boardWidth <= 0 || snapshot.boardHeight <= 0) {
     return 1.0F;
   }
-  if (snapshot.obstacles.contains(cell) ||
-      std::ranges::find(snapshot.body, cell) != snapshot.body.end()) {
-    return 1.0F;
+
+  const QPoint nextHeadRaw = snapshot.head + candidate;
+  const QPoint wrappedHead =
+    nenoserpent::core::wrapPoint(nextHeadRaw, snapshot.boardWidth, snapshot.boardHeight);
+  std::deque<QPoint> collisionBody = snapshot.body;
+  const bool wouldEatFood = wrappedHead == snapshot.food;
+  if (!wouldEatFood && !collisionBody.empty()) {
+    collisionBody.pop_back();
   }
-  return 0.0F;
+
+  const auto collision = nenoserpent::core::collisionOutcomeForHead(nextHeadRaw,
+                                                                    snapshot.boardWidth,
+                                                                    snapshot.boardHeight,
+                                                                    snapshot.obstacles,
+                                                                    collisionBody,
+                                                                    snapshot.ghostActive,
+                                                                    snapshot.portalActive,
+                                                                    snapshot.laserActive,
+                                                                    snapshot.shieldActive);
+  return collision.collision ? 1.0F : 0.0F;
 }
 
 } // namespace
@@ -46,10 +61,10 @@ auto extractFeatures(const Snapshot& snapshot) -> Features {
   v[14] = snapshot.shieldActive ? 1.0F : 0.0F;
   v[15] = snapshot.portalActive ? 1.0F : 0.0F;
   v[16] = snapshot.laserActive ? 1.0F : 0.0F;
-  v[17] = collidesAt(snapshot, snapshot.head + up);
-  v[18] = collidesAt(snapshot, snapshot.head + right);
-  v[19] = collidesAt(snapshot, snapshot.head + down);
-  v[20] = collidesAt(snapshot, snapshot.head + left);
+  v[17] = isFatalCollisionOnMove(snapshot, up);
+  v[18] = isFatalCollisionOnMove(snapshot, right);
+  v[19] = isFatalCollisionOnMove(snapshot, down);
+  v[20] = isFatalCollisionOnMove(snapshot, left);
   return features;
 }
 

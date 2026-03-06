@@ -46,8 +46,8 @@ auto loadEnvironmentConfig() -> EnvironmentConfig {
 
   const QString minConfidenceRaw = qEnvironmentVariable("NENOSERPENT_BOT_ML_MIN_CONF").trimmed();
   const QString minMarginRaw = qEnvironmentVariable("NENOSERPENT_BOT_ML_MIN_MARGIN").trimmed();
-  const auto [minConfidence, confOk] = parseFloatOrDefault(minConfidenceRaw, 0.90F);
-  const auto [minMargin, marginOk] = parseFloatOrDefault(minMarginRaw, 1.20F);
+  const auto [minConfidence, confOk] = parseFloatOrDefault(minConfidenceRaw, 0.55F);
+  const auto [minMargin, marginOk] = parseFloatOrDefault(minMarginRaw, 0.10F);
 
   const QString backendOverrideRaw =
     qEnvironmentVariable("NENOSERPENT_BOT_BACKEND").trimmed().toLower();

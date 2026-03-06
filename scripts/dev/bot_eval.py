@@ -15,7 +15,7 @@ try:
 except ImportError as exc:  # pragma: no cover
     raise SystemExit(f"PyTorch is required for bot_eval.py: {exc}") from exc
 
-FEATURE_COLUMNS = [
+FEATURE_COLUMNS_V2 = [
     "level",
     "score",
     "body_len",
@@ -44,9 +44,11 @@ class MlpPolicy(nn.Module):
     def __init__(self, input_dim: int) -> None:
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(input_dim, 64),
+            nn.Linear(input_dim, 128),
             nn.ReLU(),
-            nn.Linear(64, 64),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
             nn.ReLU(),
             nn.Linear(64, 4),
         )
@@ -61,7 +63,7 @@ def load_dataset(path: Path) -> tuple[torch.Tensor, torch.Tensor]:
     with path.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            xs.append([float(row[c]) for c in FEATURE_COLUMNS])
+            xs.append([float(row[c]) for c in FEATURE_COLUMNS_V2])
             ys.append(int(row["action"]))
     return torch.tensor(xs, dtype=torch.float32), torch.tensor(ys, dtype=torch.long)
 
@@ -78,7 +80,7 @@ def main() -> int:
     args = parser.parse_args()
 
     ckpt = torch.load(Path(args.model).resolve(), map_location="cpu", weights_only=False)
-    model = MlpPolicy(input_dim=len(FEATURE_COLUMNS))
+    model = MlpPolicy(input_dim=len(FEATURE_COLUMNS_V2))
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
 

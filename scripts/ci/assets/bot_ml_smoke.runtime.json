@@ -1,10 +1,10 @@
 {
-  "format": "nenoserpent-bot-mlp-v1",
+  "format": "nenoserpent-bot-mlp-v2",
   "normalization": {
     "mean": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     "std": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
   },
-  "feature_columns": [
+  "feature_columns_v2": [
     "level",
     "score",
     "body_len",
@@ -40,5 +40,18 @@
       ],
       "bias": [0, 0, 0, 0]
     }
-  ]
+  ],
+  "hybrid": {
+    "logit_weight": 1.0,
+    "risk_weight": 0.9,
+    "loop_weight": 0.8,
+    "orbit_weight": 1.15,
+    "stall_weight": 0.45,
+    "progress_weight": 0.45,
+    "food_weight": 0.35,
+    "space_weight": 0.16,
+    "safe_neighbor_weight": 0.12,
+    "hash_window": 192,
+    "tie_break_seed": 17
+  }
 }

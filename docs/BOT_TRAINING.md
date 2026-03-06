@@ -43,6 +43,13 @@ Dataset schema is emitted by `bot-benchmark --dump-dataset` and includes:
 - game snapshot features (`head`, `dir`, `food_delta`, powerup flags, danger around head, etc.)
 - supervised label `action` (`0=up,1=right,2=down,3=left`)
 
+Important compatibility note:
+
+- Runtime now computes local danger features with wrapped-board and buff-aware fatal-collision
+  semantics (`ghost/shield/portal/laser` aligned with core rules).
+- Older models trained with pre-fix danger semantics may regress; re-generate dataset and retrain
+  before publishing new runtime JSON.
+
 ## 2. Train Imitation Model
 
 ```bash

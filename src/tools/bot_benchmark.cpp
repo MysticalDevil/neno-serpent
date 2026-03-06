@@ -870,9 +870,9 @@ auto main(int argc, char* argv[]) -> int {
       return ok ? value : fallback;
     };
     const float minConfidence =
-      parseFloatOrDefault(qEnvironmentVariable("NENOSERPENT_BOT_ML_MIN_CONF"), 0.90F);
+      parseFloatOrDefault(qEnvironmentVariable("NENOSERPENT_BOT_ML_MIN_CONF"), 0.55F);
     const float minMargin =
-      parseFloatOrDefault(qEnvironmentVariable("NENOSERPENT_BOT_ML_MIN_MARGIN"), 1.20F);
+      parseFloatOrDefault(qEnvironmentVariable("NENOSERPENT_BOT_ML_MIN_MARGIN"), 0.10F);
     mlBackend.setConfidenceGate(minConfidence, minMargin);
     if (mlModelPath.isEmpty()) {
       std::cerr << "[bot-benchmark] ml backend requested without --ml-model, fallback to rule\n";

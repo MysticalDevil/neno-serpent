@@ -22,7 +22,7 @@ except ImportError as exc:  # pragma: no cover - runtime dependency check
     raise SystemExit(f"PyTorch is required for bot_train.py: {exc}") from exc
 
 
-FEATURE_COLUMNS = [
+FEATURE_COLUMNS_V2 = [
     "level",
     "score",
     "body_len",
@@ -60,9 +60,11 @@ class MlpPolicy(nn.Module):
     def __init__(self, input_dim: int) -> None:
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(input_dim, 64),
+            nn.Linear(input_dim, 128),
             nn.ReLU(),
-            nn.Linear(64, 64),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
             nn.ReLU(),
             nn.Linear(64, 4),
         )
@@ -72,11 +74,12 @@ class MlpPolicy(nn.Module):
 
 
 def hard_sample_weights(x: torch.Tensor, y: torch.Tensor, scale: float) -> torch.Tensor:
-    danger_up = x[:, FEATURE_COLUMNS.index("danger_up")]
-    danger_right = x[:, FEATURE_COLUMNS.index("danger_right")]
-    danger_down = x[:, FEATURE_COLUMNS.index("danger_down")]
-    danger_left = x[:, FEATURE_COLUMNS.index("danger_left")]
-    body_len = x[:, FEATURE_COLUMNS.index("body_len")]
+    danger_up = x[:, FEATURE_COLUMNS_V2.index("danger_up")]
+    danger_right = x[:, FEATURE_COLUMNS_V2.index("danger_right")]
+    danger_down = x[:, FEATURE_COLUMNS_V2.index("danger_down")]
+    danger_left = x[:, FEATURE_COLUMNS_V2.index("danger_left")]
+    body_len = x[:, FEATURE_COLUMNS_V2.index("body_len")]
+    score = x[:, FEATURE_COLUMNS_V2.index("score")]
 
     danger_sum = danger_up + danger_right + danger_down + danger_left
     per_action_danger = torch.zeros_like(danger_sum)
@@ -86,7 +89,10 @@ def hard_sample_weights(x: torch.Tensor, y: torch.Tensor, scale: float) -> torch
     per_action_danger = torch.where(y == 3, danger_left, per_action_danger)
 
     long_body = (body_len >= 18).float()
-    weights = 1.0 + scale * (1.4 * per_action_danger + 0.25 * danger_sum + 0.35 * long_body)
+    high_score = (score >= 60).float() + (score >= 120).float()
+    weights = 1.0 + scale * (
+        1.8 * per_action_danger + 0.35 * danger_sum + 0.45 * long_body + 0.30 * high_score
+    )
     return torch.clamp(weights, min=0.1, max=8.0)
 
 
@@ -97,12 +103,12 @@ def load_csv(path: Path, hard_sample_scale: float) -> Dataset:
     has_seed_column = False
     with path.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
-        missing = [c for c in FEATURE_COLUMNS + [LABEL_COLUMN] if c not in reader.fieldnames]
+        missing = [c for c in FEATURE_COLUMNS_V2 + [LABEL_COLUMN] if c not in reader.fieldnames]
         if missing:
             raise RuntimeError(f"dataset missing required columns: {missing}")
         has_seed_column = bool(reader.fieldnames and "seed" in reader.fieldnames)
         for row in reader:
-            rows_x.append([float(row[c]) for c in FEATURE_COLUMNS])
+            rows_x.append([float(row[c]) for c in FEATURE_COLUMNS_V2])
             rows_y.append(int(row[LABEL_COLUMN]))
             if has_seed_column:
                 seed_values.append(int(row["seed"]))
@@ -309,7 +315,7 @@ def main() -> int:
     metadata = {
         "dataset": str(Path(args.dataset).resolve()),
         "model": str(output_model),
-        "input_dim": len(FEATURE_COLUMNS),
+        "input_dim": len(FEATURE_COLUMNS_V2),
         "labels": {"0": "up", "1": "right", "2": "down", "3": "left"},
         "epochs": args.epochs,
         "batch_size": args.batch_size,
@@ -320,7 +326,7 @@ def main() -> int:
         "dataset_seed_grouped_split": dataset.seed_values is not None,
         "best_val_acc": best_val_acc,
         "history_tail": history[-10:],
-        "feature_columns": FEATURE_COLUMNS,
+        "feature_columns_v2": FEATURE_COLUMNS_V2,
     }
     output_metadata.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
 
@@ -345,18 +351,34 @@ def main() -> int:
             }
 
         runtime_payload = {
-            "format": "nenoserpent-bot-mlp-v1",
+            "format": "nenoserpent-bot-mlp-v2",
             "normalization": {
                 "mean": [float(v) for v in mean_vec],
                 "std": [float(v) for v in std_vec],
             },
-            "feature_columns": FEATURE_COLUMNS,
+            "feature_columns_v2": FEATURE_COLUMNS_V2,
             "layers": [
                 layer_payload("net.0.weight", "net.0.bias", "relu"),
                 layer_payload("net.2.weight", "net.2.bias", "relu"),
-                layer_payload("net.4.weight", "net.4.bias", "none"),
+                layer_payload("net.4.weight", "net.4.bias", "relu"),
+                layer_payload("net.6.weight", "net.6.bias", "none"),
             ],
+            "hybrid": {
+                "logit_weight": 1.0,
+                "risk_weight": 0.9,
+                "loop_weight": 0.8,
+                "orbit_weight": 1.15,
+                "stall_weight": 0.45,
+                "progress_weight": 0.45,
+                "food_weight": 0.35,
+                "space_weight": 0.16,
+                "safe_neighbor_weight": 0.12,
+                "hash_window": 192,
+                "tie_break_seed": 17,
+            },
         }
+        metadata["recommended_min_conf"] = 0.55
+        metadata["recommended_min_margin"] = 0.10
         runtime_json_path.write_text(
             json.dumps(runtime_payload, indent=2) + "\n", encoding="utf-8"
         )

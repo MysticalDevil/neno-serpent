@@ -11,6 +11,8 @@ private slots:
   void picksDirectionFromLoadedModel();
   void skipsReverseDirectionCandidate();
   void returnsNulloptWhenConfidenceGateRejects();
+  void allowsShieldCollisionCandidate();
+  void allowsPortalAndLaserObstacleCandidate();
 };
 
 void BotMlBackendAdapterTest::rejectsInvalidModelJson() {
@@ -21,7 +23,7 @@ void BotMlBackendAdapterTest::rejectsInvalidModelJson() {
 
 void BotMlBackendAdapterTest::picksDirectionFromLoadedModel() {
   const QByteArray modelJson = R"({
-    "format": "nenoserpent-bot-mlp-v1",
+    "format": "nenoserpent-bot-mlp-v2",
     "normalization": {
       "mean": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       "std": [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
@@ -61,7 +63,7 @@ void BotMlBackendAdapterTest::picksDirectionFromLoadedModel() {
 
 void BotMlBackendAdapterTest::skipsReverseDirectionCandidate() {
   const QByteArray modelJson = R"({
-    "format": "nenoserpent-bot-mlp-v1",
+    "format": "nenoserpent-bot-mlp-v2",
     "normalization": {
       "mean": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       "std": [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
@@ -100,7 +102,7 @@ void BotMlBackendAdapterTest::skipsReverseDirectionCandidate() {
 
 void BotMlBackendAdapterTest::returnsNulloptWhenConfidenceGateRejects() {
   const QByteArray modelJson = R"({
-    "format": "nenoserpent-bot-mlp-v1",
+    "format": "nenoserpent-bot-mlp-v2",
     "normalization": {
       "mean": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       "std": [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
@@ -134,6 +136,96 @@ void BotMlBackendAdapterTest::returnsNulloptWhenConfidenceGateRejects() {
   const auto result =
     backend.decideDirection(snapshot, nenoserpent::adapter::bot::defaultStrategyConfig());
   QVERIFY(!result.has_value());
+}
+
+void BotMlBackendAdapterTest::allowsShieldCollisionCandidate() {
+  const QByteArray modelJson = R"({
+    "format": "nenoserpent-bot-mlp-v2",
+    "normalization": {
+      "mean": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      "std": [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    },
+    "layers": [{
+      "input_dim": 21,
+      "output_dim": 4,
+      "activation": "none",
+      "weights": [
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+      ],
+      "bias": [0,8,0,0]
+    }]
+  })";
+
+  nenoserpent::adapter::bot::MlBackend backend;
+  QVERIFY(backend.loadFromJson(modelJson, QStringLiteral("inline")));
+  backend.setConfidenceGate(0.0F, 0.0F);
+
+  nenoserpent::adapter::bot::Snapshot snapshot{};
+  snapshot.head = QPoint(10, 10);
+  snapshot.direction = QPoint(0, -1);
+  snapshot.food = QPoint(12, 10);
+  snapshot.boardWidth = 20;
+  snapshot.boardHeight = 18;
+  snapshot.shieldActive = true;
+  snapshot.obstacles = {QPoint(11, 10)};
+  snapshot.body = {QPoint(10, 10), QPoint(10, 11), QPoint(10, 12)};
+
+  const auto result =
+    backend.decideDirection(snapshot, nenoserpent::adapter::bot::defaultStrategyConfig());
+  QVERIFY(result.has_value());
+  QCOMPARE(*result, QPoint(1, 0));
+}
+
+void BotMlBackendAdapterTest::allowsPortalAndLaserObstacleCandidate() {
+  const QByteArray modelJson = R"({
+    "format": "nenoserpent-bot-mlp-v2",
+    "normalization": {
+      "mean": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      "std": [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    },
+    "layers": [{
+      "input_dim": 21,
+      "output_dim": 4,
+      "activation": "none",
+      "weights": [
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+      ],
+      "bias": [0,8,0,0]
+    }]
+  })";
+
+  nenoserpent::adapter::bot::MlBackend backend;
+  QVERIFY(backend.loadFromJson(modelJson, QStringLiteral("inline")));
+  backend.setConfidenceGate(0.0F, 0.0F);
+
+  nenoserpent::adapter::bot::Snapshot portalSnapshot{};
+  portalSnapshot.head = QPoint(10, 10);
+  portalSnapshot.direction = QPoint(0, -1);
+  portalSnapshot.food = QPoint(12, 10);
+  portalSnapshot.boardWidth = 20;
+  portalSnapshot.boardHeight = 18;
+  portalSnapshot.portalActive = true;
+  portalSnapshot.obstacles = {QPoint(11, 10)};
+  portalSnapshot.body = {QPoint(10, 10), QPoint(10, 11), QPoint(10, 12)};
+
+  const auto portalResult =
+    backend.decideDirection(portalSnapshot, nenoserpent::adapter::bot::defaultStrategyConfig());
+  QVERIFY(portalResult.has_value());
+  QCOMPARE(*portalResult, QPoint(1, 0));
+
+  nenoserpent::adapter::bot::Snapshot laserSnapshot = portalSnapshot;
+  laserSnapshot.portalActive = false;
+  laserSnapshot.laserActive = true;
+  const auto laserResult =
+    backend.decideDirection(laserSnapshot, nenoserpent::adapter::bot::defaultStrategyConfig());
+  QVERIFY(laserResult.has_value());
+  QCOMPARE(*laserResult, QPoint(1, 0));
 }
 
 QTEST_MAIN(BotMlBackendAdapterTest)

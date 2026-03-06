@@ -33,8 +33,8 @@ Startup backend override:
 - optional human-teach dataset output:
   - `NENOSERPENT_BOT_HUMAN_DATASET=/abs/path/human_dataset.csv`
 - optional confidence gate:
-  - `NENOSERPENT_BOT_ML_MIN_CONF` (default `0.90`)
-  - `NENOSERPENT_BOT_ML_MIN_MARGIN` (default `1.20`)
+  - `NENOSERPENT_BOT_ML_MIN_CONF` (default `0.55`)
+  - `NENOSERPENT_BOT_ML_MIN_MARGIN` (default `0.10`)
 - optional hot-reload controls (`ml-online` only):
   - `NENOSERPENT_BOT_ML_ONLINE_HOT_RELOAD=1|0` (default `1`)
   - `NENOSERPENT_BOT_ML_ONLINE_RELOAD_TICKS=N` (default `24`)

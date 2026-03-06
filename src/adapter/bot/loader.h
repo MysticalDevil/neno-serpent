@@ -8,8 +8,8 @@ namespace nenoserpent::adapter::bot {
 
 struct EnvironmentConfig {
   StrategyLoadResult strategyLoad;
-  float minConfidence = 0.90F;
-  float minMargin = 1.20F;
+  float minConfidence = 0.55F;
+  float minMargin = 0.10F;
   bool minConfidenceValid = true;
   bool minMarginValid = true;
   QString mlModelPath;

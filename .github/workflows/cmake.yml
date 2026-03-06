@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  static-check:
+  debug-clang-gate:
     runs-on: ubuntu-24.04
 
     steps:
@@ -29,6 +29,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            ccache \
             clang \
             clang-format \
             clang-tidy \
@@ -57,6 +58,14 @@ jobs:
           host: "linux"
           target: "desktop"
           modules: "qtmultimedia qtshadertools qtsensors"
+
+      - name: Restore ccache (debug-clang)
+        uses: actions/cache@v4
+        with:
+          path: build/debug-clang/.ccache
+          key: ${{ runner.os }}-ccache-debug-clang-${{ hashFiles('CMakeLists.txt', 'CMakePresets.json', '.github/workflows/cmake.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-debug-clang-
 
       - name: Determine Changed C/C++ Files
         id: changed_cpp
@@ -99,8 +108,14 @@ jobs:
       - name: Configure Debug Clang
         run: cmake --preset debug-clang --fresh
 
+      - name: ccache Stats (Before Debug Clang Build)
+        run: ccache --show-stats --verbose || true
+
       - name: Build Debug Clang
         run: cmake --build --preset debug-clang
+
+      - name: ccache Stats (After Debug Clang Build)
+        run: ccache --show-stats --verbose || true
 
       - name: Clang-Tidy Gate (Analyzer)
         if: steps.changed_cpp.outputs.has_sources == 'true'
@@ -110,52 +125,6 @@ jobs:
           printf 'clang-tidy files:\n%s\n' "${changed_cpp_sources[@]}"
           clang-tidy -p build/debug-clang -quiet -checks='-*,clang-analyzer-*' \
             "${changed_cpp_sources[@]}"
-
-  build-test:
-    runs-on: ubuntu-24.04
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup CMake 4.x
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: "4.1.0"
-
-      - name: Install System Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            clang \
-            ninja-build \
-            libgl1-mesa-dev \
-            libvulkan-dev \
-            libasound2-dev \
-            libpulse-dev \
-            libsensors-dev \
-            xvfb \
-            libxcb-cursor0 \
-            libxcb-xinerama0 \
-            libxcb-icccm4 \
-            libxcb-image0 \
-            libxcb-keysyms1 \
-            libxcb-render-util0 \
-            libxcb-shape0 \
-            libxkbcommon-x11-0
-
-      - name: Install Qt6
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: "6.7.2"
-          host: "linux"
-          target: "desktop"
-          modules: "qtmultimedia qtshadertools qtsensors"
-
-      - name: Configure Debug Clang
-        run: cmake --preset debug-clang --fresh
-
-      - name: Build Debug Clang
-        run: cmake --build --preset debug-clang
 
       - name: Run Debug Clang Tests
         run: |
@@ -178,6 +147,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            ccache \
             clang \
             ninja-build \
             libgl1-mesa-dev \
@@ -210,11 +180,25 @@ jobs:
           target: "desktop"
           modules: "qtmultimedia qtshadertools qtsensors"
 
+      - name: Restore ccache (coverage)
+        uses: actions/cache@v4
+        with:
+          path: build/coverage/.ccache
+          key: ${{ runner.os }}-ccache-coverage-${{ hashFiles('CMakeLists.txt', 'CMakePresets.json', '.github/workflows/cmake.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-coverage-
+
       - name: Configure Coverage Build
         run: cmake --preset coverage --fresh
 
+      - name: ccache Stats (Before Coverage Build)
+        run: ccache --show-stats --verbose || true
+
       - name: Build Coverage Targets
         run: cmake --build --preset coverage
+
+      - name: ccache Stats (After Coverage Build)
+        run: ccache --show-stats --verbose || true
 
       - name: Coverage Gate (Unit)
         run: |

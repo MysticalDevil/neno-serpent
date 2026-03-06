@@ -66,6 +66,7 @@ Item {
             y: model.pos.y * gameWorld.cellH
             width: gameWorld.cellW
             height: gameWorld.cellH
+            opacity: gameWorld.activeBuff === PowerUpId.Ghost ? 0.52 : 1.0
             color: gameWorld.activeBuff === 6
                    ? (Math.floor(gameWorld.elapsed * 10) % 2 === 0 ? powerColor(6) : gameWorld.gameInk)
                    : (index === 0 ? gameWorld.gameInk : Qt.darker(gameWorld.gameSubInk, 1.04))

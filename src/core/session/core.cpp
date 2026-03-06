@@ -849,6 +849,11 @@ auto SessionCore::checkCollision(const QPoint& head, const int boardWidth, const
 
   if (outcome.consumeShield) {
     m_state.shieldActive = false;
+    if (m_state.activeBuff == static_cast<int>(BuffId::Shield)) {
+      m_state.activeBuff = static_cast<int>(BuffId::None);
+      m_state.buffTicksRemaining = 0;
+      m_state.buffTicksTotal = 0;
+    }
   }
 
   return outcome;

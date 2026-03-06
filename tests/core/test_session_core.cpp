@@ -130,10 +130,16 @@ void TestSessionCore::testCollisionConsumesLaserObstacleAndShield() {
   QCOMPARE(core.state().activeBuff, 0);
 
   core.state().shieldActive = true;
+  core.state().activeBuff = static_cast<int>(nenoserpent::core::BuffId::Shield);
+  core.state().buffTicksRemaining = 9;
+  core.state().buffTicksTotal = 40;
   const auto shieldOutcome = core.checkCollision(QPoint(4, 5), 20, 18);
   QVERIFY(!shieldOutcome.collision);
   QVERIFY(shieldOutcome.consumeShield);
   QVERIFY(!core.state().shieldActive);
+  QCOMPARE(core.state().activeBuff, static_cast<int>(nenoserpent::core::BuffId::None));
+  QCOMPARE(core.state().buffTicksRemaining, 0);
+  QCOMPARE(core.state().buffTicksTotal, 0);
 }
 
 void TestSessionCore::testFoodAndPowerUpConsumptionMutateSessionState() {
@@ -440,7 +446,7 @@ void TestSessionCore::testApplyReplayTimelineConsumesMatchingFrames() {
 void TestSessionCore::testCurrentTickIntervalTracksScoreAndSlowBuff() {
   nenoserpent::core::SessionCore core;
   core.state().score = 25;
-  QCOMPARE(core.currentTickIntervalMs(), 160);
+  QCOMPARE(core.currentTickIntervalMs(), 215);
 
   core.state().activeBuff = static_cast<int>(nenoserpent::core::BuffId::Slow);
   QCOMPARE(core.currentTickIntervalMs(), 250);

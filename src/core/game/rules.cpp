@@ -35,7 +35,11 @@ auto roguelikeChoiceChancePercent(const RoguelikeChoiceContext& ctx) -> int {
 }
 
 auto tickIntervalForScore(const int score) -> int {
-  return std::max(60, 200 - ((score / 5) * 8));
+  // Slower early-game pace and gentler ramp:
+  // - score=0   -> 230ms
+  // - score=25  -> 215ms
+  // - score=200 -> 105ms
+  return std::max(72, 230 - ((score / 8) * 5));
 }
 
 auto wrapAxis(int value, int size) -> int {

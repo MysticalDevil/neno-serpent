@@ -290,11 +290,7 @@ void EngineAdapter::startEngineTimer(const int intervalMs) {
 }
 
 auto EngineAdapter::initialGameplayIntervalMs() const -> int {
-#ifdef Q_OS_ANDROID
-  return 140;
-#else
-  return 200;
-#endif
+  return gameplayTickIntervalMs();
 }
 
 auto EngineAdapter::gameplayTickIntervalMs() const -> int {

@@ -241,9 +241,9 @@ void TestCoreRules::testCollisionOutcomeMatchesPortalLaserAndShieldSemantics() {
 }
 
 void TestCoreRules::testTickIntervalForScoreUsesSpeedFloor() {
-  QCOMPARE(nenoserpent::core::tickIntervalForScore(0), 200);
-  QCOMPARE(nenoserpent::core::tickIntervalForScore(25), 160);
-  QCOMPARE(nenoserpent::core::tickIntervalForScore(200), 60);
+  QCOMPARE(nenoserpent::core::tickIntervalForScore(0), 230);
+  QCOMPARE(nenoserpent::core::tickIntervalForScore(25), 215);
+  QCOMPARE(nenoserpent::core::tickIntervalForScore(200), 105);
 }
 
 void TestCoreRules::testPickRoguelikeChoicesIsBoundedAndDeterministic() {

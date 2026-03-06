@@ -86,23 +86,26 @@ auto buildDebugChoiceSpecs(const QVariantList& types) -> QList<nenoserpent::core
 auto choiceRecoveryWindowMs(const int preChoiceTickIntervalMs, const bool slowMode) -> int {
   const int clampedInterval = std::clamp(preChoiceTickIntervalMs, 60, 200);
   const int fastness = 200 - clampedInterval;    // 0 (slow) .. 140 (fast)
-  int windowMs = 450 + ((fastness * 550) / 140); // 450..1000
+  int windowMs = 900 + ((fastness * 900) / 140); // 900..1800
   if (slowMode) {
-    windowMs = std::max(360, windowMs - 180);
+    windowMs = std::max(700, windowMs - 220);
   }
-  return std::clamp(windowMs, 360, 1000);
+  return std::clamp(windowMs, 700, 1800);
 }
 
 auto choiceRecoveryStartIntervalMs(const int preChoiceTickIntervalMs, const bool slowMode) -> int {
   const int clamped = std::clamp(preChoiceTickIntervalMs, 60, 200);
-  const int extra = slowMode ? 90 : 130;
-  return std::clamp(clamped + extra, clamped + 40, 260);
+  const int extra = slowMode ? 110 : 170;
+  return std::clamp(clamped + extra, clamped + 60, 320);
 }
 
-auto easeOutQuad(const float t) -> float {
+auto easeInOutCubic(const float t) -> float {
   const float clamped = std::clamp(t, 0.0F, 1.0F);
-  const float remain = 1.0F - clamped;
-  return 1.0F - (remain * remain);
+  if (clamped < 0.5F) {
+    return 4.0F * clamped * clamped * clamped;
+  }
+  const float remain = (-2.0F * clamped) + 2.0F;
+  return 1.0F - ((remain * remain * remain) / 2.0F);
 }
 } // namespace
 
@@ -212,13 +215,18 @@ void EngineAdapter::advanceChoiceSpeedRecovery() {
   const int durationMs = std::max(1, m_choiceSpeedRecoveryDurationMs);
   const float progress =
     static_cast<float>(m_choiceSpeedRecoveryElapsedMs) / static_cast<float>(durationMs);
-  const float eased = easeOutQuad(progress);
+  const float eased = easeInOutCubic(progress);
   const int span = m_choiceSpeedRecoveryStartIntervalMs - m_choiceSpeedRecoveryTargetIntervalMs;
   const int nextInterval =
     m_choiceSpeedRecoveryStartIntervalMs - static_cast<int>(std::lround(span * eased));
 
-  m_timer->setInterval(std::clamp(
-    nextInterval, m_choiceSpeedRecoveryTargetIntervalMs, m_choiceSpeedRecoveryStartIntervalMs));
+  const int currentInterval = m_timer->interval();
+  const int boundedNext = std::clamp(
+    nextInterval, m_choiceSpeedRecoveryTargetIntervalMs, m_choiceSpeedRecoveryStartIntervalMs);
+  const int maxDeltaPerTick = 3;
+  const int smoothed = std::clamp(
+    boundedNext, currentInterval - maxDeltaPerTick, currentInterval + maxDeltaPerTick);
+  m_timer->setInterval(smoothed);
   if (progress >= 1.0F || m_timer->interval() <= m_choiceSpeedRecoveryTargetIntervalMs) {
     cancelChoiceSpeedRecovery();
     m_timer->setInterval(gameplayTickIntervalMs());

@@ -57,10 +57,11 @@ As of the latest refactor, `rule` and `search` backends use a unified staged pip
 2. `Target FSM`
    - `FoodChase` / `PowerChase` / `Escape`
    - Transition hysteresis is used to avoid per-tick oscillation.
+   - Escape scoring branch follows FSM mode directly (not only repeat-threshold guard).
 3. `Bounded Scoring Blocks`
    - Score composition:
      - `Progress + Survival + Reward - Risk - LoopCost`
-   - Each block is range-clamped to avoid single-term domination.
+   - Each block is range-clamped and normalized to avoid long-run saturation.
    - Under no-score stall windows, target-distance drift shaping is applied:
      - moving farther from primary target gets extra progress penalty
      - moving closer gets bounded progress bonus

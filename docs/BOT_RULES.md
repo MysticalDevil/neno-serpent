@@ -79,6 +79,7 @@ As of the latest refactor, `rule` and `search` backends use a unified staged pip
    - During forced tail-chase window, power reward bias is suppressed.
    - Under prolonged escape stalls, target anchor rotates across board corners to break rings.
    - Under deep stalls, escape scoring switches to survival-only override to force breakout.
+   - Deep-stall escape also penalizes short-window direction repetition to avoid orbit lock-in.
 5. `Decision Telemetry`
    - Runtime summary includes filter acceptance/reject stats and top-3 candidate score contributions
      (`p/s/r/d/rk/lc`, where `d` is stall drift shaping).

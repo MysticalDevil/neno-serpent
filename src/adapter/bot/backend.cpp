@@ -334,6 +334,37 @@ public:
     return 0;
   }
 
+  [[nodiscard]] auto escapeDirectionRepeatPenalty(const QPoint& candidate,
+                                                  const bool escapeMode,
+                                                  const int noScoreTicks) const -> int {
+    if (!escapeMode || noScoreTicks < 24 || m_escapeHistory.empty()) {
+      return 0;
+    }
+    const int n = static_cast<int>(m_escapeHistory.size());
+    int penalty = 0;
+    int streak = 0;
+    for (int i = n - 1; i >= 0; --i) {
+      if (m_escapeHistory[static_cast<std::size_t>(i)] != candidate) {
+        break;
+      }
+      ++streak;
+    }
+    if (streak >= 2) {
+      penalty += (streak - 1) * 22;
+    }
+    const int window = std::min(6, n);
+    int count = 0;
+    for (int i = n - window; i < n; ++i) {
+      if (m_escapeHistory[static_cast<std::size_t>(i)] == candidate) {
+        ++count;
+      }
+    }
+    if (count >= 4) {
+      penalty += (count - 3) * 18;
+    }
+    return penalty;
+  }
+
   auto observeEscapeDecision(const std::optional<QPoint>& direction, const bool escapeMode)
     -> void {
     if (!escapeMode || !direction.has_value()) {
@@ -1293,6 +1324,8 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
         preview.next.head, primaryTarget, snapshot.boardWidth, snapshot.boardHeight);
       const int cyclePenalty =
         loopController.escapeCycleContinuationPenalty(candidate, true, noScoreTicks);
+      const int repeatPenalty =
+        loopController.escapeDirectionRepeatPenalty(candidate, true, noScoreTicks);
       const int directionalPenalty = candidate == snapshot.direction ? 50 : 0;
       const int deterministicJitter =
         static_cast<int>(((tieRotateSeed + static_cast<std::uint64_t>((candidateIndex + 1) * 17) +
@@ -1302,7 +1335,7 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
       const int deepEscapeScore =
         (openSpacePct * 4) + (safeNeighbors * 52) + (candidateStats->tailReachable ? 48 : -96) -
         (anchorDistance * 28) - (revisitCount * 64) - breakdown.loopCost - breakdown.risk -
-        cyclePenalty - directionalPenalty + deterministicJitter;
+        cyclePenalty - repeatPenalty - directionalPenalty + deterministicJitter;
       breakdown.progress = clampScoreBlock(deepEscapeScore, -520, 320);
       breakdown.survival = 0;
       breakdown.reward = 0;
@@ -1337,6 +1370,7 @@ auto selectLoopAwareDirection(const Snapshot& snapshot,
                   static_cast<int>(kDirections.size());
     if (deepEscapeStall) {
       tieRank += loopController.escapeCycleContinuationPenalty(candidate, true, noScoreTicks) / 8;
+      tieRank += loopController.escapeDirectionRepeatPenalty(candidate, true, noScoreTicks) / 10;
     }
     if (score > bestScore || (score == bestScore && tieRank < bestTieRank)) {
       bestScore = score;

@@ -25,9 +25,9 @@ Rectangle {
     readonly property int titleContainerHeight: 30
     readonly property int sectionHeaderHeight: 12
     readonly property int fruitTileHeight: 24
-    readonly property int medalTileHeight: 28
+    readonly property int medalTileHeight: 24
     readonly property int fruitColumns: 3
-    readonly property int medalColumns: 4
+    readonly property int medalColumns: 3
     readonly property int footerHeight: 12
     readonly property color panelBgStrong: menuColor("cardPrimary")
     readonly property color panelBg: menuColor("cardSecondary")
@@ -43,6 +43,7 @@ Rectangle {
     readonly property int pageCount: 2
     readonly property bool onFruitPage: iconLabPage === 0
     readonly property bool onMedalPage: iconLabPage === 1
+    readonly property string pageSectionTitle: onFruitPage ? "POWERUP GLYPHS" : "ACHIEVEMENT GLYPHS"
     readonly property string selectedLabel: onFruitPage
         ? PowerMeta.buffName(iconLabSelection + 1)
         : AchievementMeta.shortLabel(medalSpecs[iconLabSelection] ? medalSpecs[iconLabSelection].id : "")
@@ -113,29 +114,41 @@ Rectangle {
                 Column {
                     anchors.fill: parent
                     spacing: iconLabLayer.contentSpacing
-                    visible: iconLabLayer.onFruitPage
+                    Components.SectionHeader {
+                        width: parent.width
+                        height: iconLabLayer.sectionHeaderHeight
+                        color: Qt.rgba(iconLabLayer.panelBg.r, iconLabLayer.panelBg.g, iconLabLayer.panelBg.b, 0.84)
+                        border.color: iconLabLayer.borderSoft
+                        titleText: iconLabLayer.pageSectionTitle
+                        gameFont: gameFont
+                        textColor: iconLabLayer.textStrong
+                        titlePixelSize: 8
+                    }
 
                     Grid {
                         id: iconLabGrid
                         width: parent.width
-                        height: (Math.ceil(iconLabLayer.fruitTypes.length / iconLabLayer.fruitColumns) * iconLabLayer.fruitTileHeight)
+                        height: iconLabLayer.onFruitPage
+                            ? (Math.ceil(iconLabLayer.fruitTypes.length / iconLabLayer.fruitColumns) * iconLabLayer.fruitTileHeight)
                                 + ((Math.ceil(iconLabLayer.fruitTypes.length / iconLabLayer.fruitColumns) - 1) * iconLabLayer.contentSpacing)
-                        columns: iconLabLayer.fruitColumns
+                            : (Math.ceil(iconLabLayer.medalSpecs.length / iconLabLayer.medalColumns) * iconLabLayer.medalTileHeight)
+                                + ((Math.ceil(iconLabLayer.medalSpecs.length / iconLabLayer.medalColumns) - 1) * iconLabLayer.contentSpacing)
+                        columns: iconLabLayer.onFruitPage ? iconLabLayer.fruitColumns : iconLabLayer.medalColumns
                         columnSpacing: iconLabLayer.contentSpacing
                         rowSpacing: iconLabLayer.contentSpacing
 
                         Repeater {
-                            model: iconLabLayer.fruitTypes
+                            model: iconLabLayer.onFruitPage ? iconLabLayer.fruitTypes : iconLabLayer.medalSpecs
 
                             delegate: Rectangle {
-                                width: Math.floor((iconLabGrid.width - (iconLabGrid.columnSpacing * (iconLabLayer.fruitColumns - 1))) / iconLabLayer.fruitColumns)
-                                height: iconLabLayer.fruitTileHeight
+                                width: Math.floor((iconLabGrid.width - (iconLabGrid.columnSpacing * (iconLabGrid.columns - 1))) / iconLabGrid.columns)
+                                height: iconLabLayer.onFruitPage ? iconLabLayer.fruitTileHeight : iconLabLayer.medalTileHeight
                                 radius: 4
                                 property int iconIdx: index
-                                clip: true
                                 color: Qt.rgba(iconLabLayer.panelBg.r, iconLabLayer.panelBg.g, iconLabLayer.panelBg.b, 0.8)
-                                border.color: powerColor(modelData)
+                                border.color: iconLabLayer.onFruitPage ? powerColor(modelData) : iconLabLayer.borderSoft
                                 border.width: 1
+                                clip: true
 
                                 Rectangle {
                                     anchors.fill: parent
@@ -168,108 +181,47 @@ Rectangle {
                                     anchors.margins: 4
                                     spacing: 4
 
-                                    Rectangle {
+                                    Item {
                                         width: 18
                                         height: 18
-                                        radius: 4
-                                        color: Qt.rgba(iconLabLayer.panelBgSoft.r, iconLabLayer.panelBgSoft.g, iconLabLayer.panelBgSoft.b, 0.86)
-                                        border.color: iconLabLayer.borderStrong
-                                        border.width: 1
                                         anchors.verticalCenter: parent.verticalCenter
 
-                                        Icons.PowerGlyph {
+                                        Rectangle {
                                             anchors.fill: parent
-                                            powerType: modelData
-                                            glyphColor: powerColor(modelData)
+                                            radius: 4
+                                            visible: iconLabLayer.onFruitPage
+                                            color: Qt.rgba(iconLabLayer.panelBgSoft.r, iconLabLayer.panelBgSoft.g, iconLabLayer.panelBgSoft.b, 0.86)
+                                            border.color: iconLabLayer.borderStrong
+                                            border.width: 1
+
+                                            Icons.PowerGlyph {
+                                                anchors.fill: parent
+                                                powerType: modelData
+                                                glyphColor: powerColor(modelData)
+                                            }
                                         }
-                                    }
 
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    width: parent.width - 22
-                                    text: PowerMeta.choiceName(modelData).toUpperCase()
-                                    color: iconLabLayer.textStrong
-                                    font.family: gameFont
-                                    font.pixelSize: 6
-                                    font.bold: true
-                                    elide: Text.ElideRight
-                                }
-                            }
-                        }
-                        }
-                    }
-                }
-
-                Column {
-                    anchors.fill: parent
-                    spacing: iconLabLayer.contentSpacing
-                    visible: iconLabLayer.onMedalPage
-
-                    Components.SectionHeader {
-                        width: parent.width
-                        height: iconLabLayer.sectionHeaderHeight
-                        color: Qt.rgba(iconLabLayer.panelBg.r, iconLabLayer.panelBg.g, iconLabLayer.panelBg.b, 0.84)
-                        border.color: iconLabLayer.borderSoft
-                        titleText: "ACHIEVEMENT GLYPHS"
-                        gameFont: gameFont
-                        textColor: iconLabLayer.textStrong
-                        titlePixelSize: 8
-                    }
-
-                    Grid {
-                        width: parent.width
-                        height: (Math.ceil(iconLabLayer.medalSpecs.length / iconLabLayer.medalColumns) * iconLabLayer.medalTileHeight)
-                                + ((Math.ceil(iconLabLayer.medalSpecs.length / iconLabLayer.medalColumns) - 1) * iconLabLayer.contentSpacing)
-                        columns: iconLabLayer.medalColumns
-                        columnSpacing: iconLabLayer.contentSpacing
-                        rowSpacing: iconLabLayer.contentSpacing
-
-                        Repeater {
-                            model: iconLabLayer.medalSpecs
-
-                            delegate: Rectangle {
-                                width: Math.floor((parent.width - (parent.columnSpacing * (iconLabLayer.medalColumns - 1))) / iconLabLayer.medalColumns)
-                                height: iconLabLayer.medalTileHeight
-                                radius: 3
-                                color: Qt.rgba(iconLabLayer.panelBg.r, iconLabLayer.panelBg.g, iconLabLayer.panelBg.b, 0.8)
-                                border.color: iconLabLayer.borderSoft
-                                border.width: 1
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    anchors.margins: 1
-                                    radius: 2
-                                    color: "transparent"
-                                    border.color: iconLabLayer.borderStrong
-                                    border.width: 1
-                                    visible: iconLabLayer.iconLabSelection === index
-                                    opacity: (Math.floor(iconLabLayer.elapsed * 8) % 2 === 0) ? 0.9 : 0.5
-                                }
-
-                                Row {
-                                    anchors.fill: parent
-                                    anchors.margins: 3
-                                    spacing: 4
-
-                                    Icons.AchievementBadgeIcon {
-                                        width: 20
-                                        height: 20
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        achievementId: modelData.id
-                                        unlocked: true
-                                        selected: iconLabLayer.iconLabSelection === index
-                                        badgeFill: iconLabLayer.panelAccent
-                                        badgeText: iconLabLayer.textOnAccent
-                                        iconFill: iconLabLayer.panelBgSoft
-                                        unknownText: iconLabLayer.textMuted
-                                        borderColor: iconLabLayer.borderStrong
-                                        borderWidth: 1
+                                        Icons.AchievementBadgeIcon {
+                                            anchors.fill: parent
+                                            visible: iconLabLayer.onMedalPage
+                                            achievementId: modelData.id
+                                            unlocked: true
+                                            selected: iconLabLayer.iconLabSelection === iconIdx
+                                            badgeFill: iconLabLayer.panelAccent
+                                            badgeText: iconLabLayer.textOnAccent
+                                            iconFill: iconLabLayer.panelBgSoft
+                                            unknownText: iconLabLayer.textMuted
+                                            borderColor: iconLabLayer.borderStrong
+                                            borderWidth: 1
+                                        }
                                     }
 
                                     Text {
                                         anchors.verticalCenter: parent.verticalCenter
-                                        width: parent.width - 26
-                                        text: AchievementMeta.shortLabel(modelData.id)
+                                        width: parent.width - 22
+                                        text: iconLabLayer.onFruitPage
+                                            ? PowerMeta.choiceName(modelData).toUpperCase()
+                                            : AchievementMeta.shortLabel(modelData.id)
                                         color: iconLabLayer.textStrong
                                         font.family: gameFont
                                         font.pixelSize: 6

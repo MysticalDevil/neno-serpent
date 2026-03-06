@@ -136,11 +136,15 @@ qt_add_executable(NenoSerpent
 )
 target_link_libraries(NenoSerpent PRIVATE nenoserpent_adapter)
 
-if(TARGET Qt6::Multimedia)
-    target_link_libraries(nenoserpent_adapter PRIVATE Qt6::Multimedia)
-    target_compile_definitions(nenoserpent_adapter PRIVATE NENOSERPENT_HAS_MULTIMEDIA)
-endif()
-if(TARGET Qt6::Sensors)
-    target_link_libraries(nenoserpent_adapter PRIVATE Qt6::Sensors)
-    target_compile_definitions(nenoserpent_adapter PRIVATE NENOSERPENT_HAS_SENSORS)
-endif()
+nenoserpent_link_optional_qt_components(
+    nenoserpent_adapter
+    Multimedia
+    Sensors
+)
+
+nenoserpent_apply_project_options(
+    nenoserpent_core
+    nenoserpent_fsm
+    nenoserpent_adapter
+    NenoSerpent
+)

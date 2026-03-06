@@ -1,0 +1,10 @@
+function(nenoserpent_link_optional_qt_components target_name)
+    foreach(component IN LISTS ARGN)
+        if(TARGET "Qt6::${component}")
+            target_link_libraries("${target_name}" PRIVATE "Qt6::${component}")
+            string(TOUPPER "${component}" component_upper)
+            target_compile_definitions(
+                "${target_name}" PRIVATE "NENOSERPENT_HAS_${component_upper}")
+        endif()
+    endforeach()
+endfunction()

@@ -31,6 +31,8 @@ struct PreviewSeed {
   int buffTicksRemaining = 0;
   int buffTicksTotal = 0;
   bool shieldActive = false;
+  QPoint scoutHintCell = {-1, -1};
+  int anchorTickIntervalMs = 0;
 };
 
 struct ReplayTimelineApplication {
@@ -159,6 +161,9 @@ private:
   void incrementTick();
   auto tickBuffCountdown() -> bool;
   auto tickPowerUpCountdown() -> bool;
+  auto computeScoutHintCell() const -> QPoint;
+  void refreshScoutHint();
+  void applyVacuumBurst();
   [[nodiscard]] auto isOccupied(const QPoint& point) const -> bool;
   void applyPowerUpResult(const PowerUpConsumptionResult& result);
   void resetStallGuard();
@@ -181,6 +186,8 @@ private:
   QList<QPoint> m_currObstacleSnapshot;
   bool m_hasObstacleSnapshots = false;
   std::deque<QPoint> m_recentSpawnPoints;
+  int m_boardWidth = 20;
+  int m_boardHeight = 18;
 };
 
 } // namespace nenoserpent::core

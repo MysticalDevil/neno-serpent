@@ -24,6 +24,7 @@ void EngineAdapter::update() {
   const int prevBuffTicksRemaining = m_session.buffTicksRemaining;
   const int prevBuffTicksTotal = m_session.buffTicksTotal;
   const bool prevShieldActive = m_session.shieldActive;
+  const QPoint prevScoutHintCell = m_session.scoutHintCell;
 
   if (m_fsmState) {
     dispatchStateCallback([](GameState& state) -> void { state.update(); });
@@ -46,7 +47,7 @@ void EngineAdapter::update() {
   if (prevActiveBuff != m_session.activeBuff ||
       prevBuffTicksRemaining != m_session.buffTicksRemaining ||
       prevBuffTicksTotal != m_session.buffTicksTotal ||
-      prevShieldActive != m_session.shieldActive) {
+      prevShieldActive != m_session.shieldActive || prevScoutHintCell != m_session.scoutHintCell) {
     emit buffChanged();
   }
   updateReflectionFallback();

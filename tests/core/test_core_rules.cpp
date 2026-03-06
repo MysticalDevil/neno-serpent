@@ -260,7 +260,7 @@ void TestCoreRules::testPickRoguelikeChoicesIsBoundedAndDeterministic() {
 
   const QList<nenoserpent::core::ChoiceSpec> bounded =
     nenoserpent::core::pickRoguelikeChoices(99U, 99);
-  QCOMPARE(bounded.size(), 9);
+  QCOMPARE(bounded.size(), 12);
 }
 
 void TestCoreRules::testDynamicLevelFallbackProducesObstacles() {
@@ -353,10 +353,11 @@ void TestCoreRules::testLevelCountFromJsonBytesUsesFallbackOnInvalidData() {
 
 void TestCoreRules::testBuffRuntimeRules() {
   QCOMPARE(nenoserpent::core::foodPointsForBuff(nenoserpent::core::BuffId::None), 1);
-  QCOMPARE(nenoserpent::core::foodPointsForBuff(nenoserpent::core::BuffId::Double), 2);
-  QCOMPARE(nenoserpent::core::foodPointsForBuff(nenoserpent::core::BuffId::Rich), 3);
+  QCOMPARE(nenoserpent::core::foodPointsForBuff(nenoserpent::core::BuffId::Gold), 2);
 
-  QCOMPARE(nenoserpent::core::buffDurationTicks(nenoserpent::core::BuffId::Rich, 40), 20);
+  QCOMPARE(nenoserpent::core::buffDurationTicks(nenoserpent::core::BuffId::Freeze, 40), 24);
+  QCOMPARE(nenoserpent::core::buffDurationTicks(nenoserpent::core::BuffId::Scout, 40), 32);
+  QCOMPARE(nenoserpent::core::buffDurationTicks(nenoserpent::core::BuffId::Anchor, 40), 26);
   QCOMPARE(nenoserpent::core::buffDurationTicks(nenoserpent::core::BuffId::Ghost, 40), 40);
 
   QCOMPARE(nenoserpent::core::miniShrinkTargetLength(10), 5);
@@ -380,7 +381,7 @@ void TestCoreRules::testWeightedRandomBuffIdUsesWeightsAndFallback() {
   QCOMPARE(nenoserpent::core::weightedRandomBuffId([](int) -> int { return 0; }),
            nenoserpent::core::BuffId::Ghost);
   QCOMPARE(nenoserpent::core::weightedRandomBuffId([](int) -> int { return 22; }),
-           nenoserpent::core::BuffId::Mini);
+           nenoserpent::core::BuffId::Freeze);
   QCOMPARE(nenoserpent::core::weightedRandomBuffId([](int) -> int { return 99; }),
            nenoserpent::core::BuffId::Ghost);
 }

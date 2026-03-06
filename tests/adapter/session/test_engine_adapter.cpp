@@ -354,7 +354,7 @@ private slots:
     QCOMPARE(head, QPoint(0, 10));
   }
 
-  void testDoubleBuffCrossesTenThresholdKeepsValidState() {
+  void testGoldBuffCrossesTenThresholdKeepsValidState() {
     EngineAdapter game;
     game.startGame();
 
@@ -366,15 +366,14 @@ private slots:
       consumeCurrentFood(game);
     }
     QVERIFY2(game.score() >= 9,
-             "Expected score to reach the pre-threshold range before picking Double");
+             "Expected score to reach the pre-threshold range before picking Gold");
 
-    QVERIFY2(pickBuff(game, PowerUpId::Double),
-             "Failed to pick Double buff from generated choices");
-    QCOMPARE(game.activeBuff(), static_cast<int>(PowerUpId::Double));
+    QVERIFY2(pickBuff(game, PowerUpId::Gold), "Failed to pick Gold buff from generated choices");
+    QCOMPARE(game.activeBuff(), static_cast<int>(PowerUpId::Gold));
 
-    const int scoreBeforeDoubleFood = game.score();
+    const int scoreBeforeGoldFood = game.score();
     consumeCurrentFood(game);
-    QCOMPARE(game.score(), scoreBeforeDoubleFood + 2);
+    QCOMPARE(game.score(), scoreBeforeGoldFood + 2);
     QVERIFY2(
       game.state() == AppState::Playing || game.state() == AppState::ChoiceSelection,
       "Dynamic roguelike trigger should keep state valid without forcing a fixed threshold popup");

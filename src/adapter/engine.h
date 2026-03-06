@@ -284,6 +284,9 @@ public:
   [[nodiscard]] auto shieldActive() const noexcept -> bool {
     return m_session.shieldActive;
   }
+  [[nodiscard]] auto scoutHintCell() const noexcept -> QPoint {
+    return m_session.scoutHintCell;
+  }
   [[nodiscard]] auto choices() const -> QVariantList {
     return m_choices;
   }

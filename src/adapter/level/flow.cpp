@@ -6,6 +6,7 @@
 #include "adapter/level/script_runtime.h"
 #include "adapter/profile/bridge.h"
 #include "core/level/runtime.h"
+#include "power_up_id.h"
 
 using namespace Qt::StringLiterals;
 
@@ -69,6 +70,9 @@ void EngineAdapter::checkAchievements() {
 }
 
 void EngineAdapter::runLevelScript() {
+  if (m_session.activeBuff == PowerUpId::Freeze) {
+    return;
+  }
   if (nenoserpent::adapter::applyLevelScriptStep(
         m_jsEngine, m_currentLevelName, m_session.tickCounter, m_session.obstacles)) {
     emit obstaclesChanged();

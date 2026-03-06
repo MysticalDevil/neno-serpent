@@ -96,3 +96,7 @@ auto SessionRenderViewModel::reflectionOffset() const -> QPointF {
 auto SessionRenderViewModel::shieldActive() const -> bool {
   return m_engineAdapter != nullptr ? m_engineAdapter->shieldActive() : false;
 }
+
+auto SessionRenderViewModel::scoutHintCell() const -> QPoint {
+  return m_engineAdapter != nullptr ? m_engineAdapter->scoutHintCell() : QPoint(-1, -1);
+}

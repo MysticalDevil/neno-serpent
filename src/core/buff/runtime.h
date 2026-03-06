@@ -12,10 +12,13 @@ enum class BuffId : int {
   Magnet = 3,
   Shield = 4,
   Portal = 5,
-  Double = 6,
-  Rich = 7,
-  Laser = 8,
-  Mini = 9,
+  Gold = 6,
+  Laser = 7,
+  Mini = 8,
+  Freeze = 9,
+  Scout = 10,
+  Vacuum = 11,
+  Anchor = 12,
 };
 
 auto foodPointsForBuff(BuffId activeBuff) -> int;

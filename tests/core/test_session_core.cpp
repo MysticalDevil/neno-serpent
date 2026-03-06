@@ -1,5 +1,6 @@
-#include <QtTest>
 #include <algorithm>
+
+#include <QtTest>
 
 #include "core/session/core.h"
 
@@ -27,6 +28,8 @@ private slots:
   void testSeedPreviewStateOverwritesSessionWithPreviewState();
   void testApplyReplayTimelineConsumesMatchingFrames();
   void testCurrentTickIntervalTracksScoreAndSlowStepDown();
+  void testAnchorScoutAndVacuumApplyDistinctRuntimeEffects();
+  void testActiveBuffSuppressesChoiceAndPowerUpSpawnFromFood();
   void testRuntimeUpdateHooksExpireBuffAndAdvanceTick();
   void testRestorePersistedSessionClearsTransientRuntimeButKeepsPersistedFields();
   void testMetaActionFacadeRoutesBootstrapAndPreviewSeeding();
@@ -458,6 +461,72 @@ void TestSessionCore::testCurrentTickIntervalTracksScoreAndSlowStepDown() {
   QCOMPARE(core.state().buffTicksTotal, 0);
   QCOMPARE(core.state().speedDownSteps, 1);
   QCOMPARE(core.currentTickIntervalMs(), 220);
+}
+
+void TestSessionCore::testAnchorScoutAndVacuumApplyDistinctRuntimeEffects() {
+  nenoserpent::core::SessionCore core;
+  core.bootstrapForLevel({}, 20, 18);
+  core.setBody({QPoint(10, 9), QPoint(10, 10), QPoint(10, 11), QPoint(10, 12)});
+  core.state().score = 40;
+  core.state().food = QPoint(15, 9);
+
+  const int baselineInterval = core.currentTickIntervalMs();
+
+  core.state().powerUpPos = QPoint(10, 9);
+  core.state().powerUpType = static_cast<int>(nenoserpent::core::BuffId::Anchor);
+  const auto anchorResult = core.consumePowerUp(QPoint(10, 9), 40, true);
+  QVERIFY(anchorResult.ate);
+  QCOMPARE(core.state().activeBuff, static_cast<int>(nenoserpent::core::BuffId::Anchor));
+  QCOMPARE(core.currentTickIntervalMs(), baselineInterval);
+
+  core.state().score = 160;
+  QCOMPARE(core.currentTickIntervalMs(), baselineInterval);
+
+  core.state().powerUpPos = QPoint(10, 9);
+  core.state().powerUpType = static_cast<int>(nenoserpent::core::BuffId::Scout);
+  const auto scoutResult = core.consumePowerUp(QPoint(10, 9), 40, true);
+  QVERIFY(scoutResult.ate);
+  QCOMPARE(core.state().activeBuff, static_cast<int>(nenoserpent::core::BuffId::Scout));
+  QVERIFY(core.state().scoutHintCell != QPoint(-1, -1));
+
+  core.state().food = QPoint(17, 9);
+  core.state().powerUpPos = QPoint(14, 9);
+  core.state().powerUpType = static_cast<int>(nenoserpent::core::BuffId::Vacuum);
+  const auto vacuumResult = core.consumePowerUp(QPoint(14, 9), 40, true);
+  QVERIFY(vacuumResult.ate);
+  QCOMPARE(core.state().activeBuff, static_cast<int>(nenoserpent::core::BuffId::None));
+  QVERIFY(core.state().food.x() < 17);
+  QVERIFY(core.state().powerUpPos == QPoint(-1, -1) || core.state().powerUpPos.x() <= 14);
+}
+
+void TestSessionCore::testActiveBuffSuppressesChoiceAndPowerUpSpawnFromFood() {
+  nenoserpent::core::SessionCore core;
+  core.bootstrapForLevel({}, 20, 18);
+  core.setBody({QPoint(10, 9), QPoint(10, 10), QPoint(10, 11), QPoint(10, 12)});
+  core.state().food = QPoint(11, 9);
+  core.state().score = 18;
+  core.state().lastRoguelikeChoiceScore = -1000;
+  core.state().activeBuff = static_cast<int>(nenoserpent::core::BuffId::Gold);
+  core.state().buffTicksRemaining = 20;
+  core.state().buffTicksTotal = 20;
+
+  const auto result =
+    core.consumeFood(QPoint(11, 9), 20, 18, [](int upper) { return std::max(0, upper - 1); });
+  QVERIFY(result.ate);
+  QVERIFY(!result.triggerChoice);
+  QVERIFY(!result.spawnPowerUp);
+
+  core.state().activeBuff = static_cast<int>(nenoserpent::core::BuffId::None);
+  core.state().shieldActive = true;
+  core.state().food = QPoint(12, 9);
+  const auto shieldResult =
+    core.consumeFood(QPoint(12, 9), 20, 18, [](int upper) { return std::max(0, upper - 1); });
+  QVERIFY(shieldResult.ate);
+  QVERIFY(!shieldResult.triggerChoice);
+  QVERIFY(!shieldResult.spawnPowerUp);
+
+  core.state().activeBuff = static_cast<int>(nenoserpent::core::BuffId::Gold);
+  QVERIFY(!core.spawnPowerUp(20, 18, [](int upper) { return upper > 0 ? upper - 1 : 0; }));
 }
 
 void TestSessionCore::testRuntimeUpdateHooksExpireBuffAndAdvanceTick() {

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 #include "adapter/engine.h"
@@ -32,17 +33,27 @@ auto choiceSpecForType(const int type) -> std::optional<nenoserpent::core::Choic
   case PowerUpId::Portal:
     return ChoiceSpec{
       .type = PowerUpId::Portal, .name = u"Portal"_s, .description = u"Phase through walls"_s};
-  case PowerUpId::Double:
+  case PowerUpId::Gold:
     return ChoiceSpec{
-      .type = PowerUpId::Double, .name = u"Double"_s, .description = u"Double points"_s};
-  case PowerUpId::Rich:
-    return ChoiceSpec{
-      .type = PowerUpId::Rich, .name = u"Diamond"_s, .description = u"Triple points"_s};
+      .type = PowerUpId::Gold, .name = u"Gold"_s, .description = u"Double points"_s};
   case PowerUpId::Laser:
     return ChoiceSpec{
       .type = PowerUpId::Laser, .name = u"Laser"_s, .description = u"Break obstacle"_s};
   case PowerUpId::Mini:
     return ChoiceSpec{.type = PowerUpId::Mini, .name = u"Mini"_s, .description = u"Shrink body"_s};
+  case PowerUpId::Freeze:
+    return ChoiceSpec{
+      .type = PowerUpId::Freeze, .name = u"Freeze"_s, .description = u"Freeze dynamic hazards"_s};
+  case PowerUpId::Scout:
+    return ChoiceSpec{
+      .type = PowerUpId::Scout, .name = u"Scout"_s, .description = u"Reveal safe next cell"_s};
+  case PowerUpId::Vacuum:
+    return ChoiceSpec{.type = PowerUpId::Vacuum,
+                      .name = u"Vacuum"_s,
+                      .description = u"Pull nearby targets inward"_s};
+  case PowerUpId::Anchor:
+    return ChoiceSpec{
+      .type = PowerUpId::Anchor, .name = u"Anchor"_s, .description = u"Lock current speed"_s};
   default:
     return std::nullopt;
   }
@@ -69,7 +80,22 @@ auto buildDebugChoiceSpecs(const QVariantList& types) -> QList<nenoserpent::core
     }
   }
 
-  for (int type = PowerUpId::Ghost; type <= PowerUpId::Mini && result.size() < 3; ++type) {
+  static const std::array<int, 12> kFallbackTypes{PowerUpId::Ghost,
+                                                  PowerUpId::Slow,
+                                                  PowerUpId::Magnet,
+                                                  PowerUpId::Shield,
+                                                  PowerUpId::Portal,
+                                                  PowerUpId::Gold,
+                                                  PowerUpId::Laser,
+                                                  PowerUpId::Mini,
+                                                  PowerUpId::Freeze,
+                                                  PowerUpId::Scout,
+                                                  PowerUpId::Vacuum,
+                                                  PowerUpId::Anchor};
+  for (const int type : kFallbackTypes) {
+    if (result.size() >= 3) {
+      break;
+    }
     if (seenTypes.contains(type)) {
       continue;
     }
@@ -224,8 +250,8 @@ void EngineAdapter::advanceChoiceSpeedRecovery() {
   const int boundedNext = std::clamp(
     nextInterval, m_choiceSpeedRecoveryTargetIntervalMs, m_choiceSpeedRecoveryStartIntervalMs);
   const int maxDeltaPerTick = 3;
-  const int smoothed = std::clamp(
-    boundedNext, currentInterval - maxDeltaPerTick, currentInterval + maxDeltaPerTick);
+  const int smoothed =
+    std::clamp(boundedNext, currentInterval - maxDeltaPerTick, currentInterval + maxDeltaPerTick);
   m_timer->setInterval(smoothed);
   if (progress >= 1.0F || m_timer->interval() <= m_choiceSpeedRecoveryTargetIntervalMs) {
     cancelChoiceSpeedRecovery();

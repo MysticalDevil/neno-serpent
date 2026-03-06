@@ -159,7 +159,8 @@ auto bfsDistances(const QPoint& start,
 
 auto buildConnectedComponents(const int boardWidth,
                               const int boardHeight,
-                              const std::vector<bool>& blocked) -> std::pair<std::vector<int>, std::vector<int>> {
+                              const std::vector<bool>& blocked)
+  -> std::pair<std::vector<int>, std::vector<int>> {
   std::vector<int> componentOf(blocked.size(), -1);
   std::vector<int> componentSizes;
   int nextComponent = 0;
@@ -227,20 +228,16 @@ auto pickSpawnPointWithSafety(const int boardWidth,
                               const std::function<int(int)>& randomBounded,
                               QPoint& pickedPoint) -> bool {
   const SpawnTuning tuning = spawnTuningForProfile(profile);
-  const auto predictedRisk = buildPredictedObstacleRisk(boardWidth,
-                                                        boardHeight,
-                                                        previousObstacles,
-                                                        obstacles,
-                                                        tuning.dynamicRiskHorizon);
+  const auto predictedRisk = buildPredictedObstacleRisk(
+    boardWidth, boardHeight, previousObstacles, obstacles, tuning.dynamicRiskHorizon);
   const QList<QPoint> freeSpots = collectFreeSpots(boardWidth, boardHeight, isBlocked);
   if (freeSpots.isEmpty()) {
     return false;
   }
 
   auto blocked = buildSpawnBlockedMap(boardWidth, boardHeight, isBlocked);
-  if (const auto headIndex = tryBoardIndex(wrapPoint(head, boardWidth, boardHeight),
-                                           boardWidth,
-                                           boardHeight);
+  if (const auto headIndex =
+        tryBoardIndex(wrapPoint(head, boardWidth, boardHeight), boardWidth, boardHeight);
       headIndex.has_value()) {
     blocked[static_cast<std::size_t>(*headIndex)] = false;
   }
@@ -250,9 +247,8 @@ auto pickSpawnPointWithSafety(const int boardWidth,
     buildConnectedComponents(boardWidth, boardHeight, blocked);
   int tailComponent = -1;
   if (tail.has_value()) {
-    if (const auto tailIndex = tryBoardIndex(wrapPoint(*tail, boardWidth, boardHeight),
-                                             boardWidth,
-                                             boardHeight);
+    if (const auto tailIndex =
+          tryBoardIndex(wrapPoint(*tail, boardWidth, boardHeight), boardWidth, boardHeight);
         tailIndex.has_value()) {
       tailComponent = componentOf[static_cast<std::size_t>(*tailIndex)];
     }
@@ -351,16 +347,16 @@ auto pickSpawnPointWithSafety(const int boardWidth,
       score -= recentPenalty * tuning.recentSpawnPenaltyWeight;
       candidates.push_back({.point = point, .score = score});
     }
-    std::sort(candidates.begin(), candidates.end(), [](const SpawnCandidate& a,
-                                                       const SpawnCandidate& b) {
-      if (a.score != b.score) {
-        return a.score > b.score;
-      }
-      if (a.point.x() != b.point.x()) {
-        return a.point.x() < b.point.x();
-      }
-      return a.point.y() < b.point.y();
-    });
+    std::sort(
+      candidates.begin(), candidates.end(), [](const SpawnCandidate& a, const SpawnCandidate& b) {
+        if (a.score != b.score) {
+          return a.score > b.score;
+        }
+        if (a.point.x() != b.point.x()) {
+          return a.point.x() < b.point.x();
+        }
+        return a.point.y() < b.point.y();
+      });
     return candidates;
   };
 
@@ -371,8 +367,7 @@ auto pickSpawnPointWithSafety(const int boardWidth,
     std::tuple{false, false, false},
   };
   for (const auto& [requireDistances, requirePocketFilter, requireTailReachable] : passes) {
-    auto candidates =
-      gatherCandidates(requireDistances, requirePocketFilter, requireTailReachable);
+    auto candidates = gatherCandidates(requireDistances, requirePocketFilter, requireTailReachable);
     if (candidates.empty()) {
       continue;
     }
@@ -586,8 +581,7 @@ auto buildPredictedObstacleRisk(const int boardWidth,
       if (prevUsed[static_cast<std::size_t>(i)]) {
         continue;
       }
-      const int distance =
-        toroidalDistance(current, previousObstacles[i], boardWidth, boardHeight);
+      const int distance = toroidalDistance(current, previousObstacles[i], boardWidth, boardHeight);
       if (distance < bestDistance) {
         bestDistance = distance;
         bestPrevIndex = i;
@@ -701,7 +695,11 @@ auto SessionCore::tickCounter() const -> int {
 auto SessionCore::currentTickIntervalMs() const -> int {
   const int baseInterval = tickIntervalForScore(m_state.score);
   const int speedDown = std::clamp(m_state.speedDownSteps, 0, MaxSpeedDownSteps);
-  return std::clamp(baseInterval + (speedDown * SpeedStepIntervalMs), 72, 250);
+  const int interval = std::clamp(baseInterval + (speedDown * SpeedStepIntervalMs), 72, 250);
+  if (m_state.activeBuff == static_cast<int>(BuffId::Anchor) && m_state.anchorTickIntervalMs > 0) {
+    return std::clamp(m_state.anchorTickIntervalMs, 72, 250);
+  }
+  return interval;
 }
 
 auto SessionCore::headPosition() const -> QPoint {
@@ -710,6 +708,110 @@ auto SessionCore::headPosition() const -> QPoint {
 
 void SessionCore::incrementTick() {
   m_state.tickCounter++;
+}
+
+auto SessionCore::computeScoutHintCell() const -> QPoint {
+  if (m_body.empty()) {
+    return QPoint(-1, -1);
+  }
+
+  const QPoint head = headPosition();
+  const std::array<QPoint, 4> candidates{
+    m_state.direction,
+    QPoint(m_state.direction.y(), -m_state.direction.x()),
+    QPoint(-m_state.direction.y(), m_state.direction.x()),
+    QPoint(-m_state.direction.x(), -m_state.direction.y()),
+  };
+
+  QPoint best = QPoint(-1, -1);
+  int bestScore = std::numeric_limits<int>::min();
+  for (const QPoint& candidate : candidates) {
+    const QPoint next = wrapPoint(head + candidate, m_boardWidth, m_boardHeight);
+    const auto outcome = collisionOutcomeForHead(head + candidate,
+                                                 m_boardWidth,
+                                                 m_boardHeight,
+                                                 m_state.obstacles,
+                                                 m_body,
+                                                 false,
+                                                 false,
+                                                 false,
+                                                 m_state.shieldActive);
+    if (outcome.collision) {
+      continue;
+    }
+
+    int openNeighbors = 0;
+    for (const QPoint& neighbor :
+         std::array<QPoint, 4>{QPoint(0, -1), QPoint(1, 0), QPoint(0, 1), QPoint(-1, 0)}) {
+      const QPoint probe = next + neighbor;
+      const auto probeOutcome = collisionOutcomeForHead(probe,
+                                                        m_boardWidth,
+                                                        m_boardHeight,
+                                                        m_state.obstacles,
+                                                        m_body,
+                                                        false,
+                                                        false,
+                                                        false,
+                                                        m_state.shieldActive);
+      if (!probeOutcome.collision) {
+        ++openNeighbors;
+      }
+    }
+
+    const int targetDistance = toroidalDistance(next, m_state.food, m_boardWidth, m_boardHeight);
+    const int score = (openNeighbors * 12) - targetDistance;
+    if (score > bestScore) {
+      bestScore = score;
+      best = next;
+    }
+  }
+  return best;
+}
+
+void SessionCore::refreshScoutHint() {
+  if (m_state.activeBuff == static_cast<int>(BuffId::Scout)) {
+    m_state.scoutHintCell = computeScoutHintCell();
+  } else {
+    m_state.scoutHintCell = QPoint(-1, -1);
+  }
+}
+
+void SessionCore::applyVacuumBurst() {
+  auto pullTowardHead = [this](const QPoint& point, const int maxSteps) -> QPoint {
+    QPoint current = wrapPoint(point, m_boardWidth, m_boardHeight);
+    const QPoint head = headPosition();
+    for (int i = 0; i < maxSteps; ++i) {
+      QPoint candidate = current;
+      const int dx = head.x() - current.x();
+      const int dy = head.y() - current.y();
+      if (std::abs(dx) >= std::abs(dy) && dx != 0) {
+        candidate.rx() += (dx > 0) ? 1 : -1;
+      } else if (dy != 0) {
+        candidate.ry() += (dy > 0) ? 1 : -1;
+      } else {
+        break;
+      }
+      candidate = wrapPoint(candidate, m_boardWidth, m_boardHeight);
+      if (candidate != head && isOccupied(candidate)) {
+        break;
+      }
+      current = candidate;
+      if (current == head) {
+        break;
+      }
+    }
+    return current;
+  };
+
+  if (m_state.food != QPoint(-1, -1)) {
+    m_state.food = pullTowardHead(m_state.food, 3);
+  }
+  if (m_state.powerUpPos != QPoint(-1, -1)) {
+    const QPoint pulled = pullTowardHead(m_state.powerUpPos, 2);
+    if (pulled != m_state.food) {
+      m_state.powerUpPos = pulled;
+    }
+  }
 }
 
 void SessionCore::resetStallGuard() {
@@ -887,6 +989,7 @@ auto SessionCore::consumePowerUp(const QPoint& head,
 
   applyPowerUpResult(result);
   m_state.powerUpPos = QPoint(-1, -1);
+  m_state.powerUpType = 0;
   m_state.powerUpTicksRemaining = 0;
   return result;
 }
@@ -909,6 +1012,7 @@ auto SessionCore::selectChoice(const int powerUpType,
 auto SessionCore::tickBuffCountdown() -> bool {
   if (m_state.activeBuff == static_cast<int>(BuffId::None) ||
       !nenoserpent::core::tickBuffCountdown(m_state.buffTicksRemaining)) {
+    refreshScoutHint();
     return false;
   }
 
@@ -916,6 +1020,8 @@ auto SessionCore::tickBuffCountdown() -> bool {
   m_state.buffTicksRemaining = 0;
   m_state.buffTicksTotal = 0;
   m_state.shieldActive = false;
+  m_state.scoutHintCell = QPoint(-1, -1);
+  m_state.anchorTickIntervalMs = 0;
   return true;
 }
 
@@ -930,19 +1036,20 @@ auto SessionCore::spawnFood(const int boardWidth,
                                                     m_lastObstacleSignature,
                                                     m_hasLastObstacleSignature,
                                                     m_dynamicObstacleConfidenceTicks);
-  const bool found = pickSpawnPointWithSafety(boardWidth,
-                                              boardHeight,
-                                              headPosition(),
-                                              tail,
-                                              m_state.obstacles,
-                                              m_prevObstacleSnapshot,
-                                              m_recentSpawnPoints,
-                                              profile,
-                                              [this](const QPoint& point) -> bool {
-                                                return isOccupied(point) || point == m_state.powerUpPos;
-                                              },
-                                              randomBounded,
-                                              pickedPoint);
+  const bool found = pickSpawnPointWithSafety(
+    boardWidth,
+    boardHeight,
+    headPosition(),
+    tail,
+    m_state.obstacles,
+    m_prevObstacleSnapshot,
+    m_recentSpawnPoints,
+    profile,
+    [this](const QPoint& point) -> bool {
+      return isOccupied(point) || point == m_state.powerUpPos;
+    },
+    randomBounded,
+    pickedPoint);
   if (found) {
     m_state.food = pickedPoint;
     rememberRecentSpawnPoint(m_recentSpawnPoints, pickedPoint);
@@ -953,6 +1060,9 @@ auto SessionCore::spawnFood(const int boardWidth,
 auto SessionCore::spawnPowerUp(const int boardWidth,
                                const int boardHeight,
                                const std::function<int(int)>& randomBounded) -> bool {
+  if (m_state.activeBuff != static_cast<int>(BuffId::None) || m_state.shieldActive) {
+    return false;
+  }
   QPoint pickedPoint;
   const std::optional<QPoint> tail = m_body.empty() ? std::nullopt : std::optional{m_body.back()};
   const SpawnProfile profile = classifySpawnProfile(m_state.obstacles,
@@ -961,19 +1071,18 @@ auto SessionCore::spawnPowerUp(const int boardWidth,
                                                     m_lastObstacleSignature,
                                                     m_hasLastObstacleSignature,
                                                     m_dynamicObstacleConfidenceTicks);
-  const bool found = pickSpawnPointWithSafety(boardWidth,
-                                              boardHeight,
-                                              headPosition(),
-                                              tail,
-                                              m_state.obstacles,
-                                              m_prevObstacleSnapshot,
-                                              m_recentSpawnPoints,
-                                              profile,
-                                              [this](const QPoint& point) -> bool {
-                                                return isOccupied(point) || point == m_state.food;
-                                              },
-                                              randomBounded,
-                                              pickedPoint);
+  const bool found = pickSpawnPointWithSafety(
+    boardWidth,
+    boardHeight,
+    headPosition(),
+    tail,
+    m_state.obstacles,
+    m_prevObstacleSnapshot,
+    m_recentSpawnPoints,
+    profile,
+    [this](const QPoint& point) -> bool { return isOccupied(point) || point == m_state.food; },
+    randomBounded,
+    pickedPoint);
   if (found) {
     m_state.powerUpPos = pickedPoint;
     m_state.powerUpType = static_cast<int>(weightedRandomBuffId(randomBounded));
@@ -1099,6 +1208,8 @@ auto SessionCore::advanceSessionStep(const SessionAdvanceConfig& config,
                                      const std::function<int(int)>& randomBounded)
   -> SessionAdvanceResult {
   SessionAdvanceResult result;
+  m_boardWidth = config.boardWidth;
+  m_boardHeight = config.boardHeight;
 
   if (!m_hasObstacleSnapshots) {
     m_prevObstacleSnapshot = m_state.obstacles;
@@ -1161,6 +1272,8 @@ auto SessionCore::advanceSessionStep(const SessionAdvanceConfig& config,
     result.magnetFoodPan = magnetFoodResult.pan;
   }
 
+  refreshScoutHint();
+
   observeStallStateAndMaybeResetTarget(config, randomBounded, result);
 
   return result;
@@ -1183,6 +1296,8 @@ void SessionCore::bootstrapForLevel(QList<QPoint> obstacles,
   m_currObstacleSnapshot.clear();
   m_hasObstacleSnapshots = false;
   m_recentSpawnPoints.clear();
+  m_boardWidth = boardWidth;
+  m_boardHeight = boardHeight;
   resetStallGuard();
 }
 
@@ -1195,6 +1310,8 @@ void SessionCore::restorePersistedSession(const StateSnapshot& snapshot) {
   const QPoint persistedFood = m_state.food;
   const int persistedScore = m_state.score;
   const int persistedSpeedDownSteps = m_state.speedDownSteps;
+  const int persistedAnchorTickIntervalMs = m_state.anchorTickIntervalMs;
+  const QPoint persistedScoutHintCell = m_state.scoutHintCell;
   const QList<QPoint> persistedObstacles = m_state.obstacles;
 
   resetTransientRuntimeState();
@@ -1204,6 +1321,8 @@ void SessionCore::restorePersistedSession(const StateSnapshot& snapshot) {
   m_state.food = persistedFood;
   m_state.score = persistedScore;
   m_state.speedDownSteps = persistedSpeedDownSteps;
+  m_state.anchorTickIntervalMs = persistedAnchorTickIntervalMs;
+  m_state.scoutHintCell = persistedScoutHintCell;
   m_state.obstacles = persistedObstacles;
   resetStallGuard();
 }
@@ -1222,6 +1341,8 @@ void SessionCore::seedPreviewState(const PreviewSeed& seed) {
   m_state.buffTicksRemaining = seed.buffTicksRemaining;
   m_state.buffTicksTotal = seed.buffTicksTotal;
   m_state.shieldActive = seed.shieldActive;
+  m_state.scoutHintCell = seed.scoutHintCell;
+  m_state.anchorTickIntervalMs = seed.anchorTickIntervalMs;
   m_state.lastRoguelikeChoiceScore = -1000;
   m_body = seed.body;
   m_inputQueue.clear();
@@ -1232,6 +1353,7 @@ void SessionCore::seedPreviewState(const PreviewSeed& seed) {
   m_currObstacleSnapshot.clear();
   m_hasObstacleSnapshots = false;
   m_recentSpawnPoints.clear();
+  refreshScoutHint();
   resetStallGuard();
 }
 
@@ -1242,10 +1364,12 @@ void SessionCore::resetTransientRuntimeState() {
   m_state.buffTicksRemaining = 0;
   m_state.buffTicksTotal = 0;
   m_state.shieldActive = false;
+  m_state.scoutHintCell = QPoint(-1, -1);
   m_state.powerUpPos = QPoint(-1, -1);
   m_state.powerUpType = 0;
   m_state.powerUpTicksRemaining = 0;
   m_state.speedDownSteps = 0;
+  m_state.anchorTickIntervalMs = 0;
   m_hasLastObstacleSignature = false;
   m_lastObstacleSignature = 0;
   m_dynamicObstacleConfidenceTicks = 0;
@@ -1279,22 +1403,33 @@ void SessionCore::restoreSnapshot(const StateSnapshot& snapshot) {
   m_currObstacleSnapshot.clear();
   m_hasObstacleSnapshots = false;
   m_recentSpawnPoints.clear();
+  refreshScoutHint();
   resetStallGuard();
 }
 
 void SessionCore::applyPowerUpResult(const PowerUpConsumptionResult& result) {
+  const int currentInterval = currentTickIntervalMs();
   if (result.shieldActivated) {
     m_state.shieldActive = true;
   }
   if (result.miniApplied) {
     m_body = applyMiniShrink(m_body, 3);
   }
+  if (result.vacuumApplied) {
+    applyVacuumBurst();
+  }
   m_state.activeBuff = result.activeBuffAfter;
   m_state.buffTicksRemaining = result.buffTicksRemaining;
   m_state.buffTicksTotal = result.buffTicksTotal;
+  if (m_state.activeBuff == static_cast<int>(BuffId::Anchor)) {
+    m_state.anchorTickIntervalMs = currentInterval;
+  } else if (m_state.activeBuff != static_cast<int>(BuffId::Anchor)) {
+    m_state.anchorTickIntervalMs = 0;
+  }
   if (result.slowMode) {
     m_state.speedDownSteps = std::clamp(m_state.speedDownSteps + 1, 0, MaxSpeedDownSteps);
   }
+  refreshScoutHint();
 }
 
 auto SessionCore::tickPowerUpCountdown() -> bool {

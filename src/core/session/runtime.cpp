@@ -26,6 +26,9 @@ auto buildPowerUpResult(const int powerUpType,
   if (acquired == static_cast<int>(nenoserpent::core::BuffId::Mini)) {
     result.miniApplied = true;
     result.activeBuffAfter = static_cast<int>(nenoserpent::core::BuffId::None);
+  } else if (acquired == static_cast<int>(nenoserpent::core::BuffId::Vacuum)) {
+    result.vacuumApplied = true;
+    result.activeBuffAfter = static_cast<int>(nenoserpent::core::BuffId::None);
   } else if (acquired == static_cast<int>(nenoserpent::core::BuffId::Slow)) {
     // Slow now permanently reduces speed by one tier, not as a timed active buff.
     result.activeBuffAfter = static_cast<int>(nenoserpent::core::BuffId::None);
@@ -61,6 +64,7 @@ auto planFoodConsumption(const QPoint& head,
                          const int boardWidth,
                          const int boardHeight,
                          const int activeBuff,
+                         const bool shieldActive,
                          const int currentScore,
                          const int lastChoiceScore,
                          const QPoint& powerUpPos,
@@ -76,6 +80,11 @@ auto planFoodConsumption(const QPoint& head,
   const int points = foodPointsForBuff(static_cast<BuffId>(activeBuff));
   result.newScore = currentScore + points;
   result.pan = (static_cast<float>(wrapped.x()) / static_cast<float>(boardWidth) - 0.5F) * 1.4F;
+
+  const bool suppressSpecialEvents = activeBuff != static_cast<int>(BuffId::None) || shieldActive;
+  if (suppressSpecialEvents) {
+    return result;
+  }
 
   const int chancePercent = roguelikeChoiceChancePercent({
     .previousScore = result.previousScore,
@@ -108,6 +117,7 @@ auto planFoodConsumption(const QPoint& head,
                              boardWidth,
                              boardHeight,
                              state.activeBuff,
+                             state.shieldActive,
                              state.score,
                              state.lastRoguelikeChoiceScore,
                              state.powerUpPos,

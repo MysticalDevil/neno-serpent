@@ -28,6 +28,7 @@ class SessionRenderViewModel final : public QObject {
   Q_PROPERTY(int buffTicksTotal READ buffTicksTotal NOTIFY buffChanged)
   Q_PROPERTY(QPointF reflectionOffset READ reflectionOffset NOTIFY reflectionOffsetChanged)
   Q_PROPERTY(bool shieldActive READ shieldActive NOTIFY buffChanged)
+  Q_PROPERTY(QPoint scoutHintCell READ scoutHintCell NOTIFY buffChanged)
 
 public:
   explicit SessionRenderViewModel(EngineAdapter* engineAdapter, QObject* parent = nullptr);
@@ -48,6 +49,7 @@ public:
   [[nodiscard]] auto buffTicksTotal() const -> int;
   [[nodiscard]] auto reflectionOffset() const -> QPointF;
   [[nodiscard]] auto shieldActive() const -> bool;
+  [[nodiscard]] auto scoutHintCell() const -> QPoint;
 
 signals:
   void foodChanged();

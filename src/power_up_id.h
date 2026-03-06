@@ -19,10 +19,13 @@ public:
     Magnet = static_cast<int>(nenoserpent::core::BuffId::Magnet),
     Shield = static_cast<int>(nenoserpent::core::BuffId::Shield),
     Portal = static_cast<int>(nenoserpent::core::BuffId::Portal),
-    Double = static_cast<int>(nenoserpent::core::BuffId::Double),
-    Rich = static_cast<int>(nenoserpent::core::BuffId::Rich),
+    Gold = static_cast<int>(nenoserpent::core::BuffId::Gold),
     Laser = static_cast<int>(nenoserpent::core::BuffId::Laser),
-    Mini = static_cast<int>(nenoserpent::core::BuffId::Mini)
+    Mini = static_cast<int>(nenoserpent::core::BuffId::Mini),
+    Freeze = static_cast<int>(nenoserpent::core::BuffId::Freeze),
+    Scout = static_cast<int>(nenoserpent::core::BuffId::Scout),
+    Vacuum = static_cast<int>(nenoserpent::core::BuffId::Vacuum),
+    Anchor = static_cast<int>(nenoserpent::core::BuffId::Anchor)
   };
   Q_ENUM(Value)
 };

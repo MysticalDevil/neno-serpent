@@ -7,18 +7,21 @@
 namespace nenoserpent::core {
 
 auto foodPointsForBuff(BuffId activeBuff) -> int {
-  if (activeBuff == BuffId::Double) {
+  if (activeBuff == BuffId::Gold) {
     return 2;
-  }
-  if (activeBuff == BuffId::Rich) {
-    return 3;
   }
   return 1;
 }
 
 auto buffDurationTicks(BuffId acquiredBuff, int baseDurationTicks) -> int {
-  if (acquiredBuff == BuffId::Rich) {
-    return baseDurationTicks / 2;
+  if (acquiredBuff == BuffId::Freeze) {
+    return std::max(16, (baseDurationTicks * 3) / 5);
+  }
+  if (acquiredBuff == BuffId::Scout) {
+    return std::max(20, (baseDurationTicks * 4) / 5);
+  }
+  if (acquiredBuff == BuffId::Anchor) {
+    return std::max(18, (baseDurationTicks * 2) / 3);
   }
   return baseDurationTicks;
 }
@@ -28,17 +31,20 @@ auto miniShrinkTargetLength(std::size_t currentLength, std::size_t minimumLength
 }
 
 auto weightedRandomBuffId(const std::function<int(int)>& pickBounded) -> BuffId {
-  // Lower Mini probability while keeping other fruits reasonably common.
-  static constexpr std::array<std::pair<BuffId, int>, 9> weightedTable{{
+  // Keep utility fruits common while gating the stronger tempo/control fruits.
+  static constexpr std::array<std::pair<BuffId, int>, 12> weightedTable{{
     {BuffId::Ghost, 3},
     {BuffId::Slow, 3},
     {BuffId::Magnet, 3},
     {BuffId::Shield, 3},
     {BuffId::Portal, 3},
-    {BuffId::Double, 3},
-    {BuffId::Rich, 2},
+    {BuffId::Gold, 3},
     {BuffId::Laser, 2},
     {BuffId::Mini, 1},
+    {BuffId::Freeze, 2},
+    {BuffId::Scout, 2},
+    {BuffId::Vacuum, 2},
+    {BuffId::Anchor, 2},
   }};
 
   int totalWeight = 0;

@@ -26,6 +26,7 @@ struct PowerUpConsumptionResult {
   int activeBuffAfter = 0;
   bool shieldActivated = false;
   bool miniApplied = false;
+  bool vacuumApplied = false;
   int buffTicksRemaining = 0;
   int buffTicksTotal = 0;
   bool slowMode = false;
@@ -42,6 +43,7 @@ auto planFoodConsumption(const QPoint& head,
                          int boardWidth,
                          int boardHeight,
                          int activeBuff,
+                         bool shieldActive,
                          int currentScore,
                          int lastChoiceScore,
                          const QPoint& powerUpPos,

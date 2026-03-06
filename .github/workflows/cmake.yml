@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    env:
+      BOT_ML_MODEL_B64: ${{ secrets.BOT_ML_MODEL_B64 }}
 
     steps:
     - uses: actions/checkout@v4
@@ -156,9 +158,9 @@ jobs:
         ./scripts/ci/bot_ml_smoke_gate.sh build/debug-clang
 
     - name: Bot ML No-Regression Gate (optional)
-      if: ${{ secrets.BOT_ML_MODEL_B64 != '' }}
+      if: env.BOT_ML_MODEL_B64 != ''
       run: |
-        echo "${{ secrets.BOT_ML_MODEL_B64 }}" | base64 -d > /tmp/nenoserpent_bot_policy_runtime.json
+        echo "${BOT_ML_MODEL_B64}" | base64 -d > /tmp/nenoserpent_bot_policy_runtime.json
         BOT_ML_MODEL=/tmp/nenoserpent_bot_policy_runtime.json \
         BOT_LEADERBOARD_PROFILE=debug \
         BOT_LEADERBOARD_REQUIRE_NO_REGRESSION=1 \
